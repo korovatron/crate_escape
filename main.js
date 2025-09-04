@@ -70,8 +70,17 @@ const tapMoveThreshold = 10; // Max px movement for tap
 function setupCanvasEventListeners() {
     // Mouse events
     document.addEventListener("mousedown", function (e) {
+        // Handle game state transitions (same logic as space key)
+        if (currentGameState === GAME_STATES.TITLE) {
+            currentGameState = GAME_STATES.PLAYING;
+            lastInputType = "Game Started!";
+            lastInputTime = Date.now();
+            inputFadeTimer = 2000;
+            return;
+        }
+        
+        // Visual feedback for mouse click during gameplay
         getMouseClickPosition(canvas, e);
-        // Visual feedback for mouse click
         lastInputType = "Mouse Click";
         clickCoordinates = `(${mouseX}, ${mouseY})`;
         lastInputTime = Date.now();
@@ -149,8 +158,12 @@ function setupCanvasEventListeners() {
                     // Normal tap behavior during gameplay
                     pressedKeys.add(' '); // Spacebar
                     setTimeout(() => pressedKeys.delete(' '), 50);
-                    // Simulate mouse click
-                    getMouseClickPosition(canvas, touch);
+                    // Calculate touch position for mouse coordinates
+                    let rect = canvas.getBoundingClientRect();
+                    let x = touch.clientX - rect.left;
+                    let y = touch.clientY - rect.top;
+                    mouseX = Math.round(x / scale);
+                    mouseY = Math.round(y / scale);
                     lastInputType = "Touch Tap";
                     clickCoordinates = `(${mouseX}, ${mouseY})`;
                     lastInputTime = Date.now();
@@ -425,11 +438,11 @@ function drawTitleScreen() {
     context.fillStyle = "#2a2a2a";
     context.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw the cartoon image in the center
+    // Draw the cartoon image to fill the screen while maintaining aspect ratio
     if (crateEscapeCartoon.complete) {
         const imgWidth = crateEscapeCartoon.width;
         const imgHeight = crateEscapeCartoon.height;
-        const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight) * 0.8; // 80% of max size
+        const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight); // Fill screen completely
         const scaledWidth = imgWidth * scale;
         const scaledHeight = imgHeight * scale;
         const x = (canvas.width - scaledWidth) / 2;
@@ -437,24 +450,6 @@ function drawTitleScreen() {
         
         context.drawImage(crateEscapeCartoon, x, y, scaledWidth, scaledHeight);
     }
-    
-    // Draw title text
-    context.fillStyle = "#ffffff";
-    context.font = "bold 48px Arial";
-    context.textAlign = "center";
-    context.fillText("THE CRATE ESCAPE", canvas.width / 2, 80);
-    
-    // Draw subtitle
-    context.font = "24px Arial";
-    context.fillText("Stack, Solve, and Celebrate!", canvas.width / 2, 120);
-    
-    // Draw instructions
-    context.font = "20px Arial";
-    context.fillStyle = "#cccccc";
-    context.fillText("Press SPACE or TAP to start", canvas.width / 2, canvas.height - 50);
-    
-    // Reset text alignment
-    context.textAlign = "left";
 }
 
 function drawGameplay() {
