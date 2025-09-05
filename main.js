@@ -267,8 +267,8 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = 'setIII';
-let currentLevelNumber = 42; // Large level for testing responsive sizing
+let currentSet = 'setI';
+let currentLevelNumber = 1; // Large level for testing responsive sizing
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
@@ -289,7 +289,7 @@ let moveTargetBoxPos = { x: 0, y: 0 };
 let playerAnimationState = 'idle'; // 'idle', 'moving-down', 'moving-up', 'moving-left', 'moving-right'
 let playerAnimationFrame = 0;
 let playerAnimationTimer = 0;
-const playerAnimationSpeed = 0.15; // Seconds between frame changes
+const playerAnimationSpeed = 0.083; // Seconds between frame changes (matches movement duration / 3 frames)
 
 // Player animation frame sequences
 const playerAnimations = {
@@ -667,6 +667,9 @@ function updatePlayerMovement(deltaTime) {
             movingBox = null;
         }
         
+        // Immediately check for continued input to eliminate pause
+        checkForContinuedInput();
+        
         // Reset to idle animation when movement completes and no continuous input
         if (!isContinuousInputActive()) {
             playerAnimationState = 'idle';
@@ -677,20 +680,37 @@ function updatePlayerMovement(deltaTime) {
 }
 
 function updatePlayerAnimation(deltaTime) {
-    // Update animation timer
-    playerAnimationTimer += deltaTime;
-    
-    // Check if it's time to advance to the next frame
-    if (playerAnimationTimer >= playerAnimationSpeed) {
+    // If there's no continuous input and no movement happening, reset to idle
+    if (!isContinuousInputActive() && !isPlayerMoving && playerAnimationState !== 'idle') {
+        playerAnimationState = 'idle';
+        playerAnimationFrame = 0;
         playerAnimationTimer = 0;
-        
+        return;
+    }
+    
+    // If moving, sync animation to movement progress instead of independent timer
+    if (isPlayerMoving) {
         const frameSequence = playerAnimations[playerAnimationState];
         if (frameSequence && frameSequence.length > 1) {
-            // Advance to next frame in sequence
-            playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
+            // Calculate frame based on movement progress (0.0 to 1.0)
+            const frameIndex = Math.floor(moveAnimationProgress * frameSequence.length);
+            playerAnimationFrame = Math.min(frameIndex, frameSequence.length - 1);
         } else {
-            // Single frame animations (like idle) stay at frame 0
             playerAnimationFrame = 0;
+        }
+    } else {
+        // When not moving, use timer-based animation for idle
+        playerAnimationTimer += deltaTime;
+        
+        if (playerAnimationTimer >= playerAnimationSpeed) {
+            playerAnimationTimer = 0;
+            
+            const frameSequence = playerAnimations[playerAnimationState];
+            if (frameSequence && frameSequence.length > 1) {
+                playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
+            } else {
+                playerAnimationFrame = 0;
+            }
         }
     }
 }
@@ -700,6 +720,34 @@ function isContinuousInputActive() {
     return isKeyDown('ArrowLeft') || isKeyDown('ArrowRight') || 
            isKeyDown('ArrowUp') || isKeyDown('ArrowDown') ||
            (isTouchActive && (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0));
+}
+
+function checkForContinuedInput() {
+    // When movement completes, immediately check for continued input
+    // This eliminates the pause between consecutive tile movements
+    
+    let moveDirection = { x: 0, y: 0 };
+    
+    // Check for held keys
+    if (isKeyDown('ArrowLeft')) {
+        moveDirection = { x: -1, y: 0 };
+    } else if (isKeyDown('ArrowRight')) {
+        moveDirection = { x: 1, y: 0 };
+    } else if (isKeyDown('ArrowUp')) {
+        moveDirection = { x: 0, y: -1 };
+    } else if (isKeyDown('ArrowDown')) {
+        moveDirection = { x: 0, y: 1 };
+    }
+    
+    // Check for active touch input
+    if (isTouchActive && (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0)) {
+        moveDirection = touchMoveDirection;
+    }
+    
+    // If input is present, start next movement immediately
+    if (moveDirection.x !== 0 || moveDirection.y !== 0) {
+        attemptPlayerMove(moveDirection);
+    }
 }
 
 function getCurrentPlayerPixelPos() {
