@@ -26,6 +26,30 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
+    // Handle player movement during gameplay
+    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
+        let moveDirection = { x: 0, y: 0 };
+        
+        switch (e.key) {
+            case "ArrowLeft":
+                moveDirection = { x: -1, y: 0 };
+                break;
+            case "ArrowRight":
+                moveDirection = { x: 1, y: 0 };
+                break;
+            case "ArrowUp":
+                moveDirection = { x: 0, y: -1 };
+                break;
+            case "ArrowDown":
+                moveDirection = { x: 0, y: 1 };
+                break;
+        }
+        
+        if (moveDirection.x !== 0 || moveDirection.y !== 0) {
+            attemptPlayerMove(moveDirection);
+        }
+    }
+    
     // Visual feedback for keyboard input (only during gameplay)
     if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
         lastInputType = `Keyboard: ${e.key === ' ' ? 'Space' : e.key}`;
@@ -116,15 +140,17 @@ function setupCanvasEventListeners() {
                 swipeProcessed = true; // Mark as processed
                 if (dx > 0) {
                     // Swipe right
-                    pressedKeys.add('ArrowRight');
-                    setTimeout(() => pressedKeys.delete('ArrowRight'), 50);
+                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
+                        attemptPlayerMove({ x: 1, y: 0 });
+                    }
                     lastInputType = "Swipe Right";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
                 } else {
                     // Swipe left
-                    pressedKeys.add('ArrowLeft');
-                    setTimeout(() => pressedKeys.delete('ArrowLeft'), 50);
+                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
+                        attemptPlayerMove({ x: -1, y: 0 });
+                    }
                     lastInputType = "Swipe Left";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
@@ -133,15 +159,17 @@ function setupCanvasEventListeners() {
                 swipeProcessed = true; // Mark as processed
                 if (dy > 0) {
                     // Swipe down
-                    pressedKeys.add('ArrowDown');
-                    setTimeout(() => pressedKeys.delete('ArrowDown'), 50);
+                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
+                        attemptPlayerMove({ x: 0, y: 1 });
+                    }
                     lastInputType = "Swipe Down";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
                 } else {
                     // Swipe up
-                    pressedKeys.add('ArrowUp');
-                    setTimeout(() => pressedKeys.delete('ArrowUp'), 50);
+                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
+                        attemptPlayerMove({ x: 0, y: -1 });
+                    }
                     lastInputType = "Swipe Up";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
@@ -202,6 +230,54 @@ let lastInputType = "";
 let lastInputTime = 0;
 let clickCoordinates = "";
 let inputFadeTimer = 0;
+
+// Game level variables
+let currentLevel = null;
+let currentSet = 'setII';
+let currentLevelNumber = 10; // Changed to a large level for testing responsive sizing
+let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
+let levelOffsetX = 0; // Offset for centering the level
+let levelOffsetY = 0;
+
+// Player movement variables
+let playerPos = { x: 0, y: 0 }; // Current player position in grid coordinates
+let playerPixelPos = { x: 0, y: 0 }; // Current player position in pixel coordinates
+let isPlayerMoving = false;
+let moveAnimationProgress = 0;
+let moveDuration = 0.25; // Animation duration in seconds
+let moveStartPos = { x: 0, y: 0 };
+let moveTargetPos = { x: 0, y: 0 };
+let movingBox = null; // Box being pushed (if any)
+let moveStartBoxPos = { x: 0, y: 0 };
+let moveTargetBoxPos = { x: 0, y: 0 };
+
+// Function to calculate optimal tile size with mobile-friendly constraints
+function calculateOptimalTileSize() {
+    if (!currentLevel) return 32;
+    
+    // Define minimum and maximum tile sizes for usability
+    const minTileSize = 24; // Minimum for mobile touch targets
+    const maxTileSize = 64; // Maximum to prevent overly large tiles
+    
+    // Calculate available screen space with padding
+    const padding = 60; // Leave space for UI elements and margins
+    const availableWidth = canvas.width - padding;
+    const availableHeight = canvas.height - padding;
+    
+    // Calculate max tile size that fits the screen
+    const maxTileWidth = Math.floor(availableWidth / currentLevel.width);
+    const maxTileHeight = Math.floor(availableHeight / currentLevel.height);
+    
+    // Use the smaller dimension to ensure the entire level fits
+    let optimalSize = Math.min(maxTileWidth, maxTileHeight);
+    
+    // Apply constraints: ensure it's within our min/max bounds
+    optimalSize = Math.max(minTileSize, Math.min(optimalSize, maxTileSize));
+    
+    console.log(`Level size: ${currentLevel.width}x${currentLevel.height}, Calculated tile size: ${optimalSize}px`);
+    
+    return optimalSize;
+}
 
 const crateEscapeCartoon = new Image();
 const spriteSheet = new Image();
@@ -360,11 +436,182 @@ function gameLoop(timeStamp) {
 
 // #region Game Load
 function gameLoad() {
-    // Initialize game state here
+    // Load level 1 from Set I
+    loadLevel(currentSet, currentLevelNumber);
+}
+
+// Function to load a specific level
+function loadLevel(setName, levelNumber) {
+    currentLevel = LevelManager.getParsedLevel(setName, levelNumber);
+    
+    if (!currentLevel) {
+        console.error(`Failed to load level ${levelNumber} from set ${setName}`);
+        return false;
+    }
+    
+    // Calculate optimal tile size for this level and screen
+    tileSize = calculateOptimalTileSize();
+    
+    // Initialize player position from level data
+    playerPos = {
+        x: currentLevel.playerStart.x,
+        y: currentLevel.playerStart.y
+    };
+    
+    // Reset movement state
+    isPlayerMoving = false;
+    moveAnimationProgress = 0;
+    moveTargetPos = { x: playerPos.x, y: playerPos.y };
+    movingBox = null;
+    
+    console.log(`Loaded level ${levelNumber} from ${setName}`);
+    console.log(`Level size: ${currentLevel.width}x${currentLevel.height}`);
+    console.log(`Using tile size: ${tileSize}px`);
+    console.log(`Player starts at: (${playerPos.x}, ${playerPos.y})`);
+    console.log(`Boxes: ${currentLevel.boxes.length}, Goals: ${currentLevel.goals.length}`);
+    
+    // Calculate level centering offsets
+    levelOffsetX = (canvas.width - currentLevel.width * tileSize) / 2;
+    levelOffsetY = (canvas.height - currentLevel.height * tileSize) / 2;
+    
+    return true;
 }
 // #endregion
 
 // #region Update Game State
+// Player movement functions
+function attemptPlayerMove(direction) {
+    const newX = playerPos.x + direction.x;
+    const newY = playerPos.y + direction.y;
+    
+    // Check if move is within bounds
+    if (newX < 0 || newX >= currentLevel.width || newY < 0 || newY >= currentLevel.height) {
+        return false;
+    }
+    
+    // Check if destination is a wall
+    if (isWall(newX, newY)) {
+        return false;
+    }
+    
+    // Check if there's a box at the destination
+    const boxIndex = findBoxAt(newX, newY);
+    if (boxIndex !== -1) {
+        // Try to push the box
+        const boxNewX = newX + direction.x;
+        const boxNewY = newY + direction.y;
+        
+        // Check if box can be pushed
+        if (boxNewX < 0 || boxNewX >= currentLevel.width || 
+            boxNewY < 0 || boxNewY >= currentLevel.height ||
+            isWall(boxNewX, boxNewY) || 
+            findBoxAt(boxNewX, boxNewY) !== -1) {
+            return false;
+        }
+        
+        // Start movement with box pushing
+        startPlayerMove(newX, newY, boxIndex, boxNewX, boxNewY);
+    } else {
+        // Simple movement without box
+        startPlayerMove(newX, newY);
+    }
+    
+    return true;
+}
+
+function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxTargetY = 0) {
+    isPlayerMoving = true;
+    moveAnimationProgress = 0;
+    
+    moveStartPos = { x: playerPos.x, y: playerPos.y };
+    moveTargetPos = { x: targetX, y: targetY };
+    
+    if (boxIndex !== null) {
+        movingBox = {
+            index: boxIndex,
+            startPos: { x: currentLevel.boxes[boxIndex].x, y: currentLevel.boxes[boxIndex].y },
+            targetPos: { x: boxTargetX, y: boxTargetY }
+        };
+    } else {
+        movingBox = null;
+    }
+}
+
+function updatePlayerMovement(deltaTime) {
+    if (!isPlayerMoving) return;
+    
+    moveAnimationProgress += deltaTime / moveDuration;
+    
+    if (moveAnimationProgress >= 1.0) {
+        // Movement complete
+        moveAnimationProgress = 1.0;
+        isPlayerMoving = false;
+        
+        // Update final positions
+        playerPos.x = moveTargetPos.x;
+        playerPos.y = moveTargetPos.y;
+        
+        if (movingBox) {
+            currentLevel.boxes[movingBox.index].x = movingBox.targetPos.x;
+            currentLevel.boxes[movingBox.index].y = movingBox.targetPos.y;
+            movingBox = null;
+        }
+    }
+}
+
+function getCurrentPlayerPixelPos() {
+    if (!isPlayerMoving) {
+        return {
+            x: levelOffsetX + playerPos.x * tileSize,
+            y: levelOffsetY + playerPos.y * tileSize
+        };
+    }
+    
+    // Interpolate position during movement
+    const t = easeInOutQuad(moveAnimationProgress);
+    const lerpX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
+    const lerpY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
+    
+    return {
+        x: levelOffsetX + lerpX * tileSize,
+        y: levelOffsetY + lerpY * tileSize
+    };
+}
+
+function getCurrentBoxPixelPos(boxIndex) {
+    if (!movingBox || movingBox.index !== boxIndex) {
+        // Box is not moving, return grid position
+        const box = currentLevel.boxes[boxIndex];
+        return {
+            x: levelOffsetX + box.x * tileSize,
+            y: levelOffsetY + box.y * tileSize
+        };
+    }
+    
+    // Interpolate position during movement
+    const t = easeInOutQuad(moveAnimationProgress);
+    const lerpX = movingBox.startPos.x + (movingBox.targetPos.x - movingBox.startPos.x) * t;
+    const lerpY = movingBox.startPos.y + (movingBox.targetPos.y - movingBox.startPos.y) * t;
+    
+    return {
+        x: levelOffsetX + lerpX * tileSize,
+        y: levelOffsetY + lerpY * tileSize
+    };
+}
+
+// Helper functions
+function isWall(x, y) {
+    return currentLevel.walls.some(wall => wall.x === x && wall.y === y);
+}
+
+function findBoxAt(x, y) {
+    return currentLevel.boxes.findIndex(box => box.x === x && box.y === y);
+}
+
+function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
 function update(secondsPassed) {
     // Update input feedback timer
     if (inputFadeTimer > 0) {
@@ -377,6 +624,10 @@ function update(secondsPassed) {
 
     // Only process game logic when playing
     if (currentGameState === GAME_STATES.PLAYING) {
+        // Update player movement animation
+        updatePlayerMovement(secondsPassed);
+        
+        // Legacy key processing (can be removed later)
         if (isKeyDown('ArrowLeft') && canProcessKey('ArrowLeft')) {
             lastKeyTime.set('ArrowLeft', Date.now());
             console.log('Left key is pressed');
@@ -453,8 +704,132 @@ function drawTitleScreen() {
 }
 
 function drawGameplay() {
-    // Draw the player sprite and game elements
-    context.drawImage(spriteSheet, playerSprite.x, playerSprite.y, playerSprite.width, playerSprite.height, 100, 100, playerSprite.width/2, playerSprite.height/2);
+    if (!currentLevel) {
+        // If no level is loaded, show error message
+        context.fillStyle = "#ffffff";
+        context.font = "24px Arial";
+        context.textAlign = "center";
+        context.fillText("No level loaded", canvas.width / 2, canvas.height / 2);
+        context.textAlign = "left";
+        return;
+    }
+    
+    // Draw the level grid
+    for (let y = 0; y < currentLevel.height; y++) {
+        for (let x = 0; x < currentLevel.width; x++) {
+            const tileX = levelOffsetX + x * tileSize;
+            const tileY = levelOffsetY + y * tileSize;
+            const char = currentLevel.grid[y][x];
+            
+            // Draw background/floor for all tiles
+            drawFloorTile(tileX, tileY);
+            
+            // Draw the appropriate sprite based on the character
+            switch (char) {
+                case '#': // Wall
+                    drawWallTile(tileX, tileY);
+                    break;
+                case '.': // Goal
+                    drawGoalTile(tileX, tileY);
+                    break;
+                case ' ': // Empty space (floor only)
+                    // Floor already drawn above
+                    break;
+            }
+        }
+    }
+    
+    // Draw boxes with smooth movement
+    currentLevel.boxes.forEach((box, index) => {
+        const pixelPos = getCurrentBoxPixelPos(index);
+        drawBoxTile(pixelPos.x, pixelPos.y);
+    });
+    
+    // Draw player with smooth movement
+    const playerPixelPos = getCurrentPlayerPixelPos();
+    drawPlayerTile(playerPixelPos.x, playerPixelPos.y);
+    
+    // Draw level info
+    drawLevelInfo();
+}
+
+// Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
+function drawFloorTile(x, y) {
+    // Using ground_01.png sprite from spriteSheet
+    const sprite = textureAtlas.frames["ground_05.png"];
+    context.drawImage(
+        spriteSheet,
+        sprite.x, sprite.y, sprite.width, sprite.height,
+        x, y, tileSize, tileSize
+    );
+}
+
+function drawWallTile(x, y) {
+    // Using block_01.png sprite from spriteSheet
+    const sprite = textureAtlas.frames["block_05.png"];
+    context.drawImage(
+        spriteSheet,
+        sprite.x, sprite.y, sprite.width, sprite.height,
+        x, y, tileSize, tileSize
+    );
+}
+
+function drawGoalTile(x, y) {
+    // Draw floor first
+    drawFloorTile(x, y);
+    
+    // Using environment_02.png sprite (small goal/target sprite) from spriteSheet
+    const sprite = textureAtlas.frames["environment_06.png"];
+    // Scale goal to fit within tile with some margin for visibility
+    const goalMargin = 4; // Margin so goal doesn't fill entire tile
+    const goalSize = tileSize - (goalMargin * 2);
+    // Center the goal sprite on the tile
+    const goalX = x + goalMargin;
+    const goalY = y + goalMargin;
+    context.drawImage(
+        spriteSheet,
+        sprite.x, sprite.y, sprite.width, sprite.height,
+        goalX, goalY, goalSize, goalSize
+    );
+}
+
+function drawBoxTile(x, y) {
+    // Using crate_01.png sprite from spriteSheet
+    const sprite = textureAtlas.frames["crate_01.png"];
+    context.drawImage(
+        spriteSheet,
+        sprite.x, sprite.y, sprite.width, sprite.height,
+        x, y, tileSize, tileSize
+    );
+}
+
+function drawPlayerTile(x, y) {
+    // Using player_03.png sprite from spriteSheet
+    const sprite = textureAtlas.frames["player_03.png"];
+    // Scale player to fit the tile size with a small margin
+    const margin = 2; // Small margin so player doesn't touch tile edges
+    const playerSize = tileSize - (margin * 2);
+    // Center the player sprite on the tile
+    const playerX = x + margin;
+    const playerY = y + margin;
+    context.drawImage(
+        spriteSheet, 
+        sprite.x, sprite.y, sprite.width, sprite.height,
+        playerX, playerY, playerSize, playerSize
+    );
+}
+
+function drawLevelInfo() {
+    // Draw level information in the top-left corner
+    context.fillStyle = "rgba(0, 0, 0, 0.7)";
+    context.fillRect(10, 10, 200, 80);
+    
+    context.fillStyle = "#ffffff";
+    context.font = "16px Arial";
+    context.fillText(`Set: ${currentSet}`, 20, 30);
+    context.fillText(`Level: ${currentLevelNumber}`, 20, 50);
+    context.fillText(`Boxes: ${currentLevel.boxes.length}`, 20, 70);
+    context.fillText(`Goals: ${currentLevel.goals.length}`, 20, 90);
 }
 // #endregion
 
@@ -469,6 +844,25 @@ function resizeCanvas() {
     canvas.style.position = 'absolute';
     canvas.style.left = '0px';
     canvas.style.top = '0px';
+    
+    // Recalculate tile size and level positioning for new screen dimensions
+    if (currentLevel) {
+        recalculateLevelLayout();
+    }
+}
+
+// Function to recalculate level layout when screen size changes
+function recalculateLevelLayout() {
+    if (!currentLevel) return;
+    
+    // Recalculate optimal tile size for new screen dimensions
+    tileSize = calculateOptimalTileSize();
+    
+    // Recalculate level centering offsets
+    levelOffsetX = (canvas.width - currentLevel.width * tileSize) / 2;
+    levelOffsetY = (canvas.height - currentLevel.height * tileSize) / 2;
+    
+    console.log(`Screen resized - New tile size: ${tileSize}px, Level centered at: (${levelOffsetX}, ${levelOffsetY})`);
 }
 function getMouseClickPosition(canvas, event) {
     let rect = canvas.getBoundingClientRect();
