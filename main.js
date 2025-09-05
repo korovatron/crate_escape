@@ -233,8 +233,8 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = 'setII';
-let currentLevelNumber = 10; // Changed to a large level for testing responsive sizing
+let currentSet = 'setI';
+let currentLevelNumber = 27; // Large level for testing responsive sizing
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
@@ -255,26 +255,35 @@ let moveTargetBoxPos = { x: 0, y: 0 };
 function calculateOptimalTileSize() {
     if (!currentLevel) return 32;
     
-    // Define minimum and maximum tile sizes for usability
-    const minTileSize = 24; // Minimum for mobile touch targets
-    const maxTileSize = 64; // Maximum to prevent overly large tiles
-    
     // Calculate available screen space with padding
     const padding = 60; // Leave space for UI elements and margins
     const availableWidth = canvas.width - padding;
     const availableHeight = canvas.height - padding;
     
-    // Calculate max tile size that fits the screen
+    // Calculate max tile size that fits the screen (integer scaling to avoid artifacts)
     const maxTileWidth = Math.floor(availableWidth / currentLevel.width);
     const maxTileHeight = Math.floor(availableHeight / currentLevel.height);
     
     // Use the smaller dimension to ensure the entire level fits
     let optimalSize = Math.min(maxTileWidth, maxTileHeight);
     
-    // Apply constraints: ensure it's within our min/max bounds
-    optimalSize = Math.max(minTileSize, Math.min(optimalSize, maxTileSize));
+    // For small levels, apply maximum constraint to prevent overly large tiles
+    // For large levels, remove minimum constraint to ensure it always fits on screen
+    const levelArea = currentLevel.width * currentLevel.height;
+    const isLargeLevel = levelArea > 200 || currentLevel.width > 20 || currentLevel.height > 15;
     
-    console.log(`Level size: ${currentLevel.width}x${currentLevel.height}, Calculated tile size: ${optimalSize}px`);
+    if (isLargeLevel) {
+        // Large levels: prioritize fitting on screen, no minimum size
+        // Still ensure it's at least 1 pixel per tile
+        optimalSize = Math.max(1, optimalSize);
+    } else {
+        // Small levels: apply both min and max constraints for usability
+        const minTileSize = 24; // Minimum for mobile touch targets
+        const maxTileSize = 64; // Maximum to prevent overly large tiles
+        optimalSize = Math.max(minTileSize, Math.min(optimalSize, maxTileSize));
+    }
+    
+    console.log(`Level size: ${currentLevel.width}x${currentLevel.height} (${levelArea} tiles), Large level: ${isLargeLevel}, Calculated tile size: ${optimalSize}px`);
     
     return optimalSize;
 }
@@ -651,6 +660,9 @@ function update(secondsPassed) {
 
 // #region Draw Each Frame
 function draw() {
+    // Disable image smoothing to prevent anti-aliasing artifacts
+    context.imageSmoothingEnabled = false;
+    
     context.fillStyle = canvasColour;
     context.fillRect(0, 0, canvas.width, canvas.height);
     
@@ -757,20 +769,24 @@ function drawGameplay() {
 function drawFloorTile(x, y) {
     // Using ground_01.png sprite from spriteSheet
     const sprite = textureAtlas.frames["ground_05.png"];
+    // Add 1 pixel overlap to eliminate grid lines
+    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize, tileSize
+        x, y, tileSize + overlap, tileSize + overlap
     );
 }
 
 function drawWallTile(x, y) {
     // Using block_01.png sprite from spriteSheet
     const sprite = textureAtlas.frames["block_05.png"];
+    // Add 1 pixel overlap to eliminate grid lines
+    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize, tileSize
+        x, y, tileSize + overlap, tileSize + overlap
     );
 }
 
@@ -796,26 +812,24 @@ function drawGoalTile(x, y) {
 function drawBoxTile(x, y) {
     // Using crate_01.png sprite from spriteSheet
     const sprite = textureAtlas.frames["crate_01.png"];
+    // Add 1 pixel overlap to eliminate grid lines
+    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize, tileSize
+        x, y, tileSize + overlap, tileSize + overlap
     );
 }
 
 function drawPlayerTile(x, y) {
     // Using player_03.png sprite from spriteSheet
     const sprite = textureAtlas.frames["player_03.png"];
-    // Scale player to fit the tile size with a small margin
-    const margin = 2; // Small margin so player doesn't touch tile edges
-    const playerSize = tileSize - (margin * 2);
-    // Center the player sprite on the tile
-    const playerX = x + margin;
-    const playerY = y + margin;
+    // Add 1 pixel overlap to eliminate grid lines
+    const overlap = 1;
     context.drawImage(
-        spriteSheet, 
+        spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        playerX, playerY, playerSize, playerSize
+        x, y, tileSize + overlap, tileSize + overlap
     );
 }
 
