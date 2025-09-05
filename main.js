@@ -631,20 +631,25 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
         movingBox = null;
     }
     
-    // Set animation state based on movement direction
+    // Determine new animation state based on movement direction
+    let newAnimationState = 'idle';
     if (direction.x > 0) {
-        playerAnimationState = 'moving-right';
+        newAnimationState = 'moving-right';
     } else if (direction.x < 0) {
-        playerAnimationState = 'moving-left';
+        newAnimationState = 'moving-left';
     } else if (direction.y > 0) {
-        playerAnimationState = 'moving-down';
+        newAnimationState = 'moving-down';
     } else if (direction.y < 0) {
-        playerAnimationState = 'moving-up';
+        newAnimationState = 'moving-up';
     }
     
-    // Reset animation frame and timer for new animation
-    playerAnimationFrame = 0;
-    playerAnimationTimer = 0;
+    // Only reset animation if direction changed, otherwise continue current animation
+    if (playerAnimationState !== newAnimationState) {
+        playerAnimationState = newAnimationState;
+        playerAnimationFrame = 0;
+        playerAnimationTimer = 0;
+    }
+    // If same direction, keep current frame and timer for smooth continuation
 }
 
 function updatePlayerMovement(deltaTime) {
@@ -688,29 +693,19 @@ function updatePlayerAnimation(deltaTime) {
         return;
     }
     
-    // If moving, sync animation to movement progress instead of independent timer
-    if (isPlayerMoving) {
+    // Use timer-based animation for consistent frame progression during multi-tile movement
+    playerAnimationTimer += deltaTime;
+    
+    if (playerAnimationTimer >= playerAnimationSpeed) {
+        playerAnimationTimer = 0;
+        
         const frameSequence = playerAnimations[playerAnimationState];
         if (frameSequence && frameSequence.length > 1) {
-            // Calculate frame based on movement progress (0.0 to 1.0)
-            const frameIndex = Math.floor(moveAnimationProgress * frameSequence.length);
-            playerAnimationFrame = Math.min(frameIndex, frameSequence.length - 1);
+            // Advance to next frame in sequence, cycling through frames
+            playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
         } else {
+            // Single frame animations (like idle) stay at frame 0
             playerAnimationFrame = 0;
-        }
-    } else {
-        // When not moving, use timer-based animation for idle
-        playerAnimationTimer += deltaTime;
-        
-        if (playerAnimationTimer >= playerAnimationSpeed) {
-            playerAnimationTimer = 0;
-            
-            const frameSequence = playerAnimations[playerAnimationState];
-            if (frameSequence && frameSequence.length > 1) {
-                playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
-            } else {
-                playerAnimationFrame = 0;
-            }
         }
     }
 }
