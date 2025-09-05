@@ -289,35 +289,67 @@ let moveTargetBoxPos = { x: 0, y: 0 };
 function calculateOptimalTileSize() {
     if (!currentLevel) return 32;
     
+    // Define safe tile sizes that avoid scaling artifacts
+    // These are clean multiples/divisors of common sprite sizes (16px, 32px, 64px)
+    const safeTileSizes = [8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128];
+    
     // Calculate available screen space with padding
     const padding = 60; // Leave space for UI elements and margins
     const availableWidth = canvas.width - padding;
     const availableHeight = canvas.height - padding;
     
-    // Calculate max tile size that fits the screen (integer scaling to avoid artifacts)
+    // Calculate max tile size that fits the screen
     const maxTileWidth = Math.floor(availableWidth / currentLevel.width);
     const maxTileHeight = Math.floor(availableHeight / currentLevel.height);
+    const maxPossibleTileSize = Math.min(maxTileWidth, maxTileHeight);
     
-    // Use the smaller dimension to ensure the entire level fits
-    let optimalSize = Math.min(maxTileWidth, maxTileHeight);
+    // Find the largest safe tile size that fits within our constraints
+    let optimalSize = 8; // Default minimum safe size
     
-    // For small levels, apply maximum constraint to prevent overly large tiles
-    // For large levels, remove minimum constraint to ensure it always fits on screen
+    for (let size of safeTileSizes) {
+        if (size <= maxPossibleTileSize) {
+            optimalSize = size;
+        } else {
+            break; // Sizes are ordered, so we can stop here
+        }
+    }
+    
+    // Apply level-specific constraints
     const levelArea = currentLevel.width * currentLevel.height;
     const isLargeLevel = levelArea > 200 || currentLevel.width > 20 || currentLevel.height > 15;
     
-    if (isLargeLevel) {
-        // Large levels: prioritize fitting on screen, no minimum size
-        // Still ensure it's at least 1 pixel per tile
-        optimalSize = Math.max(1, optimalSize);
-    } else {
-        // Small levels: apply both min and max constraints for usability
+    if (!isLargeLevel) {
+        // Small levels: apply minimum constraint for usability
         const minTileSize = 24; // Minimum for mobile touch targets
         const maxTileSize = 64; // Maximum to prevent overly large tiles
-        optimalSize = Math.max(minTileSize, Math.min(optimalSize, maxTileSize));
+        
+        // Find the best safe size within min/max range
+        let bestSize = minTileSize;
+        for (let size of safeTileSizes) {
+            if (size >= minTileSize && size <= maxTileSize && size <= maxPossibleTileSize) {
+                bestSize = size;
+            }
+        }
+        optimalSize = bestSize;
     }
     
-    console.log(`Level size: ${currentLevel.width}x${currentLevel.height} (${levelArea} tiles), Large level: ${isLargeLevel}, Calculated tile size: ${optimalSize}px`);
+    // Ensure level never exceeds screen bounds
+    const levelWidth = currentLevel.width * optimalSize;
+    const levelHeight = currentLevel.height * optimalSize;
+    
+    if (levelWidth > availableWidth || levelHeight > availableHeight) {
+        // Fallback: use the largest safe size that definitely fits
+        for (let i = safeTileSizes.length - 1; i >= 0; i--) {
+            const size = safeTileSizes[i];
+            if (currentLevel.width * size <= availableWidth && 
+                currentLevel.height * size <= availableHeight) {
+                optimalSize = size;
+                break;
+            }
+        }
+    }
+    
+    console.log(`Level size: ${currentLevel.width}x${currentLevel.height} (${levelArea} tiles), Large level: ${isLargeLevel}, Safe tile size: ${optimalSize}px`);
     
     return optimalSize;
 }
@@ -803,24 +835,20 @@ function drawGameplay() {
 function drawFloorTile(x, y) {
     // Using ground_01.png sprite from spriteSheet
     const sprite = textureAtlas.frames["ground_05.png"];
-    // Add 1 pixel overlap to eliminate grid lines
-    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize + overlap, tileSize + overlap
+        x, y, tileSize, tileSize
     );
 }
 
 function drawWallTile(x, y) {
     // Using block_01.png sprite from spriteSheet
     const sprite = textureAtlas.frames["block_05.png"];
-    // Add 1 pixel overlap to eliminate grid lines
-    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize + overlap, tileSize + overlap
+        x, y, tileSize, tileSize
     );
 }
 
@@ -846,24 +874,20 @@ function drawGoalTile(x, y) {
 function drawBoxTile(x, y) {
     // Using crate_01.png sprite from spriteSheet
     const sprite = textureAtlas.frames["crate_01.png"];
-    // Add 1 pixel overlap to eliminate grid lines
-    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize + overlap, tileSize + overlap
+        x, y, tileSize, tileSize
     );
 }
 
 function drawPlayerTile(x, y) {
     // Using player_03.png sprite from spriteSheet
     const sprite = textureAtlas.frames["player_03.png"];
-    // Add 1 pixel overlap to eliminate grid lines
-    const overlap = 1;
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize + overlap, tileSize + overlap
+        x, y, tileSize, tileSize
     );
 }
 
