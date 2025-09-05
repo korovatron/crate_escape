@@ -285,6 +285,21 @@ let movingBox = null; // Box being pushed (if any)
 let moveStartBoxPos = { x: 0, y: 0 };
 let moveTargetBoxPos = { x: 0, y: 0 };
 
+// Player animation variables
+let playerAnimationState = 'idle'; // 'idle', 'moving-down', 'moving-up', 'moving-left', 'moving-right'
+let playerAnimationFrame = 0;
+let playerAnimationTimer = 0;
+const playerAnimationSpeed = 0.15; // Seconds between frame changes
+
+// Player animation frame sequences
+const playerAnimations = {
+    idle: [3],
+    'moving-down': [3, 4, 5],
+    'moving-up': [6, 7, 8], 
+    'moving-left': [18, 19, 20],
+    'moving-right': [15, 16, 17]
+};
+
 // Function to calculate optimal tile size with mobile-friendly constraints
 function calculateOptimalTileSize() {
     if (!currentLevel) return 32;
@@ -539,6 +554,11 @@ function loadLevel(setName, levelNumber) {
     moveTargetPos = { x: playerPos.x, y: playerPos.y };
     movingBox = null;
     
+    // Reset animation state
+    playerAnimationState = 'idle';
+    playerAnimationFrame = 0;
+    playerAnimationTimer = 0;
+    
     console.log(`Loaded level ${levelNumber} from ${setName}`);
     console.log(`Level size: ${currentLevel.width}x${currentLevel.height}`);
     console.log(`Using tile size: ${tileSize}px`);
@@ -585,16 +605,16 @@ function attemptPlayerMove(direction) {
         }
         
         // Start movement with box pushing
-        startPlayerMove(newX, newY, boxIndex, boxNewX, boxNewY);
+        startPlayerMove(newX, newY, boxIndex, boxNewX, boxNewY, direction);
     } else {
         // Simple movement without box
-        startPlayerMove(newX, newY);
+        startPlayerMove(newX, newY, null, 0, 0, direction);
     }
     
     return true;
 }
 
-function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxTargetY = 0) {
+function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxTargetY = 0, direction = {x: 0, y: 0}) {
     isPlayerMoving = true;
     moveAnimationProgress = 0;
     
@@ -610,6 +630,21 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
     } else {
         movingBox = null;
     }
+    
+    // Set animation state based on movement direction
+    if (direction.x > 0) {
+        playerAnimationState = 'moving-right';
+    } else if (direction.x < 0) {
+        playerAnimationState = 'moving-left';
+    } else if (direction.y > 0) {
+        playerAnimationState = 'moving-down';
+    } else if (direction.y < 0) {
+        playerAnimationState = 'moving-up';
+    }
+    
+    // Reset animation frame and timer for new animation
+    playerAnimationFrame = 0;
+    playerAnimationTimer = 0;
 }
 
 function updatePlayerMovement(deltaTime) {
@@ -631,7 +666,40 @@ function updatePlayerMovement(deltaTime) {
             currentLevel.boxes[movingBox.index].y = movingBox.targetPos.y;
             movingBox = null;
         }
+        
+        // Reset to idle animation when movement completes and no continuous input
+        if (!isContinuousInputActive()) {
+            playerAnimationState = 'idle';
+            playerAnimationFrame = 0;
+            playerAnimationTimer = 0;
+        }
     }
+}
+
+function updatePlayerAnimation(deltaTime) {
+    // Update animation timer
+    playerAnimationTimer += deltaTime;
+    
+    // Check if it's time to advance to the next frame
+    if (playerAnimationTimer >= playerAnimationSpeed) {
+        playerAnimationTimer = 0;
+        
+        const frameSequence = playerAnimations[playerAnimationState];
+        if (frameSequence && frameSequence.length > 1) {
+            // Advance to next frame in sequence
+            playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
+        } else {
+            // Single frame animations (like idle) stay at frame 0
+            playerAnimationFrame = 0;
+        }
+    }
+}
+
+function isContinuousInputActive() {
+    // Check if any movement keys are currently pressed
+    return isKeyDown('ArrowLeft') || isKeyDown('ArrowRight') || 
+           isKeyDown('ArrowUp') || isKeyDown('ArrowDown') ||
+           (isTouchActive && (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0));
 }
 
 function getCurrentPlayerPixelPos() {
@@ -701,6 +769,9 @@ function update(secondsPassed) {
     if (currentGameState === GAME_STATES.PLAYING) {
         // Update player movement animation
         updatePlayerMovement(secondsPassed);
+        
+        // Update player sprite animation
+        updatePlayerAnimation(secondsPassed);
         
         // Legacy key processing (can be removed later)
         if (isKeyDown('ArrowLeft') && canProcessKey('ArrowLeft')) {
@@ -882,13 +953,30 @@ function drawBoxTile(x, y) {
 }
 
 function drawPlayerTile(x, y) {
-    // Using player_03.png sprite from spriteSheet
-    const sprite = textureAtlas.frames["player_03.png"];
-    context.drawImage(
-        spriteSheet,
-        sprite.x, sprite.y, sprite.width, sprite.height,
-        x, y, tileSize, tileSize
-    );
+    // Get current animation frame sequence
+    const frameSequence = playerAnimations[playerAnimationState];
+    const frameNumber = frameSequence[playerAnimationFrame];
+    
+    // Get the sprite name for this frame (player sprites are numbered 01-24 with zero padding)
+    const spriteName = `player_${frameNumber.toString().padStart(2, '0')}.png`;
+    const sprite = textureAtlas.frames[spriteName];
+    
+    if (sprite) {
+        context.drawImage(
+            spriteSheet,
+            sprite.x, sprite.y, sprite.width, sprite.height,
+            x, y, tileSize, tileSize
+        );
+    } else {
+        // Fallback to default sprite if frame not found
+        const defaultSprite = textureAtlas.frames["player_03.png"];
+        context.drawImage(
+            spriteSheet,
+            defaultSprite.x, defaultSprite.y, defaultSprite.width, defaultSprite.height,
+            x, y, tileSize, tileSize
+        );
+        console.warn(`Player sprite not found: ${spriteName}`);
+    }
 }
 
 function drawLevelInfo() {
