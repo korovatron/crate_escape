@@ -91,6 +91,16 @@ const swipeThreshold = 30; // Minimum distance in px for swipe
 const tapTimeThreshold = 300; // Max ms for tap
 const tapMoveThreshold = 10; // Max px movement for tap
 
+// Continuous touch movement variables
+let touchCurrentX = 0;
+let touchCurrentY = 0;
+let isTouchActive = false;
+let lastTouchMoveTime = 0;
+let touchMoveDirection = { x: 0, y: 0 };
+let touchMoveTimer = null;
+const touchMoveThreshold = 20; // Minimum movement to trigger continuous movement
+const touchMoveCooldown = 200; // Milliseconds between continuous moves
+
 function setupCanvasEventListeners() {
     // Mouse events
     document.addEventListener("mousedown", function (e) {
@@ -121,12 +131,82 @@ function setupCanvasEventListeners() {
             const touch = e.touches[0];
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
+            touchCurrentX = touch.clientX;
+            touchCurrentY = touch.clientY;
             touchStartTime = Date.now();
             swipeProcessed = false; // Reset swipe flag
+            isTouchActive = true;
+            lastTouchMoveTime = 0;
+            touchMoveDirection = { x: 0, y: 0 };
+            
+            // Clear any existing continuous movement timer
+            if (touchMoveTimer) {
+                clearInterval(touchMoveTimer);
+                touchMoveTimer = null;
+            }
+        }
+    }, {passive: false});
+    
+    canvas.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1 && isTouchActive && currentGameState === GAME_STATES.PLAYING) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const currentTime = Date.now();
+            
+            touchCurrentX = touch.clientX;
+            touchCurrentY = touch.clientY;
+            
+            const dx = touchCurrentX - touchStartX;
+            const dy = touchCurrentY - touchStartY;
+            
+            // Determine movement direction based on current touch position
+            let newDirection = { x: 0, y: 0 };
+            
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > touchMoveThreshold) {
+                // Horizontal movement
+                newDirection.x = dx > 0 ? 1 : -1;
+            } else if (Math.abs(dy) > touchMoveThreshold) {
+                // Vertical movement  
+                newDirection.y = dy > 0 ? 1 : -1;
+            }
+            
+            // If direction changed or first movement, trigger immediate move
+            if ((newDirection.x !== touchMoveDirection.x || newDirection.y !== touchMoveDirection.y) && 
+                (newDirection.x !== 0 || newDirection.y !== 0)) {
+                
+                touchMoveDirection = newDirection;
+                lastTouchMoveTime = currentTime;
+                
+                // Attempt immediate movement
+                if (!isPlayerMoving) {
+                    attemptPlayerMove(touchMoveDirection);
+                }
+                
+                // Start continuous movement timer
+                if (touchMoveTimer) {
+                    clearInterval(touchMoveTimer);
+                }
+                
+                touchMoveTimer = setInterval(() => {
+                    if (isTouchActive && !isPlayerMoving && currentGameState === GAME_STATES.PLAYING &&
+                        (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0)) {
+                        attemptPlayerMove(touchMoveDirection);
+                    }
+                }, touchMoveCooldown);
+            }
         }
     }, {passive: false});
     
     canvas.addEventListener('touchend', function(e) {
+        // Stop continuous movement
+        isTouchActive = false;
+        touchMoveDirection = { x: 0, y: 0 };
+        if (touchMoveTimer) {
+            clearInterval(touchMoveTimer);
+            touchMoveTimer = null;
+        }
+        
+        // Handle tap for title screen transition (fallback for old swipe behavior)
         if (e.changedTouches.length === 1 && !swipeProcessed) {
             const touch = e.changedTouches[0];
             touchEndX = touch.clientX;
@@ -135,46 +215,8 @@ function setupCanvasEventListeners() {
             const dy = touchEndY - touchStartY;
             const dt = Date.now() - touchStartTime;
             
-            // Detect swipe
-            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold) {
-                swipeProcessed = true; // Mark as processed
-                if (dx > 0) {
-                    // Swipe right
-                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
-                        attemptPlayerMove({ x: 1, y: 0 });
-                    }
-                    lastInputType = "Swipe Right";
-                    lastInputTime = Date.now();
-                    inputFadeTimer = 2000;
-                } else {
-                    // Swipe left
-                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
-                        attemptPlayerMove({ x: -1, y: 0 });
-                    }
-                    lastInputType = "Swipe Left";
-                    lastInputTime = Date.now();
-                    inputFadeTimer = 2000;
-                }
-            } else if (Math.abs(dy) > swipeThreshold) {
-                swipeProcessed = true; // Mark as processed
-                if (dy > 0) {
-                    // Swipe down
-                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
-                        attemptPlayerMove({ x: 0, y: 1 });
-                    }
-                    lastInputType = "Swipe Down";
-                    lastInputTime = Date.now();
-                    inputFadeTimer = 2000;
-                } else {
-                    // Swipe up
-                    if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
-                        attemptPlayerMove({ x: 0, y: -1 });
-                    }
-                    lastInputType = "Swipe Up";
-                    lastInputTime = Date.now();
-                    inputFadeTimer = 2000;
-                }
-            } else if (dt < tapTimeThreshold && Math.abs(dx) < tapMoveThreshold && Math.abs(dy) < tapMoveThreshold) {
+            // Only handle tap for title screen transition now
+            if (dt < tapTimeThreshold && Math.abs(dx) < tapMoveThreshold && Math.abs(dy) < tapMoveThreshold) {
                 // Tap detected
                 if (currentGameState === GAME_STATES.TITLE) {
                     // Start game on tap from title screen
@@ -182,21 +224,13 @@ function setupCanvasEventListeners() {
                     lastInputType = "Game Started!";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
-                } else if (currentGameState === GAME_STATES.PLAYING) {
-                    // Normal tap behavior during gameplay
-                    pressedKeys.add(' '); // Spacebar
-                    setTimeout(() => pressedKeys.delete(' '), 50);
-                    // Calculate touch position for mouse coordinates
-                    let rect = canvas.getBoundingClientRect();
-                    let x = touch.clientX - rect.left;
-                    let y = touch.clientY - rect.top;
-                    mouseX = Math.round(x / scale);
-                    mouseY = Math.round(y / scale);
-                    lastInputType = "Touch Tap";
-                    clickCoordinates = `(${mouseX}, ${mouseY})`;
-                    lastInputTime = Date.now();
-                    inputFadeTimer = 2000;
                 }
+                
+                // Show tap feedback
+                lastInputType = "Tap";
+                lastInputTime = Date.now();
+                inputFadeTimer = 2000;
+                clickCoordinates = `(${Math.round(touch.clientX)}, ${Math.round(touch.clientY)})`;
             }
         }
     }, {passive: false});
