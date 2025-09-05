@@ -565,9 +565,9 @@ function loadLevel(setName, levelNumber) {
     console.log(`Player starts at: (${playerPos.x}, ${playerPos.y})`);
     console.log(`Boxes: ${currentLevel.boxes.length}, Goals: ${currentLevel.goals.length}`);
     
-    // Calculate level centering offsets
-    levelOffsetX = (canvas.width - currentLevel.width * tileSize) / 2;
-    levelOffsetY = (canvas.height - currentLevel.height * tileSize) / 2;
+    // Calculate level centering offsets - use Math.floor to ensure integer pixel positions
+    levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
+    levelOffsetY = Math.floor((canvas.height - currentLevel.height * tileSize) / 2);
     
     return true;
 }
@@ -764,8 +764,8 @@ function getCurrentPlayerPixelPos() {
     const lerpY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
     
     return {
-        x: levelOffsetX + lerpX * tileSize,
-        y: levelOffsetY + lerpY * tileSize
+        x: Math.round(levelOffsetX + lerpX * tileSize),
+        y: Math.round(levelOffsetY + lerpY * tileSize)
     };
 }
 
@@ -785,8 +785,8 @@ function getCurrentBoxPixelPos(boxIndex) {
     const lerpY = movingBox.startPos.y + (movingBox.targetPos.y - movingBox.startPos.y) * t;
     
     return {
-        x: levelOffsetX + lerpX * tileSize,
-        y: levelOffsetY + lerpY * tileSize
+        x: Math.round(levelOffsetX + lerpX * tileSize),
+        y: Math.round(levelOffsetY + lerpY * tileSize)
     };
 }
 
@@ -1066,9 +1066,9 @@ function recalculateLevelLayout() {
     // Recalculate optimal tile size for new screen dimensions
     tileSize = calculateOptimalTileSize();
     
-    // Recalculate level centering offsets
-    levelOffsetX = (canvas.width - currentLevel.width * tileSize) / 2;
-    levelOffsetY = (canvas.height - currentLevel.height * tileSize) / 2;
+    // Recalculate level centering offsets - use Math.floor to ensure integer pixel positions
+    levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
+    levelOffsetY = Math.floor((canvas.height - currentLevel.height * tileSize) / 2);
     
     console.log(`Screen resized - New tile size: ${tileSize}px, Level centered at: (${levelOffsetX}, ${levelOffsetY})`);
 }
