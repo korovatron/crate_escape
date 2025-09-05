@@ -267,8 +267,8 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = 'setI';
-let currentLevelNumber = 27; // Large level for testing responsive sizing
+let currentSet = 'setIII';
+let currentLevelNumber = 42; // Large level for testing responsive sizing
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
