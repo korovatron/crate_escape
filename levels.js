@@ -2020,21 +2020,6 @@ const SOKOBAN_LEVELS = {
             " #######"
         ],
 
-        // Level 2
-        [
-            "   ###",
-            "  ## # ####",
-            " ##  ###  #",
-            "## $      #",
-            "#   @$ #  #",
-            "### $###  #",
-            "  #  #..  #",
-            " ## ##.# ##",
-            " #      ##",
-            " #     ##",
-            " #######"
-        ],
-
         // Level 3
         [
             " ## #####",
@@ -2910,11 +2895,6 @@ const SOKOBAN_LEVELS = {
     // Sasquatch Set II (50 levels)
     Sasquatch_II: [
         // Level 1
-        [
-            " II"
-        ],
-
-        // Level 2
         [
             "#####",
             "#   #####",
@@ -3859,11 +3839,6 @@ const SOKOBAN_LEVELS = {
     // Sasquatch Set III (50 levels)
     Sasquatch_III: [
         // Level 1
-        [
-            " III"
-        ],
-
-        // Level 2
         [
             " #######",
             " #  *  #",

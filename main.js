@@ -30,9 +30,15 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Handle level restart with Escape key
-    if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
+    // Handle level try again with R key
+    if ((e.key === 'r' || e.key === 'R') && currentGameState === GAME_STATES.PLAYING) {
         restartCurrentLevel();
+        return;
+    }
+    
+    // Handle exit to title with Escape key
+    if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
+        currentGameState = GAME_STATES.TITLE;
         return;
     }
     
@@ -67,10 +73,11 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape'].includes(e.key)) {
+    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R'].includes(e.key)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
-        if (e.key === 'Escape') keyName = 'Escape (Restart)';
+        if (e.key === 'Escape') keyName = 'Escape (Exit)';
+        if (e.key === 'r' || e.key === 'R') keyName = 'R (Try Again)';
         
         lastInputType = `Keyboard: ${keyName}`;
         lastInputTime = Date.now();
@@ -136,10 +143,16 @@ function setupCanvasEventListeners() {
         // Get click position
         getMouseClickPosition(canvas, e);
         
-        // Check for restart button click during gameplay
-        if (currentGameState === GAME_STATES.PLAYING && isClickOnRestartButton(mouseX, mouseY)) {
-            restartCurrentLevel();
-            return;
+        // Check for button clicks during gameplay
+        if (currentGameState === GAME_STATES.PLAYING) {
+            if (isClickOnTryAgainButton(mouseX, mouseY)) {
+                restartCurrentLevel();
+                return;
+            }
+            if (isClickOnExitButton(mouseX, mouseY)) {
+                currentGameState = GAME_STATES.TITLE;
+                return;
+            }
         }
         
         // Handle game state transitions (same logic as space key)
@@ -277,10 +290,16 @@ function setupCanvasEventListeners() {
                 // Convert touch to canvas coordinates
                 const canvasPos = getTouchCanvasPosition(touch);
                 
-                // Check for restart button tap during gameplay
-                if (currentGameState === GAME_STATES.PLAYING && isClickOnRestartButton(canvasPos.x, canvasPos.y)) {
-                    restartCurrentLevel();
-                    return;
+                // Check for button taps during gameplay
+                if (currentGameState === GAME_STATES.PLAYING) {
+                    if (isClickOnTryAgainButton(canvasPos.x, canvasPos.y)) {
+                        restartCurrentLevel();
+                        return;
+                    }
+                    if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
+                        currentGameState = GAME_STATES.TITLE;
+                        return;
+                    }
                 }
                 
                 // Tap detected
@@ -1121,15 +1140,34 @@ function restartCurrentLevel() {
     }
 }
 
-function isClickOnRestartButton(x, y) {
-    // Restart button dimensions and position
-    const buttonWidth = 80;
-    const buttonHeight = 40;
-    const buttonX = canvas.width - buttonWidth - 10; // 10px margin from right edge
-    const buttonY = 10; // 10px margin from top
+function isClickOnTryAgainButton(x, y) {
+    const isMobile = canvas.width < 600;
+    const buttonWidth = isMobile ? 70 : 90;
+    const buttonHeight = isMobile ? 30 : 40;
+    const rightMargin = 10;
+    const buttonSpacing = 10;
     
-    return x >= buttonX && x <= buttonX + buttonWidth && 
-           y >= buttonY && y <= buttonY + buttonHeight;
+    const tryAgainButtonX = canvas.width - buttonWidth - rightMargin;
+    const tryAgainButtonY = isMobile ? 15 : 10;
+    
+    return x >= tryAgainButtonX && x <= tryAgainButtonX + buttonWidth &&
+           y >= tryAgainButtonY && y <= tryAgainButtonY + buttonHeight;
+}
+
+function isClickOnExitButton(x, y) {
+    const isMobile = canvas.width < 600;
+    const buttonWidth = isMobile ? 70 : 90;
+    const buttonHeight = isMobile ? 30 : 40;
+    const rightMargin = 10;
+    const buttonSpacing = 10;
+    
+    const tryAgainButtonX = canvas.width - buttonWidth - rightMargin;
+    const tryAgainButtonY = isMobile ? 15 : 10;
+    const exitButtonX = tryAgainButtonX - buttonWidth - buttonSpacing;
+    const exitButtonY = tryAgainButtonY;
+    
+    return x >= exitButtonX && x <= exitButtonX + buttonWidth &&
+           y >= exitButtonY && y <= exitButtonY + buttonHeight;
 }
 
 function getTouchCanvasPosition(touch) {
@@ -1489,12 +1527,21 @@ function drawStatusBar() {
     context.font = fontSize;
     context.textAlign = "left";
     
-    // Draw neon restart button first to reserve space
+    // Draw buttons (BACK and TRY AGAIN)
     const buttonWidth = isMobile ? 70 : 90;
     const buttonHeight = isMobile ? 30 : 40;
-    const buttonX = canvas.width - buttonWidth - 10;
-    const buttonY = isMobile ? 15 : 10;
-    const reservedButtonSpace = buttonWidth + 20; // Button width + padding
+    const buttonSpacing = 10;
+    const rightMargin = 10;
+    
+    // TRY AGAIN button (right side)
+    const tryAgainButtonX = canvas.width - buttonWidth - rightMargin;
+    const tryAgainButtonY = isMobile ? 15 : 10;
+    
+    // EXIT button (left of TRY AGAIN button)
+    const backButtonX = tryAgainButtonX - buttonWidth - buttonSpacing;
+    const backButtonY = tryAgainButtonY;
+    
+    const reservedButtonSpace = (buttonWidth * 2) + buttonSpacing + rightMargin + 20; // Both buttons + spacing + padding
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
@@ -1541,29 +1588,55 @@ function drawStatusBar() {
         }
     }
     
-    // Button neon glow background (more subtle)
-    context.shadowColor = "#ff6600";
+    // Draw EXIT button
+    // Button neon glow background (cyan/blue color)
+    context.shadowColor = "#00ccff";
     context.shadowBlur = 12;
-    context.fillStyle = "rgba(255, 102, 0, 0.2)";
-    context.fillRect(buttonX - 5, buttonY - 5, buttonWidth + 10, buttonHeight + 10);
+    context.fillStyle = "rgba(0, 204, 255, 0.2)";
+    context.fillRect(backButtonX - 5, backButtonY - 5, buttonWidth + 10, buttonHeight + 10);
     
     // Button background
     context.shadowBlur = 0;
     context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    context.fillRect(backButtonX, backButtonY, buttonWidth, buttonHeight);
     
-    // Button neon border (more subtle)
+    // Button neon border
+    context.shadowColor = "#00ccff";
+    context.shadowBlur = 8;
+    context.strokeStyle = "#00ccff";
+    context.lineWidth = 2;
+    context.strokeRect(backButtonX, backButtonY, buttonWidth, buttonHeight);
+    context.shadowBlur = 0;
+    
+    // Button text with cyan neon
+    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 14px 'Courier New', monospace";
+    context.textAlign = "center";
+    drawNeonText("EXIT", backButtonX + buttonWidth / 2, backButtonY + buttonHeight / 2 + 5, "#00ccff", "#00ccff");
+    
+    // Draw TRY AGAIN button
+    // Button neon glow background (orange color)
+    context.shadowColor = "#ff6600";
+    context.shadowBlur = 12;
+    context.fillStyle = "rgba(255, 102, 0, 0.2)";
+    context.fillRect(tryAgainButtonX - 5, tryAgainButtonY - 5, buttonWidth + 10, buttonHeight + 10);
+    
+    // Button background
+    context.shadowBlur = 0;
+    context.fillStyle = "rgba(30, 30, 30, 0.9)";
+    context.fillRect(tryAgainButtonX, tryAgainButtonY, buttonWidth, buttonHeight);
+    
+    // Button neon border
     context.shadowColor = "#ff6600";
     context.shadowBlur = 8;
     context.strokeStyle = "#ff6600";
     context.lineWidth = 2;
-    context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    context.strokeRect(tryAgainButtonX, tryAgainButtonY, buttonWidth, buttonHeight);
     context.shadowBlur = 0;
     
     // Button text with orange neon
-    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 14px 'Courier New', monospace";
+    context.font = isMobile ? "bold 10px 'Courier New', monospace" : "bold 12px 'Courier New', monospace";
     context.textAlign = "center";
-    drawNeonText("RESTART", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5, "#ff6600", "#ff6600");
+    drawNeonText("TRY AGAIN", tryAgainButtonX + buttonWidth / 2, tryAgainButtonY + buttonHeight / 2 + 5, "#ff6600", "#ff6600");
     
     // Reset text alignment
     context.textAlign = "left";
