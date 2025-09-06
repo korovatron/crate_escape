@@ -311,17 +311,24 @@ const GAME_STATES = {
 let currentGameState = GAME_STATES.TITLE;
 
 // Level progression variables
-let currentSetName = 'demo';
+let currentSetName = 'Microban';
 let isGameComplete = false;
 let levelCompletionStartTime = 0;
 
-// Level progression order: demo -> setI -> setII -> setIII
+// Level progression order: Microban -> Sasquatch_I -> Sasquatch_II -> Sasquatch_III
+// Level counts are automatically calculated from SOKOBAN_LEVELS
 const LEVEL_PROGRESSION = [
-    { setName: 'demo', levels: 1 },
-    { setName: 'setI', levels: 40 },
-    { setName: 'setII', levels: 54 },
-    { setName: 'setIII', levels: 60 }
+    { setName: 'Microban' },
+    { setName: 'Sasquatch_I' },
+    { setName: 'Sasquatch_II' },
+    { setName: 'Sasquatch_III' }
 ];
+
+// Function to get the number of levels in a set
+function getLevelCount(setName) {
+    const levelSet = SOKOBAN_LEVELS[setName];
+    return levelSet ? levelSet.length : 0;
+}
 
 // Input feedback variables
 let lastInputType = "";
@@ -331,7 +338,7 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = 'demo'; // Start with demo level
+let currentSet = 'Microban'; // Start with Microban levels
 let currentLevelNumber = 1; // Start with level 1
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
@@ -1026,9 +1033,10 @@ function getNextLevel() {
     // Find current set in progression
     const currentSetIndex = LEVEL_PROGRESSION.findIndex(set => set.setName === currentSet);
     const currentSetInfo = LEVEL_PROGRESSION[currentSetIndex];
+    const currentSetLevelCount = getLevelCount(currentSet);
     
     // Check if there are more levels in current set
-    if (currentLevelNumber < currentSetInfo.levels) {
+    if (currentLevelNumber < currentSetLevelCount) {
         return {
             setName: currentSet,
             levelNumber: currentLevelNumber + 1,
@@ -1435,17 +1443,8 @@ function drawStatusBar() {
     context.font = "18px Arial";
     context.textAlign = "left";
     
-    // Format set name for display
-    const setDisplayNames = {
-        'demo': 'Demo',
-        'setI': 'Set I',
-        'setII': 'Set II',
-        'setIII': 'Set III'
-    };
-    const setDisplayName = setDisplayNames[currentSet] || currentSet;
-    
     // Draw set and level info
-    const levelText = `${setDisplayName} - Level ${currentLevelNumber}`;
+    const levelText = `${currentSet} - Level ${currentLevelNumber}`;
     context.fillText(levelText, 15, 30);
     
     // Draw move count and attempt count
@@ -1516,13 +1515,7 @@ function drawLevelCompleteOverlay() {
         subtitle = "Congratulations! Game Complete!";
     } else if (nextLevel.setName !== currentSet) {
         // Moving to new set
-        const setNames = {
-            'demo': 'Demo',
-            'setI': 'Set I',
-            'setII': 'Set II', 
-            'setIII': 'Set III'
-        };
-        subtitle = `Starting ${setNames[nextLevel.setName] || nextLevel.setName}`;
+        subtitle = `Starting ${nextLevel.setName}`;
     } else {
         // Next level in same set
         subtitle = `Level ${nextLevel.levelNumber}`;
