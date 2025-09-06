@@ -1279,25 +1279,36 @@ function drawTitleScreen() {
     context.save();
     context.textAlign = "center";
     
-    // Detect mobile portrait mode and adjust sizing accordingly
+    // Detect device orientation and adjust sizing accordingly
     const isMobilePortrait = canvas.height > canvas.width && canvas.width < 768;
+    const isMobileLandscape = canvas.width > canvas.height && canvas.height < 600;
     const aspectRatio = canvas.height / canvas.width;
     
-    // Calculate responsive font sizes with moderate scaling for mobile portrait
+    // Calculate responsive font sizes with different scaling for each mode
     let baseSize;
     if (isMobilePortrait) {
         // More moderate size increase for mobile portrait
-        baseSize = Math.min(canvas.width / 10, canvas.height / 25); // Reduced from /8 to /10
+        baseSize = Math.min(canvas.width / 10, canvas.height / 25);
+    } else if (isMobileLandscape) {
+        // Balanced sizing for mobile landscape - fits everything while using more space
+        baseSize = Math.min(canvas.width / 18, canvas.height / 16); // More conservative than /12
     } else {
-        // Desktop/landscape sizing
+        // Desktop/large screen sizing
         baseSize = Math.min(canvas.width, canvas.height) / 15;
     }
     
     const smallSize = baseSize * 0.7;
     const largeSize = baseSize * 1.3;
     
-    // Starting Y position - closer to top on mobile portrait to use more space
-    let yPos = isMobilePortrait ? canvas.height * 0.08 : canvas.height * 0.1;
+    // Starting Y position - much closer to top on mobile landscape
+    let yPos;
+    if (isMobileLandscape) {
+        yPos = canvas.height * 0.05; // Very close to top for landscape
+    } else if (isMobilePortrait) {
+        yPos = canvas.height * 0.08;
+    } else {
+        yPos = canvas.height * 0.1;
+    }
     
     // Line 1: "The" - smaller, brighter industrial gray for visibility
     context.fillStyle = "#BBBBBB"; // Brightened from #888888 to #BBBBBB
@@ -1325,23 +1336,31 @@ function drawTitleScreen() {
     context.fillText("ESCAPE", canvas.width / 2, yPos);
     context.strokeText("ESCAPE", canvas.width / 2, yPos);
     
-    // Add spacing after title
-    yPos += largeSize * 0.8;
+    // Add spacing after title - balanced for mobile landscape
+    if (isMobileLandscape) {
+        yPos += largeSize * 0.6; // Moderate spacing - between tight (0.4) and normal (0.8)
+    } else {
+        yPos += largeSize * 0.8; // Normal spacing for portrait/desktop
+    }
     
-    // Instructions and info text - moderately larger on mobile portrait
+    // Instructions and info text - adjust size for mobile landscape
     let textSize;
     if (isMobilePortrait) {
-        textSize = baseSize * 0.5; // Reduced from 0.6 to 0.5
+        textSize = baseSize * 0.5;
+    } else if (isMobileLandscape) {
+        textSize = baseSize * 0.5; // Balanced size for landscape
     } else {
         textSize = baseSize * 0.4; // Original size for desktop/landscape
     }
-    const lineHeight = textSize * 1.4;
+    const lineHeight = textSize * 1.3; // Slightly tighter but not too compressed
     
     // Main instruction - larger and responsive with wrapping
-    yPos += lineHeight * 1.5;
+    yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Slightly reduced spacing for landscape
     let mainInstructionSize;
     if (isMobilePortrait) {
-        mainInstructionSize = textSize * 1.3; // Reduced from 1.4 to 1.3
+        mainInstructionSize = textSize * 1.3;
+    } else if (isMobileLandscape) {
+        mainInstructionSize = textSize * 1.25; // Moderate increase for landscape
     } else {
         mainInstructionSize = textSize * 1.3; // Original size for desktop
     }
@@ -1351,11 +1370,13 @@ function drawTitleScreen() {
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
     yPos = drawWrappedText(context, "Complete each level by pushing all crates into their designated positions.", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     
-    // Demo level preview - positioned right after main instruction
-    yPos += lineHeight * 2;
+    // Demo level preview - positioned right after main instruction with moderate spacing
+    yPos += lineHeight * (isMobileLandscape ? 1.5 : 2); // Moderate spacing for landscape
     let demoTileSize;
     if (isMobilePortrait) {
-        demoTileSize = Math.min(canvas.width / 15, 40); // Reduced from /12 to /15
+        demoTileSize = Math.min(canvas.width / 15, 40);
+    } else if (isMobileLandscape) {
+        demoTileSize = Math.min(canvas.width / 20, 28); // Moderate size for landscape
     } else {
         demoTileSize = Math.min(canvas.width / 20, 32); // Original size for desktop
     }
@@ -1439,23 +1460,27 @@ function drawTitleScreen() {
     }
     
     // Control instructions - larger and responsive with wrapping
-    yPos = demoStartY + (demoHeight * demoTileSize) + lineHeight * 2;
+    yPos = demoStartY + (demoHeight * demoTileSize) + lineHeight * (isMobileLandscape ? 1.5 : 2); // Moderate spacing for landscape
     let controlInstructionSize;
     if (isMobilePortrait) {
-        controlInstructionSize = textSize * 1.2; // Reduced from 1.3 to 1.2
+        controlInstructionSize = textSize * 1.2;
+    } else if (isMobileLandscape) {
+        controlInstructionSize = textSize * 1.1; // Moderate increase for landscape
     } else {
         controlInstructionSize = textSize * 1.1; // Original size for desktop
     }
     context.font = `400 ${controlInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#CCCCCC";
-    const controlInstructionLineHeight = controlInstructionSize * 1.4;
+    const controlInstructionLineHeight = controlInstructionSize * 1.3;
     yPos = drawWrappedText(context, "Press R to retry the level. Press ESC to exit and choose a different level.", canvas.width / 2, yPos, maxTextWidth, controlInstructionLineHeight);
     
     // Start instruction - positioned after controls
-    yPos += lineHeight * 1.5;
+    yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Moderate spacing for landscape
     let startInstructionSize;
     if (isMobilePortrait) {
-        startInstructionSize = textSize * 1.1; // Reduced from 1.2 to 1.1
+        startInstructionSize = textSize * 1.1;
+    } else if (isMobileLandscape) {
+        startInstructionSize = textSize * 1.05; // Moderate increase for landscape
     } else {
         startInstructionSize = textSize; // Original size for desktop
     }
@@ -1463,9 +1488,13 @@ function drawTitleScreen() {
     context.fillStyle = "#88CC88"; // Green for start action
     context.fillText("Space or Tap to start.", canvas.width / 2, yPos);
     
-    // Author credit - positioned after start instruction with more spacing
-    yPos += lineHeight * 3; // Increased from 2 to 3 for more spacing
-    context.font = `400 ${startInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`; // Same size as start instruction
+    // Author credit - positioned after start instruction with moderate spacing
+    yPos += lineHeight * (isMobileLandscape ? 1.8 : 3); // Moderate spacing for landscape
+    let authorSize = startInstructionSize; // Same size as start instruction
+    if (isMobileLandscape) {
+        authorSize = startInstructionSize * 0.95; // Slightly smaller for landscape to ensure it fits
+    }
+    context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
     context.fillText("a javascript game by Neil Kendall 2025", canvas.width / 2, yPos);
     
@@ -2044,7 +2073,7 @@ function drawLevelSelectScreen() {
     
     // Instructions
     context.font = `${fontSize - 4}px 'Courier New', monospace`;
-    context.fillStyle = "#cccccc";
+    context.fillStyle = "#ffffff"; // Changed from #cccccc to white for better mobile readability
     if (isMobile) {
         context.fillText("TAP ARROWS TO CHANGE • TAP START BUTTON", centerX, adjustedInstructionsY);
     } else {
