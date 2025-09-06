@@ -1463,15 +1463,9 @@ function drawTitleScreen() {
     context.fillStyle = "#88CC88"; // Green for start action
     context.fillText("Space or Tap to start.", canvas.width / 2, yPos);
     
-    // Author credit - positioned after start instruction instead of bottom
-    yPos += lineHeight * 2;
-    let authorSize;
-    if (isMobilePortrait) {
-        authorSize = textSize * 0.8; // Appropriate size for mobile portrait
-    } else {
-        authorSize = textSize * 0.9; // Original relative size for desktop
-    }
-    context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    // Author credit - positioned after start instruction with more spacing
+    yPos += lineHeight * 3; // Increased from 2 to 3 for more spacing
+    context.font = `400 ${startInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`; // Same size as start instruction
     context.fillStyle = "#FFCC00"; // Yellow color
     context.fillText("a javascript game by Neil Kendall 2025", canvas.width / 2, yPos);
     
