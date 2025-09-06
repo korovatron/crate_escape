@@ -676,7 +676,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     // Check if level needs panning (level is larger than screen with minimum tile size)
     const levelPixelWidth = currentLevel.width * tileSize;
     const levelPixelHeight = currentLevel.height * tileSize;
-    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT);
+    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > canvas.height;
     
     // Initialize player position from level data
     playerPos = {
@@ -687,30 +687,29 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     // Initialize camera position
     if (levelNeedsPanning) {
         const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
+        const halfScreenHeight = canvas.height / 2;
         
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
-            // Level is wider than screen - use camera panning
-            cameraX = Math.round(Math.max(0, Math.min(
-                levelPixelWidth - canvas.width,
-                playerPos.x * tileSize + tileSize / 2 - halfScreenWidth
-            )));
+            // Level is wider than screen - center player in middle of screen
+            const desiredCameraX = playerPos.x * tileSize + tileSize / 2 - halfScreenWidth;
+            cameraX = Math.round(Math.max(0, Math.min(levelPixelWidth - canvas.width, desiredCameraX)));
         } else {
             // Level fits horizontally - center it (use negative offset for centering)
             cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
         }
         
         // Handle Y axis (vertical)
-        if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
-            // Level is taller than screen - use camera panning
+        if (levelPixelHeight > canvas.height) {
+            // Level is taller than screen - center player in middle of visible game area
+            const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfScreenHeight;
             cameraY = Math.round(Math.max(0, Math.min(
-                levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT),
-                playerPos.y * tileSize + tileSize / 2 - halfScreenHeight
-            ))) + STATUS_BAR_HEIGHT;
+                levelPixelHeight - canvas.height,
+                desiredCameraY
+            )));
         } else {
-            // Level fits vertically - center it (use negative offset for centering)
-            cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
+            // Level fits vertically - center it
+            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
         }
     } else {
         // No panning needed, reset camera to 0
@@ -841,7 +840,7 @@ function updatePlayerMovement(deltaTime) {
         const levelPixelWidth = currentLevel.width * tileSize;
         const levelPixelHeight = currentLevel.height * tileSize;
         const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
+        const halfScreenHeight = canvas.height / 2;
         
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
@@ -854,13 +853,13 @@ function updatePlayerMovement(deltaTime) {
         }
         
         // Handle Y axis (vertical)
-        if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
+        if (levelPixelHeight > canvas.height) {
             // Level is taller than screen - follow player
             const desiredCameraY = currentPlayerY * tileSize + tileSize / 2 - halfScreenHeight;
-            cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT), desiredCameraY))) + STATUS_BAR_HEIGHT;
+            cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
         } else {
             // Level fits vertically - keep centered
-            cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
+            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
         }
     }
     
@@ -960,7 +959,7 @@ function checkForContinuedInput() {
 
 function getCurrentPlayerPixelPos() {
     if (levelNeedsPanning) {
-        // For panning levels, player stays in center of screen (camera follows player)
+        // For panning levels, player position with camera offset
         if (!isPlayerMoving) {
             return {
                 x: playerPos.x * tileSize - cameraX,
@@ -1197,7 +1196,7 @@ function updateCameraPosition() {
     
     // Calculate desired camera position to center player on screen
     const halfScreenWidth = canvas.width / 2;
-    const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
+    const halfScreenHeight = canvas.height / 2;
     
     // Handle X axis (horizontal)
     if (levelPixelWidth > canvas.width) {
@@ -1210,13 +1209,13 @@ function updateCameraPosition() {
     }
     
     // Handle Y axis (vertical)
-    if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
+    if (levelPixelHeight > canvas.height) {
         // Level is taller than screen - follow player
         const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfScreenHeight;
-        cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT), desiredCameraY))) + STATUS_BAR_HEIGHT;
+        cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
     } else {
         // Level fits vertically - keep centered
-        cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
+        cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
     }
 }
 
@@ -1317,6 +1316,14 @@ function drawGameplay() {
         return;
     }
     
+    // Save the context state
+    context.save();
+    
+    // Clip the drawing area to exclude the status bar
+    context.beginPath();
+    context.rect(0, STATUS_BAR_HEIGHT, canvas.width, canvas.height - STATUS_BAR_HEIGHT);
+    context.clip();
+    
     // Draw the level grid
     for (let y = 0; y < currentLevel.height; y++) {
         for (let x = 0; x < currentLevel.width; x++) {
@@ -1368,6 +1375,9 @@ function drawGameplay() {
     // Draw player with smooth movement
     const playerPixelPos = getCurrentPlayerPixelPos();
     drawPlayerTile(playerPixelPos.x, playerPixelPos.y);
+    
+    // Restore the context state (removes clipping)
+    context.restore();
     
     // Draw status bar on top of everything
     drawStatusBar();
@@ -2138,11 +2148,11 @@ function recalculateLevelLayout() {
     // Recalculate panning detection and camera positioning
     const levelPixelWidth = currentLevel.width * tileSize;
     const levelPixelHeight = currentLevel.height * tileSize;
-    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT);
+    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > canvas.height;
     
     if (levelNeedsPanning) {
         const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
+        const halfScreenHeight = canvas.height / 2;
         
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
@@ -2157,15 +2167,16 @@ function recalculateLevelLayout() {
         }
         
         // Handle Y axis (vertical)
-        if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
-            // Level is taller than screen - use camera panning
+        if (levelPixelHeight > canvas.height) {
+            // Level is taller than screen - center player in visible game area
+            const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfScreenHeight;
             cameraY = Math.round(Math.max(0, Math.min(
-                levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT),
-                playerPos.y * tileSize + tileSize / 2 - halfScreenHeight
-            ))) + STATUS_BAR_HEIGHT;
+                levelPixelHeight - canvas.height,
+                desiredCameraY
+            )));
         } else {
             // Level fits vertically - center it
-            cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
+            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
         }
     } else {
         // No panning needed, reset camera and use level centering
