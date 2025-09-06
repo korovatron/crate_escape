@@ -29,6 +29,12 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
+    // Handle level restart with Escape key
+    if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
+        restartCurrentLevel();
+        return;
+    }
+    
     // Handle player movement during gameplay
     if (currentGameState === GAME_STATES.PLAYING && !isPlayerMoving) {
         let moveDirection = { x: 0, y: 0 };
@@ -54,8 +60,12 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
-        lastInputType = `Keyboard: ${e.key === ' ' ? 'Space' : e.key}`;
+    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape'].includes(e.key)) {
+        let keyName = e.key;
+        if (e.key === ' ') keyName = 'Space';
+        if (e.key === 'Escape') keyName = 'Escape (Restart)';
+        
+        lastInputType = `Keyboard: ${keyName}`;
         lastInputTime = Date.now();
         inputFadeTimer = 2000; // Show for 2 seconds
     }
@@ -75,6 +85,9 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             break;
         case " ":
+            e.preventDefault();
+            break;
+        case "Escape":
             e.preventDefault();
             break;
     }
@@ -107,6 +120,15 @@ const touchMoveCooldown = 200; // Milliseconds between continuous moves
 function setupCanvasEventListeners() {
     // Mouse events
     document.addEventListener("mousedown", function (e) {
+        // Get click position
+        getMouseClickPosition(canvas, e);
+        
+        // Check for restart button click during gameplay
+        if (currentGameState === GAME_STATES.PLAYING && isClickOnRestartButton(mouseX, mouseY)) {
+            restartCurrentLevel();
+            return;
+        }
+        
         // Handle game state transitions (same logic as space key)
         if (currentGameState === GAME_STATES.TITLE) {
             currentGameState = GAME_STATES.PLAYING;
@@ -114,10 +136,12 @@ function setupCanvasEventListeners() {
             lastInputTime = Date.now();
             inputFadeTimer = 2000;
             return;
+        } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
+            advanceToNextLevel();
+            return;
         }
         
         // Visual feedback for mouse click during gameplay
-        getMouseClickPosition(canvas, e);
         lastInputType = "Mouse Click";
         clickCoordinates = `(${mouseX}, ${mouseY})`;
         lastInputTime = Date.now();
@@ -232,6 +256,15 @@ function setupCanvasEventListeners() {
             
             // Only handle tap for title screen transition now
             if (dt < tapTimeThreshold && Math.abs(dx) < tapMoveThreshold && Math.abs(dy) < tapMoveThreshold) {
+                // Convert touch to canvas coordinates
+                const canvasPos = getTouchCanvasPosition(touch);
+                
+                // Check for restart button tap during gameplay
+                if (currentGameState === GAME_STATES.PLAYING && isClickOnRestartButton(canvasPos.x, canvasPos.y)) {
+                    restartCurrentLevel();
+                    return;
+                }
+                
                 // Tap detected
                 if (currentGameState === GAME_STATES.TITLE) {
                     // Start game on tap from title screen
@@ -309,6 +342,11 @@ let cameraX = 0; // Camera position in world coordinates
 let cameraY = 0;
 let levelNeedsPanning = false; // Whether level is larger than screen
 
+// Status bar configuration
+const STATUS_BAR_HEIGHT = 60;
+let moveCount = 0;
+let attemptCount = 1; // Start at 1 since first play is attempt 1
+
 // Player movement variables
 let playerPos = { x: 0, y: 0 }; // Current player position in grid coordinates
 let playerPixelPos = { x: 0, y: 0 }; // Current player position in pixel coordinates
@@ -348,7 +386,7 @@ function calculateOptimalTileSize() {
     // Calculate available screen space with padding
     const padding = 60; // Leave space for UI elements and margins
     const availableWidth = canvas.width - padding;
-    const availableHeight = canvas.height - padding;
+    const availableHeight = canvas.height - padding - STATUS_BAR_HEIGHT; // Account for status bar
     
     // Calculate max tile size that fits the screen
     const maxTileWidth = Math.floor(availableWidth / currentLevel.width);
@@ -563,12 +601,20 @@ function gameLoad() {
 }
 
 // Function to load a specific level
-function loadLevel(setName, levelNumber) {
+function loadLevel(setName, levelNumber, isRestart = false) {
     currentLevel = LevelManager.getParsedLevel(setName, levelNumber);
     
     if (!currentLevel) {
         console.error(`Failed to load level ${levelNumber} from set ${setName}`);
         return false;
+    }
+    
+    // Reset move count for level load/restart
+    moveCount = 0;
+    
+    // Only reset attempt count for new levels, not restarts
+    if (!isRestart) {
+        attemptCount = 1;
     }
     
     // Calculate optimal tile size for this level and screen
@@ -577,7 +623,7 @@ function loadLevel(setName, levelNumber) {
     // Check if level needs panning (level is larger than screen with minimum tile size)
     const levelPixelWidth = currentLevel.width * tileSize;
     const levelPixelHeight = currentLevel.height * tileSize;
-    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > canvas.height;
+    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT);
     
     // Initialize player position from level data
     playerPos = {
@@ -588,7 +634,7 @@ function loadLevel(setName, levelNumber) {
     // Initialize camera position
     if (levelNeedsPanning) {
         const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = canvas.height / 2;
+        const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
         
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
@@ -603,15 +649,15 @@ function loadLevel(setName, levelNumber) {
         }
         
         // Handle Y axis (vertical)
-        if (levelPixelHeight > canvas.height) {
+        if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
             // Level is taller than screen - use camera panning
             cameraY = Math.round(Math.max(0, Math.min(
-                levelPixelHeight - canvas.height,
+                levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT),
                 playerPos.y * tileSize + tileSize / 2 - halfScreenHeight
-            )));
+            ))) + STATUS_BAR_HEIGHT;
         } else {
             // Level fits vertically - center it (use negative offset for centering)
-            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
+            cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
         }
     } else {
         // No panning needed, reset camera to 0
@@ -638,7 +684,7 @@ function loadLevel(setName, levelNumber) {
     
     // Calculate level centering offsets - use Math.floor to ensure integer pixel positions
     levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
-    levelOffsetY = Math.floor((canvas.height - currentLevel.height * tileSize) / 2);
+    levelOffsetY = Math.floor((canvas.height - STATUS_BAR_HEIGHT - currentLevel.height * tileSize) / 2) + STATUS_BAR_HEIGHT;
     
     return true;
 }
@@ -688,6 +734,9 @@ function attemptPlayerMove(direction) {
 function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxTargetY = 0, direction = {x: 0, y: 0}) {
     isPlayerMoving = true;
     moveAnimationProgress = 0;
+    
+    // Increment move count
+    moveCount++;
     
     moveStartPos = { x: playerPos.x, y: playerPos.y };
     moveTargetPos = { x: targetX, y: targetY };
@@ -739,7 +788,7 @@ function updatePlayerMovement(deltaTime) {
         const levelPixelWidth = currentLevel.width * tileSize;
         const levelPixelHeight = currentLevel.height * tileSize;
         const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = canvas.height / 2;
+        const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
         
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
@@ -752,13 +801,13 @@ function updatePlayerMovement(deltaTime) {
         }
         
         // Handle Y axis (vertical)
-        if (levelPixelHeight > canvas.height) {
+        if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
             // Level is taller than screen - follow player
             const desiredCameraY = currentPlayerY * tileSize + tileSize / 2 - halfScreenHeight;
-            cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
+            cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT), desiredCameraY))) + STATUS_BAR_HEIGHT;
         } else {
             // Level fits vertically - keep centered
-            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
+            cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
         }
     }
     
@@ -1024,6 +1073,38 @@ function advanceToNextLevel() {
     }
 }
 
+function restartCurrentLevel() {
+    // Increment attempt count
+    attemptCount++;
+    
+    // Reload the current level with restart flag
+    if (loadLevel(currentSet, currentLevelNumber, true)) {
+        currentGameState = GAME_STATES.PLAYING;
+        console.log(`Restarted level ${currentLevelNumber} from ${currentSet} (Attempt ${attemptCount})`);
+    } else {
+        console.error(`Failed to restart level ${currentLevelNumber} from ${currentSet}`);
+    }
+}
+
+function isClickOnRestartButton(x, y) {
+    // Restart button dimensions and position
+    const buttonWidth = 80;
+    const buttonHeight = 40;
+    const buttonX = canvas.width - buttonWidth - 10; // 10px margin from right edge
+    const buttonY = 10; // 10px margin from top
+    
+    return x >= buttonX && x <= buttonX + buttonWidth && 
+           y >= buttonY && y <= buttonY + buttonHeight;
+}
+
+function getTouchCanvasPosition(touch) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: Math.round((touch.clientX - rect.left) / scale),
+        y: Math.round((touch.clientY - rect.top) / scale)
+    };
+}
+
 function getInterpolationValue(progress) {
     // Use linear interpolation for continuous movement to avoid pauses
     // Use eased interpolation for single movements for natural feel
@@ -1043,7 +1124,7 @@ function updateCameraPosition() {
     
     // Calculate desired camera position to center player on screen
     const halfScreenWidth = canvas.width / 2;
-    const halfScreenHeight = canvas.height / 2;
+    const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
     
     // Handle X axis (horizontal)
     if (levelPixelWidth > canvas.width) {
@@ -1056,13 +1137,13 @@ function updateCameraPosition() {
     }
     
     // Handle Y axis (vertical)
-    if (levelPixelHeight > canvas.height) {
+    if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
         // Level is taller than screen - follow player
         const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfScreenHeight;
-        cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
+        cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT), desiredCameraY))) + STATUS_BAR_HEIGHT;
     } else {
         // Level fits vertically - keep centered
-        cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
+        cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
     }
 }
 
@@ -1212,6 +1293,9 @@ function drawGameplay() {
     // Draw player with smooth movement
     const playerPixelPos = getCurrentPlayerPixelPos();
     drawPlayerTile(playerPixelPos.x, playerPixelPos.y);
+    
+    // Draw status bar on top of everything
+    drawStatusBar();
 }
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
@@ -1337,14 +1421,86 @@ function drawLevelInfo() {
     context.fillText(`Goals: ${currentLevel.goals.length}`, 20, 90);
 }
 
-function drawLevelCompleteOverlay() {
-    // Draw semi-transparent overlay
+function drawStatusBar() {
+    // Draw status bar background
     context.fillStyle = "rgba(0, 0, 0, 0.8)";
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     
+    // Draw border line at bottom of status bar
+    context.fillStyle = "#444444";
+    context.fillRect(0, STATUS_BAR_HEIGHT - 2, canvas.width, 2);
+    
+    // Set text properties
+    context.fillStyle = "#ffffff";
+    context.font = "18px Arial";
+    context.textAlign = "left";
+    
+    // Format set name for display
+    const setDisplayNames = {
+        'demo': 'Demo',
+        'setI': 'Set I',
+        'setII': 'Set II',
+        'setIII': 'Set III'
+    };
+    const setDisplayName = setDisplayNames[currentSet] || currentSet;
+    
+    // Draw set and level info
+    const levelText = `${setDisplayName} - Level ${currentLevelNumber}`;
+    context.fillText(levelText, 15, 30);
+    
+    // Draw move count and attempt count
+    const moveText = `Moves: ${moveCount}`;
+    const attemptText = `Attempts: ${attemptCount}`;
+    const levelTextWidth = context.measureText(levelText).width;
+    const moveTextWidth = context.measureText(moveText).width;
+    
+    context.fillText(moveText, 15 + levelTextWidth + 40, 30);
+    context.fillText(attemptText, 15 + levelTextWidth + 40 + moveTextWidth + 30, 30);
+    
+    // Draw restart button
+    const buttonWidth = 80;
+    const buttonHeight = 40;
+    const buttonX = canvas.width - buttonWidth - 10;
+    const buttonY = 10;
+    
+    // Button background
+    context.fillStyle = "#555555";
+    context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Button border
+    context.strokeStyle = "#888888";
+    context.lineWidth = 2;
+    context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Button text
+    context.fillStyle = "#ffffff";
+    context.font = "14px Arial";
+    context.textAlign = "center";
+    context.fillText("RESTART", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+    
+    // Reset text alignment
+    context.textAlign = "left";
+}
+
+function drawLevelCompleteOverlay() {
     // Calculate text positioning
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
+    
+    // Calculate overlay height based on content
+    const lineHeight = 60; // Space between text lines
+    const padding = 40; // Top and bottom padding
+    const overlayHeight = 200; // Fixed height for 4 lines of text + padding
+    const overlayY = centerY - overlayHeight / 2;
+    
+    // Draw semi-transparent overlay (full width, centered height)
+    context.fillStyle = "rgba(0, 0, 0, 0.8)";
+    context.fillRect(0, overlayY, canvas.width, overlayHeight);
+    
+    // Draw subtle border at top and bottom
+    context.fillStyle = "#444444";
+    context.fillRect(0, overlayY, canvas.width, 2); // Top border
+    context.fillRect(0, overlayY + overlayHeight - 2, canvas.width, 2); // Bottom border
     
     // Main completion message
     context.fillStyle = "#ffffff";
@@ -1375,10 +1531,16 @@ function drawLevelCompleteOverlay() {
     context.font = "24px Arial";
     context.fillText(subtitle, centerX, centerY + 10);
     
+    // Show completion stats
+    context.font = "20px Arial";
+    context.fillStyle = "#ffdd00"; // Gold color for stats
+    const statsText = `Completed in ${moveCount} moves (Attempt ${attemptCount})`;
+    context.fillText(statsText, centerX, centerY + 40);
+    
     // Instructions
     context.font = "18px Arial";
     context.fillStyle = "#cccccc";
-    context.fillText("Press SPACE or TAP to continue", centerX, centerY + 60);
+    context.fillText("Press SPACE or TAP to continue", centerX, centerY + 70);
     
     // Reset text alignment
     context.textAlign = "left";
@@ -1413,11 +1575,11 @@ function recalculateLevelLayout() {
     // Recalculate panning detection and camera positioning
     const levelPixelWidth = currentLevel.width * tileSize;
     const levelPixelHeight = currentLevel.height * tileSize;
-    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > canvas.height;
+    levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT);
     
     if (levelNeedsPanning) {
         const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = canvas.height / 2;
+        const halfScreenHeight = (canvas.height - STATUS_BAR_HEIGHT) / 2;
         
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
@@ -1432,15 +1594,15 @@ function recalculateLevelLayout() {
         }
         
         // Handle Y axis (vertical)
-        if (levelPixelHeight > canvas.height) {
+        if (levelPixelHeight > (canvas.height - STATUS_BAR_HEIGHT)) {
             // Level is taller than screen - use camera panning
             cameraY = Math.round(Math.max(0, Math.min(
-                levelPixelHeight - canvas.height,
+                levelPixelHeight - (canvas.height - STATUS_BAR_HEIGHT),
                 playerPos.y * tileSize + tileSize / 2 - halfScreenHeight
-            )));
+            ))) + STATUS_BAR_HEIGHT;
         } else {
             // Level fits vertically - center it
-            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
+            cameraY = Math.round(-((canvas.height - STATUS_BAR_HEIGHT) - levelPixelHeight) / 2) + STATUS_BAR_HEIGHT;
         }
     } else {
         // No panning needed, reset camera and use level centering
@@ -1449,7 +1611,7 @@ function recalculateLevelLayout() {
         
         // Recalculate level centering offsets for smaller levels
         levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
-        levelOffsetY = Math.floor((canvas.height - currentLevel.height * tileSize) / 2);
+        levelOffsetY = Math.floor((canvas.height - STATUS_BAR_HEIGHT - currentLevel.height * tileSize) / 2) + STATUS_BAR_HEIGHT;
     }
     
     console.log(`Screen resized - New tile size: ${tileSize}px, Panning: ${levelNeedsPanning}, Camera: (${cameraX}, ${cameraY})`);
