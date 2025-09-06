@@ -1545,9 +1545,12 @@ function drawLevelCompleteOverlay() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     
+    // Mobile detection and responsive sizing
+    const isMobile = canvas.width < 600;
+    const padding = isMobile ? 20 : 40; // Reduce padding on mobile
+    
     // Calculate overlay height based on content
     const lineHeight = 60; // Space between text lines
-    const padding = 40; // Top and bottom padding
     const overlayHeight = 200; // Fixed height for 4 lines of text + padding
     const overlayY = centerY - overlayHeight / 2;
     
@@ -1567,19 +1570,43 @@ function drawLevelCompleteOverlay() {
     context.fillRect(0, overlayY + overlayHeight - 3, canvas.width, 3); // Bottom border
     context.shadowBlur = 0;
     
-    // Helper function to draw neon text (more subtle version)
-    function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff", fontSize = "24px") {
-        context.font = `bold ${fontSize} 'Courier New', monospace`;
+    // Helper function to draw responsive text with overflow protection
+    function drawResponsiveText(text, x, y, color = "#00ffff", baseFontSize = 24) {
+        // Responsive font sizing
+        const fontSize = isMobile ? Math.max(baseFontSize * 0.7, 16) : baseFontSize;
+        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        
+        // Check if text fits, if not, try smaller font or truncate
+        let adjustedText = text;
+        let textWidth = context.measureText(adjustedText).width;
+        const maxWidth = canvas.width - (padding * 2);
+        
+        if (textWidth > maxWidth) {
+            // Try smaller font first
+            const smallerSize = fontSize * 0.8;
+            context.font = `bold ${smallerSize}px 'Courier New', monospace`;
+            textWidth = context.measureText(adjustedText).width;
+            
+            // If still too wide, truncate text
+            if (textWidth > maxWidth) {
+                while (textWidth > maxWidth && adjustedText.length > 10) {
+                    adjustedText = adjustedText.slice(0, -4) + "...";
+                    textWidth = context.measureText(adjustedText).width;
+                }
+            }
+        }
         
         // Draw text without glow - just the color
         context.shadowBlur = 0;
         context.fillStyle = color;
-        context.fillText(text, x, y);
+        context.fillText(adjustedText, x, y);
+        
+        return adjustedText; // Return in case caller needs the adjusted text
     }
     
     // Main completion message with green neon glow
     context.textAlign = "center";
-    drawNeonText("LEVEL COMPLETE!", centerX, centerY - 40, "#00ff00", "#00ff00", "48px");
+    drawResponsiveText("LEVEL COMPLETE!", centerX, centerY - 40, "#00ff00", 48);
     
     // Get next level info for subtitle
     const nextLevel = getNextLevel();
@@ -1599,22 +1626,32 @@ function drawLevelCompleteOverlay() {
         subtitleColor = "#00ffff"; // Cyan for next level
     }
     
-    drawNeonText(subtitle, centerX, centerY + 10, subtitleColor, subtitleColor, "24px");
+    drawResponsiveText(subtitle, centerX, centerY + 10, subtitleColor, 24);
     
     // Show completion stats with gold neon
     const statsText = `COMPLETED IN ${moveCount} MOVES (ATTEMPT ${attemptCount})`;
-    drawNeonText(statsText, centerX, centerY + 40, "#ffdd00", "#ffdd00", "20px");
+    drawResponsiveText(statsText, centerX, centerY + 40, "#ffdd00", 20);
     
     // Instructions with pulsing effect
     const time = Date.now() / 1000;
     const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
     const instructColor = `rgba(255, 255, 255, ${pulse})`;
     
-    context.font = "bold 18px 'Courier New', monospace";
+    // Use responsive sizing for instructions too
+    const instructFontSize = isMobile ? 14 : 18;
+    context.font = `bold ${instructFontSize}px 'Courier New', monospace`;
     context.shadowColor = "#ffffff";
     context.shadowBlur = 10 * pulse;
     context.fillStyle = instructColor;
-    context.fillText("PRESS SPACE OR TAP TO CONTINUE", centerX, centerY + 70);
+    
+    // Check if instruction text fits
+    let instructText = "PRESS SPACE OR TAP TO CONTINUE";
+    let instructWidth = context.measureText(instructText).width;
+    if (instructWidth > canvas.width - (padding * 2)) {
+        instructText = "TAP TO CONTINUE";
+    }
+    
+    context.fillText(instructText, centerX, centerY + 70);
     context.shadowBlur = 0;
     
     // Reset text alignment
