@@ -1865,7 +1865,7 @@ function drawStatusBar() {
         // Draw moves and attempts separately to maintain colors
         drawNeonText(moveText, 15, 45, "#00ff88", "#00ff88");
         const moveTextWidth = context.measureText(moveText).width;
-        drawNeonText(attemptText, 15 + moveTextWidth + 20, 45, "#ff00ff", "#ff00ff");
+        drawNeonText(attemptText, 15 + moveTextWidth + 20, 45, "#ffff00", "#ffff00");
     } else {
         // Desktop layout: Single row with proper spacing
         const levelText = `${currentSet} - Level ${currentLevelNumber}`;
@@ -1884,7 +1884,7 @@ function drawStatusBar() {
             // All text fits - use normal spacing
             drawNeonText(levelText, 15, 35, "#00ffff", "#00ffff");
             drawNeonText(moveText, 15 + levelTextWidth + 30, 35, "#00ff88", "#00ff88");
-            drawNeonText(attemptText, 15 + levelTextWidth + 30 + moveTextWidth + 30, 35, "#ff00ff", "#ff00ff");
+            drawNeonText(attemptText, 15 + levelTextWidth + 30 + moveTextWidth + 30, 35, "#ffff00", "#ffff00");
         } else {
             // Text doesn't fit - use abbreviated format
             const shortLevelText = `${currentSet} - Lv${currentLevelNumber}`;
