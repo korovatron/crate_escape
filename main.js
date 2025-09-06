@@ -1372,24 +1372,33 @@ function drawTitleScreen() {
     
     // Demo level preview - positioned right after main instruction with moderate spacing
     yPos += lineHeight * (isMobileLandscape ? 1.5 : 2); // Moderate spacing for landscape
-    let demoTileSize;
+    
+    // Calculate demo tile size with pixel-perfect scaling to avoid artifacts
+    let baseDemoTileSize;
     if (isMobilePortrait) {
-        demoTileSize = Math.min(canvas.width / 15, 40);
+        baseDemoTileSize = Math.min(canvas.width / 15, 40);
     } else if (isMobileLandscape) {
-        demoTileSize = Math.min(canvas.width / 20, 28); // Moderate size for landscape
+        baseDemoTileSize = Math.min(canvas.width / 20, 28); // Moderate size for landscape
     } else {
-        demoTileSize = Math.min(canvas.width / 20, 32); // Original size for desktop
+        baseDemoTileSize = Math.min(canvas.width / 20, 32); // Original size for desktop
     }
+    
+    // Ensure tile size is an integer for pixel-perfect rendering
+    const demoTileSize = Math.floor(baseDemoTileSize);
+    
     const demoWidth = 7; // 7 tiles wide
     const demoHeight = 3; // 3 tiles high
-    const demoStartX = (canvas.width - (demoWidth * demoTileSize)) / 2;
-    const demoStartY = yPos;
     
-    // Draw demo level tiles
+    // Pixel-align the demo level position
+    const demoStartX = Math.floor((canvas.width - (demoWidth * demoTileSize)) / 2);
+    const demoStartY = Math.floor(yPos);
+    
+    // Draw demo level tiles with pixel-perfect positioning
     for (let y = 0; y < demoHeight; y++) {
         for (let x = 0; x < demoWidth; x++) {
-            const tileX = demoStartX + x * demoTileSize;
-            const tileY = demoStartY + y * demoTileSize;
+            // Ensure pixel-aligned tile positions
+            const tileX = Math.floor(demoStartX + x * demoTileSize);
+            const tileY = Math.floor(demoStartY + y * demoTileSize);
             
             if (y === 0 || y === 2 || x === 0 || x === 6) {
                 // Wall tiles - same as main game
@@ -1429,9 +1438,9 @@ function drawTitleScreen() {
                     // Goal tile - same as main game (floor + goal sprite with margin)
                     const goalSprite = textureAtlas.frames["environment_06.png"];
                     const goalMargin = Math.max(1, Math.floor(demoTileSize / 8)); // Scale margin with tile size
-                    const goalSize = demoTileSize - (goalMargin * 2);
-                    const goalX = tileX + goalMargin;
-                    const goalY = tileY + goalMargin;
+                    const goalSize = Math.floor(demoTileSize - (goalMargin * 2)); // Ensure integer size
+                    const goalX = Math.floor(tileX + goalMargin); // Pixel-align goal position
+                    const goalY = Math.floor(tileY + goalMargin);
                     context.drawImage(
                         spriteSheet,
                         goalSprite.x, goalSprite.y, goalSprite.width, goalSprite.height,
@@ -1439,21 +1448,63 @@ function drawTitleScreen() {
                     );
                 }
                 
-                // Add movement arrows on empty tiles
+                // Add movement arrows on empty tiles with dramatic manual glow effect
                 if (x === 2 || x === 4) {
-                    // Draw small white arrow pointing right
-                    const arrowSize = demoTileSize * 0.4;
-                    const arrowX = tileX + demoTileSize / 2;
-                    const arrowY = tileY + demoTileSize / 2;
+                    // Draw arrow with bright blue glow for maximum contrast against brown ground
+                    const arrowSize = Math.floor(demoTileSize * 0.4);
+                    const arrowX = Math.floor(tileX + demoTileSize / 2);
+                    const arrowY = Math.floor(tileY + demoTileSize / 2);
                     
-                    context.fillStyle = "#FFFFFF";
-                    context.beginPath();
-                    // Arrow pointing right: triangle
-                    context.moveTo(arrowX - arrowSize/3, arrowY - arrowSize/3);
-                    context.lineTo(arrowX + arrowSize/3, arrowY);
-                    context.lineTo(arrowX - arrowSize/3, arrowY + arrowSize/3);
-                    context.closePath();
-                    context.fill();
+                    // Calculate pulsating intensity
+                    const time = Date.now() * 0.005;
+                    const glowIntensity = 0.5 + 0.5 * Math.sin(time); // 0.5 to 1.0 for brighter baseline
+                    
+                    // Save context
+                    context.save();
+                    
+                    // Create manual glow effect with bright blue colors for contrast against brown ground
+                    const arrowThird = Math.floor(arrowSize / 3);
+                    
+                    // Draw multiple glow layers from largest to smallest
+                    for (let layer = 6; layer >= 0; layer--) {
+                        const layerSize = arrowSize + layer * 4; // Each layer 4px larger for bigger glow
+                        const layerThird = Math.floor(layerSize / 3);
+                        const baseOpacity = glowIntensity * 0.4; // Much higher base opacity
+                        
+                        if (layer > 4) {
+                            // Outer bright blue glow layers - perfect contrast against brown
+                            context.fillStyle = `rgba(0, 150, 255, ${baseOpacity / (layer - 2)})`; // Bright blue
+                        } else if (layer > 2) {
+                            // Middle cyan-blue glow layers - bright and prominent
+                            context.fillStyle = `rgba(100, 200, 255, ${baseOpacity / (layer - 1)})`; // Light blue
+                        } else if (layer > 0) {
+                            // Inner bright cyan layers
+                            context.fillStyle = `rgba(200, 230, 255, ${baseOpacity * 1.5})`; // Very light blue
+                        } else {
+                            // Core very bright white arrow
+                            context.fillStyle = `rgba(255, 255, 255, ${0.9 + glowIntensity * 0.1})`; // Almost always bright white
+                        }
+                        
+                        // Draw complete arrow with head and tail
+                        const tailWidth = Math.floor(layerThird * 0.6); // Tail is narrower than head
+                        const tailLength = Math.floor(layerThird * 1.2); // Tail extends behind
+                        
+                        context.beginPath();
+                        // Arrow head (pointing right)
+                        context.moveTo(arrowX - layerThird, arrowY - layerThird); // Top left of head
+                        context.lineTo(arrowX + layerThird, arrowY); // Arrow tip
+                        context.lineTo(arrowX - layerThird, arrowY + layerThird); // Bottom left of head
+                        // Connect to tail
+                        context.lineTo(arrowX - layerThird, arrowY + tailWidth); // Top of tail notch
+                        context.lineTo(arrowX - layerThird - tailLength, arrowY + tailWidth); // End of top tail
+                        context.lineTo(arrowX - layerThird - tailLength, arrowY - tailWidth); // End of bottom tail
+                        context.lineTo(arrowX - layerThird, arrowY - tailWidth); // Bottom of tail notch
+                        context.closePath();
+                        context.fill();
+                    }
+                    
+                    // Restore context
+                    context.restore();
                 }
             }
         }
