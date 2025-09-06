@@ -18,8 +18,9 @@ document.addEventListener('keydown', (e) => {
     // Handle game state transitions
     if (e.key === ' ') {
         if (currentGameState === GAME_STATES.TITLE) {
-            currentGameState = GAME_STATES.PLAYING;
-            lastInputType = "Game Started!";
+            currentGameState = GAME_STATES.LEVEL_SELECT;
+            initializeLevelSelect();
+            lastInputType = "Level Select";
             lastInputTime = Date.now();
             inputFadeTimer = 2000;
             return;
@@ -32,6 +33,12 @@ document.addEventListener('keydown', (e) => {
     // Handle level restart with Escape key
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
         restartCurrentLevel();
+        return;
+    }
+    
+    // Handle level selection navigation
+    if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+        handleLevelSelectInput(e.key);
         return;
     }
     
@@ -131,10 +138,14 @@ function setupCanvasEventListeners() {
         
         // Handle game state transitions (same logic as space key)
         if (currentGameState === GAME_STATES.TITLE) {
-            currentGameState = GAME_STATES.PLAYING;
-            lastInputType = "Game Started!";
+            currentGameState = GAME_STATES.LEVEL_SELECT;
+            initializeLevelSelect();
+            lastInputType = "Level Select";
             lastInputTime = Date.now();
             inputFadeTimer = 2000;
+            return;
+        } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+            handleLevelSelectClick(mouseX, mouseY);
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
             advanceToNextLevel();
@@ -267,11 +278,14 @@ function setupCanvasEventListeners() {
                 
                 // Tap detected
                 if (currentGameState === GAME_STATES.TITLE) {
-                    // Start game on tap from title screen
-                    currentGameState = GAME_STATES.PLAYING;
-                    lastInputType = "Game Started!";
+                    // Go to level select on tap from title screen
+                    currentGameState = GAME_STATES.LEVEL_SELECT;
+                    initializeLevelSelect();
+                    lastInputType = "Level Select";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
+                } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+                    handleLevelSelectClick(canvasPos.x, canvasPos.y);
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
                     advanceToNextLevel();
                 }
@@ -304,11 +318,17 @@ let mouseY = 0;
 // Game state management
 const GAME_STATES = {
     TITLE: 'title',
+    LEVEL_SELECT: 'level_select',
     PLAYING: 'playing',
     PAUSED: 'paused',
     LEVEL_COMPLETE: 'level_complete'
 };
 let currentGameState = GAME_STATES.TITLE;
+
+// Level selection variables
+let levelSelectOption = 'start'; // 'start', 'set', 'level'
+let selectedSet = 'Microban';
+let selectedLevel = 1;
 
 // Level progression variables
 let currentSetName = 'Microban';
@@ -1205,6 +1225,8 @@ function draw() {
     
     if (currentGameState === GAME_STATES.TITLE) {
         drawTitleScreen();
+    } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+        drawLevelSelectScreen();
     } else if (currentGameState === GAME_STATES.PLAYING) {
         drawGameplay();
     } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
@@ -1656,6 +1678,189 @@ function drawLevelCompleteOverlay() {
     
     // Reset text alignment
     context.textAlign = "left";
+}
+// #endregion
+
+// #region Level Selection System
+function initializeLevelSelect() {
+    levelSelectOption = 'start';
+    selectedSet = 'Microban';
+    selectedLevel = 1;
+}
+
+function drawLevelSelectScreen() {
+    // Draw background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    const centerX = canvas.width / 2;
+    const isMobile = canvas.width < 600;
+    const fontSize = isMobile ? 24 : 32;
+    const smallFontSize = isMobile ? 16 : 20;
+    
+    // Title
+    context.font = `bold ${fontSize + 8}px 'Courier New', monospace`;
+    context.fillStyle = "#00ffff";
+    context.textAlign = "center";
+    context.fillText("SELECT LEVEL", centerX, 80);
+    
+    // Options
+    const optionY = 150;
+    const spacing = 80;
+    
+    // Start from beginning option
+    const startColor = levelSelectOption === 'start' ? "#00ff00" : "#ffffff";
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.fillStyle = startColor;
+    context.fillText("► START FROM BEGINNING", centerX, optionY);
+    
+    // Choose level option
+    const chooseColor = levelSelectOption === 'choose' ? "#00ff00" : "#ffffff";
+    context.fillStyle = chooseColor;
+    context.fillText("► CHOOSE LEVEL", centerX, optionY + spacing);
+    
+    if (levelSelectOption === 'choose') {
+        // Show set selection
+        context.font = `bold ${smallFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#ffdd00";
+        context.fillText(`SET: ${selectedSet}`, centerX, optionY + spacing + 40);
+        
+        // Show level selection
+        const maxLevel = getLevelCount(selectedSet);
+        context.fillText(`LEVEL: ${selectedLevel} / ${maxLevel}`, centerX, optionY + spacing + 70);
+        
+        // Instructions
+        context.font = `${smallFontSize - 2}px 'Courier New', monospace`;
+        context.fillStyle = "#cccccc";
+        context.fillText("↑↓ CHANGE OPTION  ←→ CHANGE VALUES  SPACE TO START", centerX, optionY + spacing + 120);
+    } else {
+        // Instructions for start option
+        context.font = `${smallFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#cccccc";
+        context.fillText("↑↓ CHANGE OPTION  SPACE TO START", centerX, optionY + spacing + 80);
+    }
+    
+    context.textAlign = "left";
+}
+
+function handleLevelSelectInput(key) {
+    switch (key) {
+        case 'ArrowUp':
+            levelSelectOption = levelSelectOption === 'choose' ? 'start' : 'choose';
+            break;
+        case 'ArrowDown':
+            levelSelectOption = levelSelectOption === 'start' ? 'choose' : 'start';
+            break;
+        case 'ArrowLeft':
+            if (levelSelectOption === 'choose') {
+                handleLevelSelectLeft();
+            }
+            break;
+        case 'ArrowRight':
+            if (levelSelectOption === 'choose') {
+                handleLevelSelectRight();
+            }
+            break;
+        case ' ':
+            startSelectedLevel();
+            break;
+        case 'Escape':
+            currentGameState = GAME_STATES.TITLE;
+            break;
+    }
+}
+
+function handleLevelSelectLeft() {
+    // Cycle through sets or decrease level
+    const setNames = Object.keys(SOKOBAN_LEVELS);
+    const currentSetIndex = setNames.indexOf(selectedSet);
+    
+    if (currentSetIndex > 0) {
+        selectedSet = setNames[currentSetIndex - 1];
+        selectedLevel = 1; // Reset to level 1 when changing sets
+    } else {
+        // Decrease level if we're at the first set
+        if (selectedLevel > 1) {
+            selectedLevel--;
+        }
+    }
+}
+
+function handleLevelSelectRight() {
+    // Cycle through sets or increase level
+    const setNames = Object.keys(SOKOBAN_LEVELS);
+    const currentSetIndex = setNames.indexOf(selectedSet);
+    const maxLevel = getLevelCount(selectedSet);
+    
+    if (selectedLevel < maxLevel) {
+        selectedLevel++;
+    } else if (currentSetIndex < setNames.length - 1) {
+        selectedSet = setNames[currentSetIndex + 1];
+        selectedLevel = 1; // Reset to level 1 when changing sets
+    }
+}
+
+function handleLevelSelectClick(x, y) {
+    const centerX = canvas.width / 2;
+    const optionY = 150;
+    const spacing = 80;
+    
+    // Check if clicking on "Start from beginning"
+    if (y >= optionY - 20 && y <= optionY + 20) {
+        levelSelectOption = 'start';
+        startSelectedLevel();
+        return;
+    }
+    
+    // Check if clicking on "Choose level"
+    if (y >= optionY + spacing - 20 && y <= optionY + spacing + 20) {
+        if (levelSelectOption === 'choose') {
+            startSelectedLevel();
+        } else {
+            levelSelectOption = 'choose';
+        }
+        return;
+    }
+    
+    // If in choose mode, handle clicks on set/level areas
+    if (levelSelectOption === 'choose') {
+        // Set area click
+        if (y >= optionY + spacing + 20 && y <= optionY + spacing + 60) {
+            if (x < centerX) {
+                handleLevelSelectLeft();
+            } else {
+                handleLevelSelectRight();
+            }
+        }
+        // Level area click
+        else if (y >= optionY + spacing + 50 && y <= optionY + spacing + 90) {
+            if (x < centerX) {
+                if (selectedLevel > 1) selectedLevel--;
+            } else {
+                const maxLevel = getLevelCount(selectedSet);
+                if (selectedLevel < maxLevel) selectedLevel++;
+            }
+        }
+    }
+}
+
+function startSelectedLevel() {
+    if (levelSelectOption === 'start') {
+        // Start from beginning - reset to first level
+        currentSet = 'Microban';
+        currentLevelNumber = 1;
+    } else {
+        // Start from selected level
+        currentSet = selectedSet;
+        currentLevelNumber = selectedLevel;
+    }
+    
+    // Load the selected level and start the game
+    loadLevel(currentSet, currentLevelNumber);
+    currentGameState = GAME_STATES.PLAYING;
+    lastInputType = "Game Started!";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
 }
 // #endregion
 
