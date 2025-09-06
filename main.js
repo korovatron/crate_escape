@@ -558,25 +558,25 @@ function loadLevel(setName, levelNumber) {
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
             // Level is wider than screen - use camera panning
-            cameraX = Math.max(0, Math.min(
+            cameraX = Math.round(Math.max(0, Math.min(
                 levelPixelWidth - canvas.width,
                 playerPos.x * tileSize + tileSize / 2 - halfScreenWidth
-            ));
+            )));
         } else {
             // Level fits horizontally - center it (use negative offset for centering)
-            cameraX = -(canvas.width - levelPixelWidth) / 2;
+            cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
         }
         
         // Handle Y axis (vertical)
         if (levelPixelHeight > canvas.height) {
             // Level is taller than screen - use camera panning
-            cameraY = Math.max(0, Math.min(
+            cameraY = Math.round(Math.max(0, Math.min(
                 levelPixelHeight - canvas.height,
                 playerPos.y * tileSize + tileSize / 2 - halfScreenHeight
-            ));
+            )));
         } else {
             // Level fits vertically - center it (use negative offset for centering)
-            cameraY = -(canvas.height - levelPixelHeight) / 2;
+            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
         }
     } else {
         // No panning needed, reset camera to 0
@@ -695,7 +695,8 @@ function updatePlayerMovement(deltaTime) {
     
     // Update camera during movement for smooth panning
     if (levelNeedsPanning) {
-        const t = easeInOutQuad(moveAnimationProgress);
+        // Use linear interpolation during continuous input to avoid pause between movements
+        const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
         const currentPlayerX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
         const currentPlayerY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
         
@@ -709,20 +710,20 @@ function updatePlayerMovement(deltaTime) {
         if (levelPixelWidth > canvas.width) {
             // Level is wider than screen - follow player
             const desiredCameraX = currentPlayerX * tileSize + tileSize / 2 - halfScreenWidth;
-            cameraX = Math.max(0, Math.min(levelPixelWidth - canvas.width, desiredCameraX));
+            cameraX = Math.round(Math.max(0, Math.min(levelPixelWidth - canvas.width, desiredCameraX)));
         } else {
             // Level fits horizontally - keep centered
-            cameraX = -(canvas.width - levelPixelWidth) / 2;
+            cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
         }
         
         // Handle Y axis (vertical)
         if (levelPixelHeight > canvas.height) {
             // Level is taller than screen - follow player
             const desiredCameraY = currentPlayerY * tileSize + tileSize / 2 - halfScreenHeight;
-            cameraY = Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY));
+            cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
         } else {
             // Level fits vertically - keep centered
-            cameraY = -(canvas.height - levelPixelHeight) / 2;
+            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
         }
     }
     
@@ -828,7 +829,8 @@ function getCurrentPlayerPixelPos() {
         }
         
         // Interpolate position during movement
-        const t = easeInOutQuad(moveAnimationProgress);
+        // Use linear interpolation during continuous input to avoid pause between movements
+        const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
         const lerpX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
         const lerpY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
         
@@ -846,7 +848,8 @@ function getCurrentPlayerPixelPos() {
         }
         
         // Interpolate position during movement
-        const t = easeInOutQuad(moveAnimationProgress);
+        // Use linear interpolation during continuous input to avoid pause between movements
+        const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
         const lerpX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
         const lerpY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
         
@@ -876,7 +879,8 @@ function getCurrentBoxPixelPos(boxIndex) {
     }
     
     // Interpolate position during movement
-    const t = easeInOutQuad(moveAnimationProgress);
+    // Use linear interpolation during continuous input to avoid pause between movements
+    const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
     const lerpX = movingBox.startPos.x + (movingBox.targetPos.x - movingBox.startPos.x) * t;
     const lerpY = movingBox.startPos.y + (movingBox.targetPos.y - movingBox.startPos.y) * t;
     
@@ -921,20 +925,20 @@ function updateCameraPosition() {
     if (levelPixelWidth > canvas.width) {
         // Level is wider than screen - follow player
         const desiredCameraX = playerPos.x * tileSize + tileSize / 2 - halfScreenWidth;
-        cameraX = Math.max(0, Math.min(levelPixelWidth - canvas.width, desiredCameraX));
+        cameraX = Math.round(Math.max(0, Math.min(levelPixelWidth - canvas.width, desiredCameraX)));
     } else {
         // Level fits horizontally - keep centered
-        cameraX = -(canvas.width - levelPixelWidth) / 2;
+        cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
     }
     
     // Handle Y axis (vertical)
     if (levelPixelHeight > canvas.height) {
         // Level is taller than screen - follow player
         const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfScreenHeight;
-        cameraY = Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY));
+        cameraY = Math.round(Math.max(0, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
     } else {
         // Level fits vertically - keep centered
-        cameraY = -(canvas.height - levelPixelHeight) / 2;
+        cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
     }
 }
 
@@ -1229,25 +1233,25 @@ function recalculateLevelLayout() {
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
             // Level is wider than screen - use camera panning
-            cameraX = Math.max(0, Math.min(
+            cameraX = Math.round(Math.max(0, Math.min(
                 levelPixelWidth - canvas.width,
                 playerPos.x * tileSize + tileSize / 2 - halfScreenWidth
-            ));
+            )));
         } else {
             // Level fits horizontally - center it
-            cameraX = -(canvas.width - levelPixelWidth) / 2;
+            cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
         }
         
         // Handle Y axis (vertical)
         if (levelPixelHeight > canvas.height) {
             // Level is taller than screen - use camera panning
-            cameraY = Math.max(0, Math.min(
+            cameraY = Math.round(Math.max(0, Math.min(
                 levelPixelHeight - canvas.height,
                 playerPos.y * tileSize + tileSize / 2 - halfScreenHeight
-            ));
+            )));
         } else {
             // Level fits vertically - center it
-            cameraY = -(canvas.height - levelPixelHeight) / 2;
+            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
         }
     } else {
         // No panning needed, reset camera and use level centering
