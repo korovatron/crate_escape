@@ -1279,13 +1279,25 @@ function drawTitleScreen() {
     context.save();
     context.textAlign = "center";
     
-    // Calculate responsive font sizes based on screen width (made larger)
-    const baseSize = Math.min(canvas.width, canvas.height) / 15; // Changed from /20 to /15
-    const smallSize = baseSize * 0.7; // Increased from 0.6 to 0.7
-    const largeSize = baseSize * 1.3; // Increased from 1.2 to 1.3
+    // Detect mobile portrait mode and adjust sizing accordingly
+    const isMobilePortrait = canvas.height > canvas.width && canvas.width < 768;
+    const aspectRatio = canvas.height / canvas.width;
     
-    // Starting Y position (moved even closer to top - 10% instead of 15%)
-    let yPos = canvas.height * 0.1;
+    // Calculate responsive font sizes with moderate scaling for mobile portrait
+    let baseSize;
+    if (isMobilePortrait) {
+        // More moderate size increase for mobile portrait
+        baseSize = Math.min(canvas.width / 10, canvas.height / 25); // Reduced from /8 to /10
+    } else {
+        // Desktop/landscape sizing
+        baseSize = Math.min(canvas.width, canvas.height) / 15;
+    }
+    
+    const smallSize = baseSize * 0.7;
+    const largeSize = baseSize * 1.3;
+    
+    // Starting Y position - closer to top on mobile portrait to use more space
+    let yPos = isMobilePortrait ? canvas.height * 0.08 : canvas.height * 0.1;
     
     // Line 1: "The" - smaller, brighter industrial gray for visibility
     context.fillStyle = "#BBBBBB"; // Brightened from #888888 to #BBBBBB
@@ -1316,22 +1328,37 @@ function drawTitleScreen() {
     // Add spacing after title
     yPos += largeSize * 0.8;
     
-    // Instructions and info text
-    const textSize = baseSize * 0.4; // Smaller text for instructions
+    // Instructions and info text - moderately larger on mobile portrait
+    let textSize;
+    if (isMobilePortrait) {
+        textSize = baseSize * 0.5; // Reduced from 0.6 to 0.5
+    } else {
+        textSize = baseSize * 0.4; // Original size for desktop/landscape
+    }
     const lineHeight = textSize * 1.4;
     
     // Main instruction - larger and responsive with wrapping
     yPos += lineHeight * 1.5;
-    const mainInstructionSize = textSize * 1.3; // Increased from 1.1 to 1.3
+    let mainInstructionSize;
+    if (isMobilePortrait) {
+        mainInstructionSize = textSize * 1.3; // Reduced from 1.4 to 1.3
+    } else {
+        mainInstructionSize = textSize * 1.3; // Original size for desktop
+    }
     context.font = `400 ${mainInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#DDDDDD";
-    const maxTextWidth = canvas.width * 0.8; // Use 80% of canvas width
+    const maxTextWidth = canvas.width * 0.9; // Use more width on mobile
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
     yPos = drawWrappedText(context, "Complete each level by pushing all crates into their designated positions.", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     
     // Demo level preview - positioned right after main instruction
     yPos += lineHeight * 2;
-    const demoTileSize = Math.min(canvas.width / 20, 32); // Small tiles
+    let demoTileSize;
+    if (isMobilePortrait) {
+        demoTileSize = Math.min(canvas.width / 15, 40); // Reduced from /12 to /15
+    } else {
+        demoTileSize = Math.min(canvas.width / 20, 32); // Original size for desktop
+    }
     const demoWidth = 7; // 7 tiles wide
     const demoHeight = 3; // 3 tiles high
     const demoStartX = (canvas.width - (demoWidth * demoTileSize)) / 2;
@@ -1413,7 +1440,12 @@ function drawTitleScreen() {
     
     // Control instructions - larger and responsive with wrapping
     yPos = demoStartY + (demoHeight * demoTileSize) + lineHeight * 2;
-    const controlInstructionSize = textSize * 1.1; // Increased from 0.9 to 1.1
+    let controlInstructionSize;
+    if (isMobilePortrait) {
+        controlInstructionSize = textSize * 1.2; // Reduced from 1.3 to 1.2
+    } else {
+        controlInstructionSize = textSize * 1.1; // Original size for desktop
+    }
     context.font = `400 ${controlInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#CCCCCC";
     const controlInstructionLineHeight = controlInstructionSize * 1.4;
@@ -1421,14 +1453,27 @@ function drawTitleScreen() {
     
     // Start instruction - positioned after controls
     yPos += lineHeight * 1.5;
-    context.font = `700 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    let startInstructionSize;
+    if (isMobilePortrait) {
+        startInstructionSize = textSize * 1.1; // Reduced from 1.2 to 1.1
+    } else {
+        startInstructionSize = textSize; // Original size for desktop
+    }
+    context.font = `700 ${startInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#88CC88"; // Green for start action
     context.fillText("Space or Tap to start.", canvas.width / 2, yPos);
     
-    // Author credit - yellow, larger, and at bottom of screen
-    context.font = `400 ${textSize * 0.9}px 'Roboto Condensed', 'Arial', sans-serif`;
+    // Author credit - positioned after start instruction instead of bottom
+    yPos += lineHeight * 2;
+    let authorSize;
+    if (isMobilePortrait) {
+        authorSize = textSize * 0.8; // Appropriate size for mobile portrait
+    } else {
+        authorSize = textSize * 0.9; // Original relative size for desktop
+    }
+    context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
-    context.fillText("By Neil Kendall", canvas.width / 2, canvas.height - textSize);
+    context.fillText("a javascript game by Neil Kendall 2025", canvas.width / 2, yPos);
     
     context.restore();
 }
