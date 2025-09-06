@@ -256,7 +256,7 @@ let secondsPassed = 0;
 let oldTimeStamp = 0;
 let baseWidth = 800;
 let baseHeight = 600;
-let canvasColour = "#5f5a5aff"
+let canvasColour = "#000000" // Black background
 let scale = 1;
 let xOffset = 0;
 let yOffset = 0;
@@ -1030,47 +1030,31 @@ function draw() {
     } else if (currentGameState === GAME_STATES.PLAYING) {
         drawGameplay();
     }
-    
-    // Draw input feedback (always on top)
-    if (lastInputType && inputFadeTimer > 0) {
-        const alpha = Math.min(inputFadeTimer / 1000, 1); // Fade out effect
-        context.save();
-        context.globalAlpha = alpha;
-        
-        // Background for text
-        context.fillStyle = "rgba(0, 0, 0, 0.7)";
-        context.fillRect(10, 10, 300, clickCoordinates ? 60 : 40);
-        
-        // Input type text
-        context.fillStyle = "#ffffff";
-        context.font = "20px Arial";
-        context.fillText(`Input: ${lastInputType}`, 20, 35);
-        
-        // Coordinates if available
-        if (clickCoordinates) {
-            context.fillText(`Coordinates: ${clickCoordinates}`, 20, 55);
-        }
-        
-        context.restore();
-    }
 }
 
 function drawTitleScreen() {
     // Draw title screen background
-    context.fillStyle = "#2a2a2a";
+    context.fillStyle = "#000000"; // Black background
     context.fillRect(0, 0, canvas.width, canvas.height);
     
     // Draw the cartoon image to fill the screen while maintaining aspect ratio
     if (crateEscapeCartoon.complete) {
         const imgWidth = crateEscapeCartoon.width;
         const imgHeight = crateEscapeCartoon.height;
-        const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight); // Fill screen completely
+        const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight);
         const scaledWidth = imgWidth * scale;
         const scaledHeight = imgHeight * scale;
         const x = (canvas.width - scaledWidth) / 2;
         const y = (canvas.height - scaledHeight) / 2;
         
+        // Enable high-quality image smoothing for better scaling
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        
         context.drawImage(crateEscapeCartoon, x, y, scaledWidth, scaledHeight);
+        
+        context.restore();
     }
 }
 
@@ -1136,9 +1120,6 @@ function drawGameplay() {
     // Draw player with smooth movement
     const playerPixelPos = getCurrentPlayerPixelPos();
     drawPlayerTile(playerPixelPos.x, playerPixelPos.y);
-    
-    // Draw level info
-    drawLevelInfo();
 }
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
