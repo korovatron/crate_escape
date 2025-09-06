@@ -23,6 +23,9 @@ document.addEventListener('keydown', (e) => {
             lastInputTime = Date.now();
             inputFadeTimer = 2000;
             return;
+        } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
+            advanceToNextLevel();
+            return;
         }
     }
     
@@ -236,6 +239,8 @@ function setupCanvasEventListeners() {
                     lastInputType = "Game Started!";
                     lastInputTime = Date.now();
                     inputFadeTimer = 2000;
+                } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
+                    advanceToNextLevel();
                 }
                 
                 // Show tap feedback
@@ -267,9 +272,23 @@ let mouseY = 0;
 const GAME_STATES = {
     TITLE: 'title',
     PLAYING: 'playing',
-    PAUSED: 'paused'
+    PAUSED: 'paused',
+    LEVEL_COMPLETE: 'level_complete'
 };
 let currentGameState = GAME_STATES.TITLE;
+
+// Level progression variables
+let currentSetName = 'demo';
+let isGameComplete = false;
+let levelCompletionStartTime = 0;
+
+// Level progression order: demo -> setI -> setII -> setIII
+const LEVEL_PROGRESSION = [
+    { setName: 'demo', levels: 1 },
+    { setName: 'setI', levels: 40 },
+    { setName: 'setII', levels: 54 },
+    { setName: 'setIII', levels: 60 }
+];
 
 // Input feedback variables
 let lastInputType = "";
@@ -279,8 +298,8 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = 'setI';
-let currentLevelNumber = 1; // Large level for testing responsive sizing
+let currentSet = 'demo'; // Start with demo level
+let currentLevelNumber = 1; // Start with level 1
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
@@ -761,6 +780,9 @@ function updatePlayerMovement(deltaTime) {
             movingBox = null;
         }
         
+        // Check if level is complete after movement
+        checkLevelCompletion();
+        
         // Immediately check for continued input to eliminate pause
         checkForContinuedInput();
         
@@ -935,6 +957,73 @@ function smoothstep(t) {
     return t * t * (3 - 2 * t);
 }
 
+function isLevelComplete() {
+    // Check if all boxes are on goal tiles
+    if (!currentLevel || currentLevel.boxes.length === 0) return false;
+    
+    return currentLevel.boxes.every(box => 
+        currentLevel.goals.some(goal => goal.x === box.x && goal.y === box.y)
+    );
+}
+
+function checkLevelCompletion() {
+    if (currentGameState === GAME_STATES.PLAYING && isLevelComplete()) {
+        currentGameState = GAME_STATES.LEVEL_COMPLETE;
+        levelCompletionStartTime = Date.now();
+    }
+}
+
+function getNextLevel() {
+    // Find current set in progression
+    const currentSetIndex = LEVEL_PROGRESSION.findIndex(set => set.setName === currentSet);
+    const currentSetInfo = LEVEL_PROGRESSION[currentSetIndex];
+    
+    // Check if there are more levels in current set
+    if (currentLevelNumber < currentSetInfo.levels) {
+        return {
+            setName: currentSet,
+            levelNumber: currentLevelNumber + 1,
+            isComplete: false
+        };
+    }
+    
+    // Move to next set
+    if (currentSetIndex < LEVEL_PROGRESSION.length - 1) {
+        const nextSet = LEVEL_PROGRESSION[currentSetIndex + 1];
+        return {
+            setName: nextSet.setName,
+            levelNumber: 1,
+            isComplete: false
+        };
+    }
+    
+    // Game complete
+    return {
+        setName: currentSet,
+        levelNumber: currentLevelNumber,
+        isComplete: true
+    };
+}
+
+function advanceToNextLevel() {
+    const nextLevel = getNextLevel();
+    
+    if (nextLevel.isComplete) {
+        isGameComplete = true;
+        return;
+    }
+    
+    currentSet = nextLevel.setName;
+    currentLevelNumber = nextLevel.levelNumber;
+    
+    // Load the new level
+    if (loadLevel(currentSet, currentLevelNumber)) {
+        currentGameState = GAME_STATES.PLAYING;
+    } else {
+        console.error(`Failed to load level ${currentLevelNumber} from ${currentSet}`);
+    }
+}
+
 function getInterpolationValue(progress) {
     // Use linear interpolation for continuous movement to avoid pauses
     // Use eased interpolation for single movements for natural feel
@@ -1029,6 +1118,9 @@ function draw() {
         drawTitleScreen();
     } else if (currentGameState === GAME_STATES.PLAYING) {
         drawGameplay();
+    } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
+        drawGameplay(); // Draw the completed level in background
+        drawLevelCompleteOverlay();
     }
 }
 
@@ -1243,6 +1335,53 @@ function drawLevelInfo() {
     context.fillText(`Level: ${currentLevelNumber}`, 20, 50);
     context.fillText(`Boxes: ${currentLevel.boxes.length}`, 20, 70);
     context.fillText(`Goals: ${currentLevel.goals.length}`, 20, 90);
+}
+
+function drawLevelCompleteOverlay() {
+    // Draw semi-transparent overlay
+    context.fillStyle = "rgba(0, 0, 0, 0.8)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Calculate text positioning
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    // Main completion message
+    context.fillStyle = "#ffffff";
+    context.font = "bold 48px Arial";
+    context.textAlign = "center";
+    context.fillText("Level Complete!", centerX, centerY - 40);
+    
+    // Get next level info for subtitle
+    const nextLevel = getNextLevel();
+    let subtitle = "";
+    
+    if (nextLevel.isComplete) {
+        subtitle = "Congratulations! Game Complete!";
+    } else if (nextLevel.setName !== currentSet) {
+        // Moving to new set
+        const setNames = {
+            'demo': 'Demo',
+            'setI': 'Set I',
+            'setII': 'Set II', 
+            'setIII': 'Set III'
+        };
+        subtitle = `Starting ${setNames[nextLevel.setName] || nextLevel.setName}`;
+    } else {
+        // Next level in same set
+        subtitle = `Level ${nextLevel.levelNumber}`;
+    }
+    
+    context.font = "24px Arial";
+    context.fillText(subtitle, centerX, centerY + 10);
+    
+    // Instructions
+    context.font = "18px Arial";
+    context.fillStyle = "#cccccc";
+    context.fillText("Press SPACE or TAP to continue", centerX, centerY + 60);
+    
+    // Reset text alignment
+    context.textAlign = "left";
 }
 // #endregion
 

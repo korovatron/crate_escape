@@ -2848,6 +2848,16 @@ const LevelManager = {
             return null;
         }
         
+        // Special handling for demo level (single level, not an array of levels)
+        if (setName === 'demo') {
+            if (levelNumber === 1) {
+                return set; // Return the demo level array directly
+            } else {
+                console.error(`Demo set only has 1 level, requested level ${levelNumber}`);
+                return null;
+            }
+        }
+        
         const level = set[levelNumber - 1]; // Convert to 0-indexed
         if (!level) {
             console.error(`Level ${levelNumber} not found in set "${setName}"`);
@@ -2865,7 +2875,14 @@ const LevelManager = {
     // Get total number of levels in a set
     getLevelCount: function(setName) {
         const set = SOKOBAN_LEVELS[setName];
-        return set ? set.length : 0;
+        if (!set) return 0;
+        
+        // Special handling for demo level (single level, not an array of levels)
+        if (setName === 'demo') {
+            return 1;
+        }
+        
+        return set.length;
     },
 
     // Get all available set names
