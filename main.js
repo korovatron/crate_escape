@@ -489,7 +489,6 @@ function calculateOptimalTileSize() {
     return optimalSize;
 }
 
-const crateEscapeCartoon = new Image();
 const spriteSheet = new Image();
 const textureAtlas = {
   spriteSheet,
@@ -605,15 +604,7 @@ const playerSprite = textureAtlas.frames["player_03.png"];
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 2;
-    
-    crateEscapeCartoon.src = "assets/images/crateEscapeCartoon.png";
-    crateEscapeCartoon.onload = function () {
-        imagesLoaded++;
-        if (imagesLoaded == numberImages) {
-            createCanvas();
-        }
-    }
+    const numberImages = 1;
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
@@ -1284,25 +1275,194 @@ function drawTitleScreen() {
     context.fillStyle = "#000000"; // Black background
     context.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw the cartoon image to fill the screen while maintaining aspect ratio
-    if (crateEscapeCartoon.complete) {
-        const imgWidth = crateEscapeCartoon.width;
-        const imgHeight = crateEscapeCartoon.height;
-        const scale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight);
-        const scaledWidth = imgWidth * scale;
-        const scaledHeight = imgHeight * scale;
-        const x = (canvas.width - scaledWidth) / 2;
-        const y = (canvas.height - scaledHeight) / 2;
-        
-        // Enable high-quality image smoothing for better scaling
-        context.save();
-        context.imageSmoothingEnabled = true;
-        context.imageSmoothingQuality = 'high';
-        
-        context.drawImage(crateEscapeCartoon, x, y, scaledWidth, scaledHeight);
-        
-        context.restore();
+    // Draw industrial-style text title
+    context.save();
+    context.textAlign = "center";
+    
+    // Calculate responsive font sizes based on screen width (made larger)
+    const baseSize = Math.min(canvas.width, canvas.height) / 15; // Changed from /20 to /15
+    const smallSize = baseSize * 0.7; // Increased from 0.6 to 0.7
+    const largeSize = baseSize * 1.3; // Increased from 1.2 to 1.3
+    
+    // Starting Y position (moved even closer to top - 10% instead of 15%)
+    let yPos = canvas.height * 0.1;
+    
+    // Line 1: "The" - smaller, brighter industrial gray for visibility
+    context.fillStyle = "#BBBBBB"; // Brightened from #888888 to #BBBBBB
+    context.font = `${smallSize}px 'Roboto Condensed', 'Courier New', 'Monaco', 'Consolas', monospace`;
+    context.strokeStyle = "#555555"; // Lightened stroke too
+    context.lineWidth = 1;
+    context.fillText("The", canvas.width / 2, yPos);
+    context.strokeText("The", canvas.width / 2, yPos);
+    
+    // Line 2: "CRATE" - larger, industrial orange/rust color
+    yPos += largeSize * 1.2;
+    context.font = `900 ${largeSize}px 'Orbitron', 'Impact', 'Arial Black', 'Helvetica', 'Arial', sans-serif`;
+    context.fillStyle = "#CC6600";
+    context.strokeStyle = "#663300";
+    context.lineWidth = 2;
+    context.fillText("CRATE", canvas.width / 2, yPos);
+    context.strokeText("CRATE", canvas.width / 2, yPos);
+    
+    // Line 3: "ESCAPE" - larger, steel blue/industrial color
+    yPos += largeSize * 1.2;
+    context.font = `900 ${largeSize}px 'Orbitron', 'Impact', 'Arial Black', 'Helvetica', 'Arial', sans-serif`;
+    context.fillStyle = "#4682B4";
+    context.strokeStyle = "#2F4F4F";
+    context.lineWidth = 2;
+    context.fillText("ESCAPE", canvas.width / 2, yPos);
+    context.strokeText("ESCAPE", canvas.width / 2, yPos);
+    
+    // Add spacing after title
+    yPos += largeSize * 0.8;
+    
+    // Instructions and info text
+    const textSize = baseSize * 0.4; // Smaller text for instructions
+    const lineHeight = textSize * 1.4;
+    
+    // Main instruction - larger and responsive with wrapping
+    yPos += lineHeight * 1.5;
+    const mainInstructionSize = textSize * 1.3; // Increased from 1.1 to 1.3
+    context.font = `400 ${mainInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#DDDDDD";
+    const maxTextWidth = canvas.width * 0.8; // Use 80% of canvas width
+    const mainInstructionLineHeight = mainInstructionSize * 1.4;
+    yPos = drawWrappedText(context, "Complete each level by pushing all crates into their designated positions.", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
+    
+    // Demo level preview - positioned right after main instruction
+    yPos += lineHeight * 2;
+    const demoTileSize = Math.min(canvas.width / 20, 32); // Small tiles
+    const demoWidth = 7; // 7 tiles wide
+    const demoHeight = 3; // 3 tiles high
+    const demoStartX = (canvas.width - (demoWidth * demoTileSize)) / 2;
+    const demoStartY = yPos;
+    
+    // Draw demo level tiles
+    for (let y = 0; y < demoHeight; y++) {
+        for (let x = 0; x < demoWidth; x++) {
+            const tileX = demoStartX + x * demoTileSize;
+            const tileY = demoStartY + y * demoTileSize;
+            
+            if (y === 0 || y === 2 || x === 0 || x === 6) {
+                // Wall tiles - same as main game
+                const sprite = textureAtlas.frames["block_05.png"];
+                context.drawImage(
+                    spriteSheet,
+                    sprite.x, sprite.y, sprite.width, sprite.height,
+                    tileX, tileY, demoTileSize, demoTileSize
+                );
+            } else if (y === 1) {
+                // Floor corridor - same as main game
+                const sprite = textureAtlas.frames["ground_05.png"];
+                context.drawImage(
+                    spriteSheet,
+                    sprite.x, sprite.y, sprite.width, sprite.height,
+                    tileX, tileY, demoTileSize, demoTileSize
+                );
+                
+                // Add game elements
+                if (x === 1) {
+                    // Player - use default player sprite (same as main game fallback)
+                    const playerSprite = textureAtlas.frames["player_03.png"];
+                    context.drawImage(
+                        spriteSheet,
+                        playerSprite.x, playerSprite.y, playerSprite.width, playerSprite.height,
+                        tileX, tileY, demoTileSize, demoTileSize
+                    );
+                } else if (x === 3) {
+                    // Crate - use normal crate sprite (same as main game)
+                    const crateSprite = textureAtlas.frames["crate_11.png"];
+                    context.drawImage(
+                        spriteSheet,
+                        crateSprite.x, crateSprite.y, crateSprite.width, crateSprite.height,
+                        tileX, tileY, demoTileSize, demoTileSize
+                    );
+                } else if (x === 5) {
+                    // Goal tile - same as main game (floor + goal sprite with margin)
+                    const goalSprite = textureAtlas.frames["environment_06.png"];
+                    const goalMargin = Math.max(1, Math.floor(demoTileSize / 8)); // Scale margin with tile size
+                    const goalSize = demoTileSize - (goalMargin * 2);
+                    const goalX = tileX + goalMargin;
+                    const goalY = tileY + goalMargin;
+                    context.drawImage(
+                        spriteSheet,
+                        goalSprite.x, goalSprite.y, goalSprite.width, goalSprite.height,
+                        goalX, goalY, goalSize, goalSize
+                    );
+                }
+                
+                // Add movement arrows on empty tiles
+                if (x === 2 || x === 4) {
+                    // Draw small white arrow pointing right
+                    const arrowSize = demoTileSize * 0.4;
+                    const arrowX = tileX + demoTileSize / 2;
+                    const arrowY = tileY + demoTileSize / 2;
+                    
+                    context.fillStyle = "#FFFFFF";
+                    context.beginPath();
+                    // Arrow pointing right: triangle
+                    context.moveTo(arrowX - arrowSize/3, arrowY - arrowSize/3);
+                    context.lineTo(arrowX + arrowSize/3, arrowY);
+                    context.lineTo(arrowX - arrowSize/3, arrowY + arrowSize/3);
+                    context.closePath();
+                    context.fill();
+                }
+            }
+        }
     }
+    
+    // Control instructions - larger and responsive with wrapping
+    yPos = demoStartY + (demoHeight * demoTileSize) + lineHeight * 2;
+    const controlInstructionSize = textSize * 1.1; // Increased from 0.9 to 1.1
+    context.font = `400 ${controlInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    const controlInstructionLineHeight = controlInstructionSize * 1.4;
+    yPos = drawWrappedText(context, "Press R to retry the level. Press ESC to exit and choose a different level.", canvas.width / 2, yPos, maxTextWidth, controlInstructionLineHeight);
+    
+    // Start instruction - positioned after controls
+    yPos += lineHeight * 1.5;
+    context.font = `700 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#88CC88"; // Green for start action
+    context.fillText("Space or Tap to start.", canvas.width / 2, yPos);
+    
+    // Author credit - yellow, larger, and at bottom of screen
+    context.font = `400 ${textSize * 0.9}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#FFCC00"; // Yellow color
+    context.fillText("By Neil Kendall", canvas.width / 2, canvas.height - textSize);
+    
+    context.restore();
+}
+
+// Helper function to draw text with automatic wrapping
+function drawWrappedText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+    const lines = [];
+    
+    // First pass: determine how many lines we need
+    for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        const testWidth = metrics.width;
+        
+        if (testWidth > maxWidth && n > 0) {
+            lines.push(line.trim());
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line.trim());
+    
+    // Second pass: draw the lines
+    for (let i = 0; i < lines.length; i++) {
+        context.fillText(lines[i], x, currentY);
+        currentY += lineHeight;
+    }
+    
+    // Return the final Y position for continued layout
+    return currentY - lineHeight + (lineHeight * 0.3); // Adjust spacing after text block
 }
 
 function drawGameplay() {
