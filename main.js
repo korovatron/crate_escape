@@ -1525,8 +1525,14 @@ function drawTitleScreen() {
     const controlInstructionLineHeight = controlInstructionSize * 1.3;
     yPos = drawWrappedText(context, "Press R to retry the level. Press ESC to exit and choose a different level.", canvas.width / 2, yPos, maxTextWidth, controlInstructionLineHeight);
     
-    // Start instruction - positioned after controls
+    // Start instruction - positioned after controls with pulsating effect like level complete
     yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Moderate spacing for landscape
+    
+    // Instructions with pulsing effect (same as level complete overlay)
+    const time = Date.now() / 1000;
+    const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
+    const instructColor = `rgba(136, 204, 136, ${pulse})`; // Green with pulsing alpha
+    
     let startInstructionSize;
     if (isMobilePortrait) {
         startInstructionSize = textSize * 1.1;
@@ -1535,9 +1541,22 @@ function drawTitleScreen() {
     } else {
         startInstructionSize = textSize; // Original size for desktop
     }
+    
+    // Apply pulsating effect with shadow
     context.font = `700 ${startInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#88CC88"; // Green for start action
-    context.fillText("Space or Tap to start.", canvas.width / 2, yPos);
+    context.shadowColor = "#88CC88"; // Green shadow
+    context.shadowBlur = 10 * pulse;
+    context.fillStyle = instructColor;
+    
+    // Check if instruction text fits
+    let instructText = "SPACE OR TAP TO START";
+    let instructWidth = context.measureText(instructText).width;
+    if (instructWidth > canvas.width * 0.9) {
+        instructText = "TAP TO START";
+    }
+    
+    context.fillText(instructText, canvas.width / 2, yPos);
+    context.shadowBlur = 0;
     
     // Author credit - positioned after start instruction with moderate spacing
     yPos += lineHeight * (isMobileLandscape ? 1.8 : 3); // Moderate spacing for landscape
