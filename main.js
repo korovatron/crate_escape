@@ -1430,52 +1430,83 @@ function drawLevelInfo() {
 }
 
 function drawStatusBar() {
-    // Draw status bar background
-    context.fillStyle = "rgba(0, 0, 0, 0.8)";
+    // Draw dark background with subtle gradient
+    const gradient = context.createLinearGradient(0, 0, 0, STATUS_BAR_HEIGHT);
+    gradient.addColorStop(0, "rgba(0, 0, 0, 0.95)");
+    gradient.addColorStop(1, "rgba(20, 20, 40, 0.95)");
+    context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     
-    // Draw border line at bottom of status bar
-    context.fillStyle = "#444444";
-    context.fillRect(0, STATUS_BAR_HEIGHT - 2, canvas.width, 2);
+    // Draw neon border at bottom of status bar
+    context.shadowColor = "#00ffff";
+    context.shadowBlur = 15;
+    context.fillStyle = "#00ffff";
+    context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
+    context.shadowBlur = 0;
+    
+    // Helper function to draw neon text
+    function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff") {
+        // Draw glow
+        context.shadowColor = glowColor;
+        context.shadowBlur = 20;
+        context.fillStyle = color;
+        context.fillText(text, x, y);
+        
+        // Draw inner bright text
+        context.shadowBlur = 10;
+        context.fillStyle = "#ffffff";
+        context.fillText(text, x, y);
+        
+        // Reset shadow
+        context.shadowBlur = 0;
+    }
     
     // Set text properties
-    context.fillStyle = "#ffffff";
-    context.font = "18px Arial";
+    context.font = "bold 18px 'Courier New', monospace";
     context.textAlign = "left";
     
-    // Draw set and level info
+    // Draw set and level info with cyan neon glow
     const levelText = `${currentSet} - Level ${currentLevelNumber}`;
-    context.fillText(levelText, 15, 30);
+    drawNeonText(levelText, 15, 35, "#00ffff", "#00ffff");
     
-    // Draw move count and attempt count
+    // Draw move count and attempt count with green/purple neon
     const moveText = `Moves: ${moveCount}`;
     const attemptText = `Attempts: ${attemptCount}`;
     const levelTextWidth = context.measureText(levelText).width;
     const moveTextWidth = context.measureText(moveText).width;
     
-    context.fillText(moveText, 15 + levelTextWidth + 40, 30);
-    context.fillText(attemptText, 15 + levelTextWidth + 40 + moveTextWidth + 30, 30);
+    drawNeonText(moveText, 15 + levelTextWidth + 40, 35, "#00ff88", "#00ff88");
+    drawNeonText(attemptText, 15 + levelTextWidth + 40 + moveTextWidth + 30, 35, "#ff00ff", "#ff00ff");
     
-    // Draw restart button
-    const buttonWidth = 80;
+    // Draw neon restart button
+    const buttonWidth = 90;
     const buttonHeight = 40;
     const buttonX = canvas.width - buttonWidth - 10;
     const buttonY = 10;
     
+    // Button neon glow background
+    context.shadowColor = "#ff6600";
+    context.shadowBlur = 25;
+    context.fillStyle = "rgba(255, 102, 0, 0.3)";
+    context.fillRect(buttonX - 5, buttonY - 5, buttonWidth + 10, buttonHeight + 10);
+    
     // Button background
-    context.fillStyle = "#555555";
+    context.shadowBlur = 0;
+    context.fillStyle = "rgba(30, 30, 30, 0.9)";
     context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
     
-    // Button border
-    context.strokeStyle = "#888888";
+    // Button neon border
+    context.shadowColor = "#ff6600";
+    context.shadowBlur = 15;
+    context.strokeStyle = "#ff6600";
     context.lineWidth = 2;
     context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    context.shadowBlur = 0;
     
-    // Button text
-    context.fillStyle = "#ffffff";
-    context.font = "14px Arial";
+    // Button text with orange neon
+    context.font = "bold 14px 'Courier New', monospace";
     context.textAlign = "center";
-    context.fillText("RESTART", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+    drawNeonText("RESTART", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5, "#ff6600", "#ff6600");
     
     // Reset text alignment
     context.textAlign = "left";
@@ -1492,48 +1523,80 @@ function drawLevelCompleteOverlay() {
     const overlayHeight = 200; // Fixed height for 4 lines of text + padding
     const overlayY = centerY - overlayHeight / 2;
     
-    // Draw semi-transparent overlay (full width, centered height)
-    context.fillStyle = "rgba(0, 0, 0, 0.8)";
+    // Draw semi-transparent overlay with dark gradient
+    const gradient = context.createLinearGradient(0, overlayY, 0, overlayY + overlayHeight);
+    gradient.addColorStop(0, "rgba(0, 10, 20, 0.95)");
+    gradient.addColorStop(0.5, "rgba(0, 0, 0, 0.95)");
+    gradient.addColorStop(1, "rgba(20, 0, 20, 0.95)");
+    context.fillStyle = gradient;
     context.fillRect(0, overlayY, canvas.width, overlayHeight);
     
-    // Draw subtle border at top and bottom
-    context.fillStyle = "#444444";
-    context.fillRect(0, overlayY, canvas.width, 2); // Top border
-    context.fillRect(0, overlayY + overlayHeight - 2, canvas.width, 2); // Bottom border
+    // Draw neon borders at top and bottom
+    context.shadowColor = "#00ff00";
+    context.shadowBlur = 20;
+    context.fillStyle = "#00ff00";
+    context.fillRect(0, overlayY, canvas.width, 3); // Top border
+    context.fillRect(0, overlayY + overlayHeight - 3, canvas.width, 3); // Bottom border
+    context.shadowBlur = 0;
     
-    // Main completion message
-    context.fillStyle = "#ffffff";
-    context.font = "bold 48px Arial";
+    // Helper function to draw neon text (reuse from status bar)
+    function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff", fontSize = "24px") {
+        context.font = `bold ${fontSize} 'Courier New', monospace`;
+        
+        // Draw outer glow
+        context.shadowColor = glowColor;
+        context.shadowBlur = 30;
+        context.fillStyle = color;
+        context.fillText(text, x, y);
+        
+        // Draw inner bright text
+        context.shadowBlur = 15;
+        context.fillStyle = "#ffffff";
+        context.fillText(text, x, y);
+        
+        // Reset shadow
+        context.shadowBlur = 0;
+    }
+    
+    // Main completion message with green neon glow
     context.textAlign = "center";
-    context.fillText("Level Complete!", centerX, centerY - 40);
+    drawNeonText("LEVEL COMPLETE!", centerX, centerY - 40, "#00ff00", "#00ff00", "48px");
     
     // Get next level info for subtitle
     const nextLevel = getNextLevel();
     let subtitle = "";
+    let subtitleColor = "#00ffff";
     
     if (nextLevel.isComplete) {
-        subtitle = "Congratulations! Game Complete!";
+        subtitle = "CONGRATULATIONS! GAME COMPLETE!";
+        subtitleColor = "#ff6600"; // Orange for game complete
     } else if (nextLevel.setName !== currentSet) {
         // Moving to new set
-        subtitle = `Starting ${nextLevel.setName}`;
+        subtitle = `STARTING ${nextLevel.setName.toUpperCase()}`;
+        subtitleColor = "#ff00ff"; // Magenta for new set
     } else {
         // Next level in same set
-        subtitle = `Level ${nextLevel.levelNumber}`;
+        subtitle = `NEXT: LEVEL ${nextLevel.levelNumber}`;
+        subtitleColor = "#00ffff"; // Cyan for next level
     }
     
-    context.font = "24px Arial";
-    context.fillText(subtitle, centerX, centerY + 10);
+    drawNeonText(subtitle, centerX, centerY + 10, subtitleColor, subtitleColor, "24px");
     
-    // Show completion stats
-    context.font = "20px Arial";
-    context.fillStyle = "#ffdd00"; // Gold color for stats
-    const statsText = `Completed in ${moveCount} moves (Attempt ${attemptCount})`;
-    context.fillText(statsText, centerX, centerY + 40);
+    // Show completion stats with gold neon
+    const statsText = `COMPLETED IN ${moveCount} MOVES (ATTEMPT ${attemptCount})`;
+    drawNeonText(statsText, centerX, centerY + 40, "#ffdd00", "#ffdd00", "20px");
     
-    // Instructions
-    context.font = "18px Arial";
-    context.fillStyle = "#cccccc";
-    context.fillText("Press SPACE or TAP to continue", centerX, centerY + 70);
+    // Instructions with pulsing effect
+    const time = Date.now() / 1000;
+    const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
+    const instructColor = `rgba(255, 255, 255, ${pulse})`;
+    
+    context.font = "bold 18px 'Courier New', monospace";
+    context.shadowColor = "#ffffff";
+    context.shadowBlur = 10 * pulse;
+    context.fillStyle = instructColor;
+    context.fillText("PRESS SPACE OR TAP TO CONTINUE", centerX, centerY + 70);
+    context.shadowBlur = 0;
     
     // Reset text alignment
     context.textAlign = "left";
