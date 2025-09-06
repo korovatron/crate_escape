@@ -118,6 +118,7 @@ const tapMoveThreshold = 10; // Max px movement for tap
 let touchCurrentX = 0;
 let touchCurrentY = 0;
 let isTouchActive = false;
+let isUsingTouch = false; // Flag to prevent mouse event conflicts on touch devices
 let lastTouchMoveTime = 0;
 let touchMoveDirection = { x: 0, y: 0 };
 let touchMoveTimer = null;
@@ -127,6 +128,11 @@ const touchMoveCooldown = 200; // Milliseconds between continuous moves
 function setupCanvasEventListeners() {
     // Mouse events
     document.addEventListener("mousedown", function (e) {
+        // Prevent mouse events if we're using touch
+        if (isUsingTouch) {
+            return;
+        }
+        
         // Get click position
         getMouseClickPosition(canvas, e);
         
@@ -177,6 +183,7 @@ function setupCanvasEventListeners() {
     
     // Touch events
     canvas.addEventListener('touchstart', function(e) {
+        isUsingTouch = true; // Mark that we're using touch
         if (e.touches.length === 1) {
             const touch = e.touches[0];
             touchStartX = touch.clientX;
@@ -1707,6 +1714,18 @@ function drawLevelSelectScreen() {
     // Options
     const optionY = 150;
     const spacing = 80;
+    const touchAreaHeight = 50;
+    const touchAreaWidth = canvas.width * 0.8;
+    const touchAreaLeft = (canvas.width - touchAreaWidth) / 2;
+    
+    // Draw touch area backgrounds for better visibility on mobile
+    if (isMobile) {
+        context.fillStyle = "rgba(255, 255, 255, 0.1)";
+        // Start option background
+        context.fillRect(touchAreaLeft, optionY - touchAreaHeight/2, touchAreaWidth, touchAreaHeight);
+        // Choose option background
+        context.fillRect(touchAreaLeft, optionY + spacing - touchAreaHeight/2, touchAreaWidth, touchAreaHeight);
+    }
     
     // Start from beginning option
     const startColor = levelSelectOption === 'start' ? "#00ff00" : "#ffffff";
@@ -1720,24 +1739,46 @@ function drawLevelSelectScreen() {
     context.fillText("► CHOOSE LEVEL", centerX, optionY + spacing);
     
     if (levelSelectOption === 'choose') {
-        // Show set selection
+        // Show set selection with touch indicators
         context.font = `bold ${smallFontSize}px 'Courier New', monospace`;
         context.fillStyle = "#ffdd00";
-        context.fillText(`SET: ${selectedSet}`, centerX, optionY + spacing + 40);
         
-        // Show level selection
+        // Set selection with arrows for touch
+        const setY = optionY + spacing + 40;
+        if (isMobile) {
+            context.fillStyle = "rgba(255, 221, 0, 0.2)";
+            context.fillRect(touchAreaLeft, setY - 20, touchAreaWidth, 40);
+        }
+        context.fillStyle = "#ffdd00";
+        context.fillText(`◄ SET: ${selectedSet} ►`, centerX, setY);
+        
+        // Show level selection with touch indicators
+        const levelY = optionY + spacing + 70;
         const maxLevel = getLevelCount(selectedSet);
-        context.fillText(`LEVEL: ${selectedLevel} / ${maxLevel}`, centerX, optionY + spacing + 70);
+        if (isMobile) {
+            context.fillStyle = "rgba(255, 221, 0, 0.2)";
+            context.fillRect(touchAreaLeft, levelY - 20, touchAreaWidth, 40);
+        }
+        context.fillStyle = "#ffdd00";
+        context.fillText(`◄ LEVEL: ${selectedLevel} / ${maxLevel} ►`, centerX, levelY);
         
         // Instructions
         context.font = `${smallFontSize - 2}px 'Courier New', monospace`;
         context.fillStyle = "#cccccc";
-        context.fillText("↑↓ CHANGE OPTION  ←→ CHANGE VALUES  SPACE TO START", centerX, optionY + spacing + 120);
+        if (isMobile) {
+            context.fillText("TAP OPTIONS TO CHANGE • TAP ARROWS TO ADJUST", centerX, optionY + spacing + 120);
+        } else {
+            context.fillText("↑↓ CHANGE OPTION  ←→ CHANGE VALUES  SPACE TO START", centerX, optionY + spacing + 120);
+        }
     } else {
         // Instructions for start option
         context.font = `${smallFontSize}px 'Courier New', monospace`;
         context.fillStyle = "#cccccc";
-        context.fillText("↑↓ CHANGE OPTION  SPACE TO START", centerX, optionY + spacing + 80);
+        if (isMobile) {
+            context.fillText("TAP TO SELECT • TAP OPTION TO START", centerX, optionY + spacing + 80);
+        } else {
+            context.fillText("↑↓ CHANGE OPTION  SPACE TO START", centerX, optionY + spacing + 80);
+        }
     }
     
     context.textAlign = "left";
@@ -1805,15 +1846,23 @@ function handleLevelSelectClick(x, y) {
     const optionY = 150;
     const spacing = 80;
     
-    // Check if clicking on "Start from beginning"
-    if (y >= optionY - 20 && y <= optionY + 20) {
+    // Make touch areas larger and more forgiving
+    const touchAreaHeight = 50; // Larger touch area
+    const touchAreaWidth = canvas.width * 0.8; // 80% of screen width
+    const touchAreaLeft = (canvas.width - touchAreaWidth) / 2;
+    const touchAreaRight = touchAreaLeft + touchAreaWidth;
+    
+    // Check if clicking on "Start from beginning" - larger area
+    if (y >= optionY - touchAreaHeight/2 && y <= optionY + touchAreaHeight/2 && 
+        x >= touchAreaLeft && x <= touchAreaRight) {
         levelSelectOption = 'start';
         startSelectedLevel();
         return;
     }
     
-    // Check if clicking on "Choose level"
-    if (y >= optionY + spacing - 20 && y <= optionY + spacing + 20) {
+    // Check if clicking on "Choose level" - larger area
+    if (y >= optionY + spacing - touchAreaHeight/2 && y <= optionY + spacing + touchAreaHeight/2 &&
+        x >= touchAreaLeft && x <= touchAreaRight) {
         if (levelSelectOption === 'choose') {
             startSelectedLevel();
         } else {
@@ -1822,24 +1871,28 @@ function handleLevelSelectClick(x, y) {
         return;
     }
     
-    // If in choose mode, handle clicks on set/level areas
+    // If in choose mode, handle clicks on set/level areas with larger touch zones
     if (levelSelectOption === 'choose') {
-        // Set area click
-        if (y >= optionY + spacing + 20 && y <= optionY + spacing + 60) {
-            if (x < centerX) {
+        // Set area click - much larger area
+        if (y >= optionY + spacing + 15 && y <= optionY + spacing + 65) {
+            if (x < centerX - 20) { // Left side - previous set/level
                 handleLevelSelectLeft();
-            } else {
+            } else if (x > centerX + 20) { // Right side - next set/level
                 handleLevelSelectRight();
             }
+            // Middle area doesn't do anything to avoid accidental clicks
+            return;
         }
-        // Level area click
-        else if (y >= optionY + spacing + 50 && y <= optionY + spacing + 90) {
-            if (x < centerX) {
+        
+        // Level area click - larger area
+        if (y >= optionY + spacing + 45 && y <= optionY + spacing + 95) {
+            if (x < centerX - 20) { // Left side - decrease level
                 if (selectedLevel > 1) selectedLevel--;
-            } else {
+            } else if (x > centerX + 20) { // Right side - increase level
                 const maxLevel = getLevelCount(selectedSet);
                 if (selectedLevel < maxLevel) selectedLevel++;
             }
+            return;
         }
     }
 }
