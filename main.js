@@ -318,6 +318,9 @@ function calculateOptimalTileSize() {
     const maxTileHeight = Math.floor(availableHeight / currentLevel.height);
     const maxPossibleTileSize = Math.min(maxTileWidth, maxTileHeight);
     
+    // Enforce minimum tile size for mobile usability - prefer overflow over tiny tiles
+    const minTileSize = 32; // Minimum for comfortable touch interaction
+    
     // Find the largest safe tile size that fits within our constraints
     let optimalSize = 8; // Default minimum safe size
     
@@ -329,39 +332,28 @@ function calculateOptimalTileSize() {
         }
     }
     
-    // Apply level-specific constraints
+    // If the optimal size is below minimum, use minimum and allow overflow
+    if (optimalSize < minTileSize) {
+        optimalSize = minTileSize;
+        console.log(`Level too large for screen - using minimum tile size ${minTileSize}px (level will overflow)`);
+    }
+    
+    // Apply level-specific constraints for small levels only
     const levelArea = currentLevel.width * currentLevel.height;
     const isLargeLevel = levelArea > 200 || currentLevel.width > 20 || currentLevel.height > 15;
     
-    if (!isLargeLevel) {
-        // Small levels: apply minimum constraint for usability
-        const minTileSize = 24; // Minimum for mobile touch targets
+    if (!isLargeLevel && optimalSize >= minTileSize) {
+        // Small levels: apply maximum constraint to prevent overly large tiles
         const maxTileSize = 64; // Maximum to prevent overly large tiles
         
         // Find the best safe size within min/max range
-        let bestSize = minTileSize;
+        let bestSize = optimalSize;
         for (let size of safeTileSizes) {
             if (size >= minTileSize && size <= maxTileSize && size <= maxPossibleTileSize) {
                 bestSize = size;
             }
         }
         optimalSize = bestSize;
-    }
-    
-    // Ensure level never exceeds screen bounds
-    const levelWidth = currentLevel.width * optimalSize;
-    const levelHeight = currentLevel.height * optimalSize;
-    
-    if (levelWidth > availableWidth || levelHeight > availableHeight) {
-        // Fallback: use the largest safe size that definitely fits
-        for (let i = safeTileSizes.length - 1; i >= 0; i--) {
-            const size = safeTileSizes[i];
-            if (currentLevel.width * size <= availableWidth && 
-                currentLevel.height * size <= availableHeight) {
-                optimalSize = size;
-                break;
-            }
-        }
     }
     
     console.log(`Level size: ${currentLevel.width}x${currentLevel.height} (${levelArea} tiles), Large level: ${isLargeLevel}, Safe tile size: ${optimalSize}px`);
