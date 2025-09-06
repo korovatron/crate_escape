@@ -1776,14 +1776,30 @@ function drawLevelSelectScreen() {
     
     const centerX = canvas.width / 2;
     const isMobile = canvas.width < 600;
+    const isLandscape = canvas.width > canvas.height;
     const fontSize = isMobile ? 20 : 24;
     const titleFontSize = isMobile ? 28 : 36;
+    
+    // Responsive layout based on screen height
+    const availableHeight = canvas.height;
+    const titleY = availableHeight * 0.12; // 12% from top
+    const setY = availableHeight * 0.32; // 32% from top
+    const levelY = availableHeight * 0.52; // 52% from top
+    const startButtonY = availableHeight * 0.72; // 72% from top
+    const instructionsY = availableHeight * 0.92; // 92% from top
+    
+    // Adjust spacing for very short screens (landscape mobile)
+    const spacing = isLandscape && isMobile ? 0.15 : 0.20; // Tighter spacing in landscape
+    const adjustedSetY = isLandscape && isMobile ? availableHeight * 0.25 : setY;
+    const adjustedLevelY = isLandscape && isMobile ? availableHeight * 0.40 : levelY;
+    const adjustedStartButtonY = isLandscape && isMobile ? availableHeight * 0.60 : startButtonY;
+    const adjustedInstructionsY = isLandscape && isMobile ? availableHeight * 0.85 : instructionsY;
     
     // Title
     context.font = `bold ${titleFontSize}px 'Courier New', monospace`;
     context.fillStyle = "#00ffff";
     context.textAlign = "center";
-    context.fillText("SELECT LEVEL", centerX, 80);
+    context.fillText("SELECT LEVEL", centerX, titleY);
     
     // Button dimensions
     const buttonWidth = isMobile ? 40 : 50;
@@ -1791,42 +1807,39 @@ function drawLevelSelectScreen() {
     const indicatorWidth = isMobile ? 200 : 250;
     const indicatorHeight = isMobile ? 40 : 50;
     
-    // Set selector - increased gap from title
-    const setY = 180;
-    drawSelector("SET", selectedSet, centerX, setY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
+    // Set selector
+    drawSelector("SET", selectedSet, centerX, adjustedSetY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
     
-    // Level selector - increased spacing between selectors
-    const levelY = setY + 120;
+    // Level selector
     const maxLevel = getLevelCount(selectedSet);
-    drawSelector("LEVEL", `${selectedLevel} / ${maxLevel}`, centerX, levelY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'level', fontSize);
+    drawSelector("LEVEL", `${selectedLevel} / ${maxLevel}`, centerX, adjustedLevelY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'level', fontSize);
     
     // Start game button
-    const startButtonY = levelY + 100;
     const startButtonWidth = isMobile ? 200 : 250;
     const startButtonHeight = isMobile ? 50 : 60;
     const startButtonX = centerX - startButtonWidth / 2;
     
     // Start button background
     context.fillStyle = "rgba(0, 255, 0, 0.2)";
-    context.fillRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    context.fillRect(startButtonX, adjustedStartButtonY, startButtonWidth, startButtonHeight);
     
     // Start button border
     context.strokeStyle = "#00ff00";
     context.lineWidth = 2;
-    context.strokeRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    context.strokeRect(startButtonX, adjustedStartButtonY, startButtonWidth, startButtonHeight);
     
     // Start button text
     context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
     context.fillStyle = "#00ff00";
-    context.fillText("START GAME", centerX, startButtonY + startButtonHeight / 2 + 8);
+    context.fillText("START GAME", centerX, adjustedStartButtonY + startButtonHeight / 2 + 8);
     
-    // Instructions - moved further down with more spacing
+    // Instructions
     context.font = `${fontSize - 4}px 'Courier New', monospace`;
     context.fillStyle = "#cccccc";
     if (isMobile) {
-        context.fillText("TAP ARROWS TO CHANGE • TAP START BUTTON", centerX, startButtonY + 100);
+        context.fillText("TAP ARROWS TO CHANGE • TAP START BUTTON", centerX, adjustedInstructionsY);
     } else {
-        context.fillText("CLICK ARROWS TO CHANGE • CLICK START OR PRESS SPACE", centerX, startButtonY + 100);
+        context.fillText("CLICK ARROWS TO CHANGE • CLICK START OR PRESS SPACE", centerX, adjustedInstructionsY);
     }
     
     context.textAlign = "left";
@@ -1903,10 +1916,13 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
     
     // Store start button position
     if (type === 'level') { // Only store once
-        const startButtonY = y + 100;
-        const startButtonWidth = canvas.width < 600 ? 200 : 250;
-        const startButtonHeight = canvas.width < 600 ? 50 : 60;
-        const startButtonX = centerX - startButtonWidth / 2;
+        const isMobile = canvas.width < 600;
+        const isLandscape = canvas.width > canvas.height;
+        const availableHeight = canvas.height;
+        const startButtonY = isLandscape && isMobile ? availableHeight * 0.60 : availableHeight * 0.72;
+        const startButtonWidth = isMobile ? 200 : 250;
+        const startButtonHeight = isMobile ? 50 : 60;
+        const startButtonX = canvas.width / 2 - startButtonWidth / 2;
         
         window.levelSelectButtons.start = {
             x: startButtonX, y: startButtonY, width: startButtonWidth, height: startButtonHeight
