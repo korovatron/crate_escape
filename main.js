@@ -1690,8 +1690,9 @@ function drawLevelCompleteOverlay() {
 
 // #region Level Selection System
 function initializeLevelSelect() {
-    levelSelectOption = 'start';
-    selectedSet = 'Microban';
+    // Get the first set name from levels.js instead of hardcoding
+    const setNames = Object.keys(SOKOBAN_LEVELS);
+    selectedSet = setNames[0]; // First set in the data
     selectedLevel = 1;
 }
 
@@ -1702,104 +1703,172 @@ function drawLevelSelectScreen() {
     
     const centerX = canvas.width / 2;
     const isMobile = canvas.width < 600;
-    const fontSize = isMobile ? 24 : 32;
-    const smallFontSize = isMobile ? 16 : 20;
+    const fontSize = isMobile ? 20 : 24;
+    const titleFontSize = isMobile ? 28 : 36;
     
     // Title
-    context.font = `bold ${fontSize + 8}px 'Courier New', monospace`;
+    context.font = `bold ${titleFontSize}px 'Courier New', monospace`;
     context.fillStyle = "#00ffff";
     context.textAlign = "center";
     context.fillText("SELECT LEVEL", centerX, 80);
     
-    // Options
-    const optionY = 150;
-    const spacing = 80;
-    const touchAreaHeight = 50;
-    const touchAreaWidth = canvas.width * 0.8;
-    const touchAreaLeft = (canvas.width - touchAreaWidth) / 2;
+    // Button dimensions
+    const buttonWidth = isMobile ? 40 : 50;
+    const buttonHeight = isMobile ? 30 : 40;
+    const indicatorWidth = isMobile ? 200 : 250;
+    const indicatorHeight = isMobile ? 40 : 50;
     
-    // Draw touch area backgrounds for better visibility on mobile
+    // Set selector - increased gap from title
+    const setY = 180;
+    drawSelector("SET", selectedSet, centerX, setY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
+    
+    // Level selector - increased spacing between selectors
+    const levelY = setY + 120;
+    const maxLevel = getLevelCount(selectedSet);
+    drawSelector("LEVEL", `${selectedLevel} / ${maxLevel}`, centerX, levelY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'level', fontSize);
+    
+    // Start game button
+    const startButtonY = levelY + 100;
+    const startButtonWidth = isMobile ? 200 : 250;
+    const startButtonHeight = isMobile ? 50 : 60;
+    const startButtonX = centerX - startButtonWidth / 2;
+    
+    // Start button background
+    context.fillStyle = "rgba(0, 255, 0, 0.2)";
+    context.fillRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    
+    // Start button border
+    context.strokeStyle = "#00ff00";
+    context.lineWidth = 2;
+    context.strokeRect(startButtonX, startButtonY, startButtonWidth, startButtonHeight);
+    
+    // Start button text
+    context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
+    context.fillStyle = "#00ff00";
+    context.fillText("START GAME", centerX, startButtonY + startButtonHeight / 2 + 8);
+    
+    // Instructions - moved further down with more spacing
+    context.font = `${fontSize - 4}px 'Courier New', monospace`;
+    context.fillStyle = "#cccccc";
     if (isMobile) {
-        context.fillStyle = "rgba(255, 255, 255, 0.1)";
-        // Start option background
-        context.fillRect(touchAreaLeft, optionY - touchAreaHeight/2, touchAreaWidth, touchAreaHeight);
-        // Choose option background
-        context.fillRect(touchAreaLeft, optionY + spacing - touchAreaHeight/2, touchAreaWidth, touchAreaHeight);
-    }
-    
-    // Start from beginning option
-    const startColor = levelSelectOption === 'start' ? "#00ff00" : "#ffffff";
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
-    context.fillStyle = startColor;
-    context.fillText("► START FROM BEGINNING", centerX, optionY);
-    
-    // Choose level option
-    const chooseColor = levelSelectOption === 'choose' ? "#00ff00" : "#ffffff";
-    context.fillStyle = chooseColor;
-    context.fillText("► CHOOSE LEVEL", centerX, optionY + spacing);
-    
-    if (levelSelectOption === 'choose') {
-        // Show set selection with touch indicators
-        context.font = `bold ${smallFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#ffdd00";
-        
-        // Set selection with arrows for touch
-        const setY = optionY + spacing + 40;
-        if (isMobile) {
-            context.fillStyle = "rgba(255, 221, 0, 0.2)";
-            context.fillRect(touchAreaLeft, setY - 20, touchAreaWidth, 40);
-        }
-        context.fillStyle = "#ffdd00";
-        context.fillText(`◄ SET: ${selectedSet} ►`, centerX, setY);
-        
-        // Show level selection with touch indicators
-        const levelY = optionY + spacing + 70;
-        const maxLevel = getLevelCount(selectedSet);
-        if (isMobile) {
-            context.fillStyle = "rgba(255, 221, 0, 0.2)";
-            context.fillRect(touchAreaLeft, levelY - 20, touchAreaWidth, 40);
-        }
-        context.fillStyle = "#ffdd00";
-        context.fillText(`◄ LEVEL: ${selectedLevel} / ${maxLevel} ►`, centerX, levelY);
-        
-        // Instructions
-        context.font = `${smallFontSize - 2}px 'Courier New', monospace`;
-        context.fillStyle = "#cccccc";
-        if (isMobile) {
-            context.fillText("TAP OPTIONS TO CHANGE • TAP ARROWS TO ADJUST", centerX, optionY + spacing + 120);
-        } else {
-            context.fillText("↑↓ CHANGE OPTION  ←→ CHANGE VALUES  SPACE TO START", centerX, optionY + spacing + 120);
-        }
+        context.fillText("TAP ARROWS TO CHANGE • TAP START BUTTON", centerX, startButtonY + 100);
     } else {
-        // Instructions for start option
-        context.font = `${smallFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#cccccc";
-        if (isMobile) {
-            context.fillText("TAP TO SELECT • TAP OPTION TO START", centerX, optionY + spacing + 80);
-        } else {
-            context.fillText("↑↓ CHANGE OPTION  SPACE TO START", centerX, optionY + spacing + 80);
-        }
+        context.fillText("CLICK ARROWS TO CHANGE • CLICK START OR PRESS SPACE", centerX, startButtonY + 100);
     }
     
     context.textAlign = "left";
 }
 
+function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, type, fontSize) {
+    // Label - positioned above the indicator box with more spacing
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.fillStyle = "#ffffff";
+    context.textAlign = "center";
+    context.fillText(label, centerX, y - 35);
+    
+    // Indicator box position
+    const indicatorY = y - indicatorHeight / 2;
+    
+    // Button Y position - centered with the indicator box
+    const buttonY = indicatorY + (indicatorHeight - buttonHeight) / 2;
+    
+    // Left arrow button
+    const leftButtonX = centerX - indicatorWidth / 2 - buttonWidth - 10;
+    
+    // Left button background
+    context.fillStyle = "rgba(255, 255, 255, 0.1)";
+    context.fillRect(leftButtonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Left button border
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = 1;
+    context.strokeRect(leftButtonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Left arrow text - centered in button
+    context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
+    context.fillStyle = "#ffffff";
+    context.fillText("◄", leftButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 6);
+    
+    // Right arrow button
+    const rightButtonX = centerX + indicatorWidth / 2 + 10;
+    
+    // Right button background
+    context.fillStyle = "rgba(255, 255, 255, 0.1)";
+    context.fillRect(rightButtonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Right button border
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = 1;
+    context.strokeRect(rightButtonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Right arrow text - centered in button
+    context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
+    context.fillStyle = "#ffffff";
+    context.fillText("►", rightButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 6);
+    
+    // Value indicator background
+    const indicatorX = centerX - indicatorWidth / 2;
+    context.fillStyle = "rgba(255, 221, 0, 0.2)";
+    context.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+    
+    // Value indicator border
+    context.strokeStyle = "#ffdd00";
+    context.lineWidth = 2;
+    context.strokeRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+    
+    // Value text - centered in indicator box
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.fillStyle = "#ffdd00";
+    context.fillText(value, centerX, indicatorY + indicatorHeight / 2 + 6);
+    
+    // Store button positions for click detection
+    if (!window.levelSelectButtons) window.levelSelectButtons = {};
+    window.levelSelectButtons[type] = {
+        left: { x: leftButtonX, y: buttonY, width: buttonWidth, height: buttonHeight },
+        right: { x: rightButtonX, y: buttonY, width: buttonWidth, height: buttonHeight }
+    };
+    
+    // Store start button position
+    if (type === 'level') { // Only store once
+        const startButtonY = y + 100;
+        const startButtonWidth = canvas.width < 600 ? 200 : 250;
+        const startButtonHeight = canvas.width < 600 ? 50 : 60;
+        const startButtonX = centerX - startButtonWidth / 2;
+        
+        window.levelSelectButtons.start = {
+            x: startButtonX, y: startButtonY, width: startButtonWidth, height: startButtonHeight
+        };
+    }
+}
+
 function handleLevelSelectInput(key) {
     switch (key) {
         case 'ArrowUp':
-            levelSelectOption = levelSelectOption === 'choose' ? 'start' : 'choose';
+            if (levelSelectOption === 'start') {
+                levelSelectOption = 'choose';
+            } else {
+                // In choose mode, up changes to previous set
+                handleLevelSelectLeft();
+            }
             break;
         case 'ArrowDown':
-            levelSelectOption = levelSelectOption === 'start' ? 'choose' : 'start';
+            if (levelSelectOption === 'choose') {
+                levelSelectOption = 'start';
+            } else {
+                // In start mode, down goes to choose mode
+                levelSelectOption = 'choose';
+            }
             break;
         case 'ArrowLeft':
             if (levelSelectOption === 'choose') {
-                handleLevelSelectLeft();
+                // Left decreases level
+                handleLevelSelectUp();
             }
             break;
         case 'ArrowRight':
             if (levelSelectOption === 'choose') {
-                handleLevelSelectRight();
+                // Right increases level
+                handleLevelSelectDown();
             }
             break;
         case ' ':
@@ -1812,7 +1881,8 @@ function handleLevelSelectInput(key) {
 }
 
 function handleLevelSelectLeft() {
-    // Cycle through sets or decrease level
+    // Always cycle through sets when using left/right arrows on keyboard
+    // or when tapping on the set line
     const setNames = Object.keys(SOKOBAN_LEVELS);
     const currentSetIndex = setNames.indexOf(selectedSet);
     
@@ -1820,78 +1890,112 @@ function handleLevelSelectLeft() {
         selectedSet = setNames[currentSetIndex - 1];
         selectedLevel = 1; // Reset to level 1 when changing sets
     } else {
-        // Decrease level if we're at the first set
-        if (selectedLevel > 1) {
-            selectedLevel--;
-        }
+        // Wrap around to last set
+        selectedSet = setNames[setNames.length - 1];
+        selectedLevel = 1;
     }
 }
 
 function handleLevelSelectRight() {
-    // Cycle through sets or increase level
+    // Always cycle through sets when using left/right arrows on keyboard
+    // or when tapping on the set line  
     const setNames = Object.keys(SOKOBAN_LEVELS);
     const currentSetIndex = setNames.indexOf(selectedSet);
-    const maxLevel = getLevelCount(selectedSet);
     
-    if (selectedLevel < maxLevel) {
-        selectedLevel++;
-    } else if (currentSetIndex < setNames.length - 1) {
+    if (currentSetIndex < setNames.length - 1) {
         selectedSet = setNames[currentSetIndex + 1];
         selectedLevel = 1; // Reset to level 1 when changing sets
+    } else {
+        // Wrap around to first set
+        selectedSet = setNames[0];
+        selectedLevel = 1;
+    }
+}
+
+function handleLevelSelectUp() {
+    if (selectedLevel > 1) {
+        selectedLevel--;
+    } else {
+        // Wrap to max level
+        const maxLevel = getLevelCount(selectedSet);
+        selectedLevel = maxLevel;
+    }
+}
+
+function handleLevelSelectDown() {
+    const maxLevel = getLevelCount(selectedSet);
+    if (selectedLevel < maxLevel) {
+        selectedLevel++;
+    } else {
+        // Wrap to level 1
+        selectedLevel = 1;
     }
 }
 
 function handleLevelSelectClick(x, y) {
-    const centerX = canvas.width / 2;
-    const optionY = 150;
-    const spacing = 80;
+    if (!window.levelSelectButtons) return;
     
-    // Make touch areas larger and more forgiving
-    const touchAreaHeight = 50; // Larger touch area
-    const touchAreaWidth = canvas.width * 0.8; // 80% of screen width
-    const touchAreaLeft = (canvas.width - touchAreaWidth) / 2;
-    const touchAreaRight = touchAreaLeft + touchAreaWidth;
-    
-    // Check if clicking on "Start from beginning" - larger area
-    if (y >= optionY - touchAreaHeight/2 && y <= optionY + touchAreaHeight/2 && 
-        x >= touchAreaLeft && x <= touchAreaRight) {
-        levelSelectOption = 'start';
-        startSelectedLevel();
-        return;
-    }
-    
-    // Check if clicking on "Choose level" - larger area
-    if (y >= optionY + spacing - touchAreaHeight/2 && y <= optionY + spacing + touchAreaHeight/2 &&
-        x >= touchAreaLeft && x <= touchAreaRight) {
-        if (levelSelectOption === 'choose') {
-            startSelectedLevel();
-        } else {
-            levelSelectOption = 'choose';
-        }
-        return;
-    }
-    
-    // If in choose mode, handle clicks on set/level areas with larger touch zones
-    if (levelSelectOption === 'choose') {
-        // Set area click - much larger area
-        if (y >= optionY + spacing + 15 && y <= optionY + spacing + 65) {
-            if (x < centerX - 20) { // Left side - previous set/level
-                handleLevelSelectLeft();
-            } else if (x > centerX + 20) { // Right side - next set/level
-                handleLevelSelectRight();
-            }
-            // Middle area doesn't do anything to avoid accidental clicks
+    // Check set navigation buttons
+    if (window.levelSelectButtons.set) {
+        const leftBtn = window.levelSelectButtons.set.left;
+        const rightBtn = window.levelSelectButtons.set.right;
+        
+        // Left set button
+        if (x >= leftBtn.x && x <= leftBtn.x + leftBtn.width &&
+            y >= leftBtn.y && y <= leftBtn.y + leftBtn.height) {
+            const sets = Object.keys(SOKOBAN_LEVELS);
+            const currentIndex = sets.indexOf(selectedSet);
+            selectedSet = sets[(currentIndex - 1 + sets.length) % sets.length];
+            selectedLevel = 1; // Reset to first level in new set
             return;
         }
         
-        // Level area click - larger area
-        if (y >= optionY + spacing + 45 && y <= optionY + spacing + 95) {
-            if (x < centerX - 20) { // Left side - decrease level
-                if (selectedLevel > 1) selectedLevel--;
-            } else if (x > centerX + 20) { // Right side - increase level
-                const maxLevel = getLevelCount(selectedSet);
-                if (selectedLevel < maxLevel) selectedLevel++;
-            }
+        // Right set button
+        if (x >= rightBtn.x && x <= rightBtn.x + rightBtn.width &&
+            y >= rightBtn.y && y <= rightBtn.y + rightBtn.height) {
+            const sets = Object.keys(SOKOBAN_LEVELS);
+            const currentIndex = sets.indexOf(selectedSet);
+            selectedSet = sets[(currentIndex + 1) % sets.length];
+            selectedLevel = 1; // Reset to first level in new set
+            return;
+        }
+    }
+    
+    // Check level navigation buttons
+    if (window.levelSelectButtons.level) {
+        const leftBtn = window.levelSelectButtons.level.left;
+        const rightBtn = window.levelSelectButtons.level.right;
+        
+        // Left level button
+        if (x >= leftBtn.x && x <= leftBtn.x + leftBtn.width &&
+            y >= leftBtn.y && y <= leftBtn.y + leftBtn.height) {
+            const maxLevel = getLevelCount(selectedSet);
+            selectedLevel = selectedLevel > 1 ? selectedLevel - 1 : maxLevel;
+            return;
+        }
+        
+        // Right level button
+        if (x >= rightBtn.x && x <= rightBtn.x + rightBtn.width &&
+            y >= rightBtn.y && y <= rightBtn.y + rightBtn.height) {
+            const maxLevel = getLevelCount(selectedSet);
+            selectedLevel = selectedLevel < maxLevel ? selectedLevel + 1 : 1;
+            return;
+        }
+    }
+    
+    // Check start game button
+    if (window.levelSelectButtons.start) {
+        const startBtn = window.levelSelectButtons.start;
+        if (x >= startBtn.x && x <= startBtn.x + startBtn.width &&
+            y >= startBtn.y && y <= startBtn.y + startBtn.height) {
+            // Start the selected level directly
+            currentSet = selectedSet;
+            currentLevelNumber = selectedLevel;
+            loadLevel(currentSet, currentLevelNumber);
+            currentGameState = GAME_STATES.PLAYING;
+            lastInputType = "Game Started!";
+            lastInputTime = Date.now();
+            inputFadeTimer = 2000;
             return;
         }
     }
