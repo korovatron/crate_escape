@@ -1554,11 +1554,11 @@ function drawLevelCompleteOverlay() {
     const overlayHeight = 200; // Fixed height for 4 lines of text + padding
     const overlayY = centerY - overlayHeight / 2;
     
-    // Draw semi-transparent overlay with dark gradient
+    // Draw semi-transparent overlay with dark gradient (more transparent)
     const gradient = context.createLinearGradient(0, overlayY, 0, overlayY + overlayHeight);
-    gradient.addColorStop(0, "rgba(0, 10, 20, 0.95)");
-    gradient.addColorStop(0.5, "rgba(0, 0, 0, 0.95)");
-    gradient.addColorStop(1, "rgba(20, 0, 20, 0.95)");
+    gradient.addColorStop(0, "rgba(0, 10, 20, 0.7)");
+    gradient.addColorStop(0.5, "rgba(0, 0, 0, 0.7)");
+    gradient.addColorStop(1, "rgba(20, 0, 20, 0.7)");
     context.fillStyle = gradient;
     context.fillRect(0, overlayY, canvas.width, overlayHeight);
     
