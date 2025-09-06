@@ -125,6 +125,18 @@ function setupCanvasEventListeners() {
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('orientationchange', resizeCanvas);
     
+    // Prevent iOS magnifier and context menu on long press
+    canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    
+    // Prevent selection and drag behaviors that can trigger magnifier
+    canvas.addEventListener('selectstart', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    
     // Touch events
     canvas.addEventListener('touchstart', function(e) {
         if (e.touches.length === 1) {

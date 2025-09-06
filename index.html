@@ -22,6 +22,10 @@
 
     canvas {
       transform-origin: top left;
+      -webkit-user-select: none; /* Prevent text selection */
+      -webkit-touch-callout: none; /* Disable iOS callout (magnifier) */
+      -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+      user-select: none; /* Prevent text selection on other browsers */
     }
   </style>
 </head>
