@@ -1437,57 +1437,85 @@ function drawStatusBar() {
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     
-    // Draw neon border at bottom of status bar
+    // Draw neon border at bottom of status bar (more subtle)
     context.shadowColor = "#00ffff";
-    context.shadowBlur = 15;
+    context.shadowBlur = 8;
     context.fillStyle = "#00ffff";
     context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
     context.shadowBlur = 0;
     
     // Helper function to draw neon text
     function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff") {
-        // Draw glow
-        context.shadowColor = glowColor;
-        context.shadowBlur = 20;
+        // Draw text without glow - just the color
+        context.shadowBlur = 0;
         context.fillStyle = color;
         context.fillText(text, x, y);
-        
-        // Draw inner bright text
-        context.shadowBlur = 10;
-        context.fillStyle = "#ffffff";
-        context.fillText(text, x, y);
-        
-        // Reset shadow
-        context.shadowBlur = 0;
     }
     
+    // Responsive layout based on screen width
+    const isMobile = canvas.width < 600;
+    const fontSize = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
+    
     // Set text properties
-    context.font = "bold 18px 'Courier New', monospace";
+    context.font = fontSize;
     context.textAlign = "left";
     
-    // Draw set and level info with cyan neon glow
-    const levelText = `${currentSet} - Level ${currentLevelNumber}`;
-    drawNeonText(levelText, 15, 35, "#00ffff", "#00ffff");
-    
-    // Draw move count and attempt count with green/purple neon
-    const moveText = `Moves: ${moveCount}`;
-    const attemptText = `Attempts: ${attemptCount}`;
-    const levelTextWidth = context.measureText(levelText).width;
-    const moveTextWidth = context.measureText(moveText).width;
-    
-    drawNeonText(moveText, 15 + levelTextWidth + 40, 35, "#00ff88", "#00ff88");
-    drawNeonText(attemptText, 15 + levelTextWidth + 40 + moveTextWidth + 30, 35, "#ff00ff", "#ff00ff");
-    
-    // Draw neon restart button
-    const buttonWidth = 90;
-    const buttonHeight = 40;
+    // Draw neon restart button first to reserve space
+    const buttonWidth = isMobile ? 70 : 90;
+    const buttonHeight = isMobile ? 30 : 40;
     const buttonX = canvas.width - buttonWidth - 10;
-    const buttonY = 10;
+    const buttonY = isMobile ? 15 : 10;
+    const reservedButtonSpace = buttonWidth + 20; // Button width + padding
     
-    // Button neon glow background
+    // Available space for text (excluding button area)
+    const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
+    
+    if (isMobile) {
+        // Mobile layout: Stack text in two rows with full text
+        const levelText = `${currentSet} - Level ${currentLevelNumber}`;
+        const moveText = `Moves: ${moveCount}`;
+        const attemptText = `Attempts: ${attemptCount}`;
+        
+        drawNeonText(levelText, 15, 25, "#00ffff", "#00ffff");
+        
+        // Draw moves and attempts separately to maintain colors
+        drawNeonText(moveText, 15, 45, "#00ff88", "#00ff88");
+        const moveTextWidth = context.measureText(moveText).width;
+        drawNeonText(attemptText, 15 + moveTextWidth + 20, 45, "#ff00ff", "#ff00ff");
+    } else {
+        // Desktop layout: Single row with proper spacing
+        const levelText = `${currentSet} - Level ${currentLevelNumber}`;
+        const moveText = `Moves: ${moveCount}`;
+        const attemptText = `Attempts: ${attemptCount}`;
+        
+        // Measure text widths
+        const levelTextWidth = context.measureText(levelText).width;
+        const moveTextWidth = context.measureText(moveText).width;
+        const attemptTextWidth = context.measureText(attemptText).width;
+        
+        // Calculate total width needed
+        const totalTextWidth = levelTextWidth + moveTextWidth + attemptTextWidth + 60; // 60px for spacing
+        
+        if (totalTextWidth <= availableTextWidth) {
+            // All text fits - use normal spacing
+            drawNeonText(levelText, 15, 35, "#00ffff", "#00ffff");
+            drawNeonText(moveText, 15 + levelTextWidth + 30, 35, "#00ff88", "#00ff88");
+            drawNeonText(attemptText, 15 + levelTextWidth + 30 + moveTextWidth + 30, 35, "#ff00ff", "#ff00ff");
+        } else {
+            // Text doesn't fit - use abbreviated format
+            const shortLevelText = `${currentSet} - Lv${currentLevelNumber}`;
+            const shortStatsText = `${moveCount}m ${attemptCount}a`;
+            
+            drawNeonText(shortLevelText, 15, 35, "#00ffff", "#00ffff");
+            const shortLevelWidth = context.measureText(shortLevelText).width;
+            drawNeonText(shortStatsText, 15 + shortLevelWidth + 20, 35, "#00ff88", "#00ff88");
+        }
+    }
+    
+    // Button neon glow background (more subtle)
     context.shadowColor = "#ff6600";
-    context.shadowBlur = 25;
-    context.fillStyle = "rgba(255, 102, 0, 0.3)";
+    context.shadowBlur = 12;
+    context.fillStyle = "rgba(255, 102, 0, 0.2)";
     context.fillRect(buttonX - 5, buttonY - 5, buttonWidth + 10, buttonHeight + 10);
     
     // Button background
@@ -1495,16 +1523,16 @@ function drawStatusBar() {
     context.fillStyle = "rgba(30, 30, 30, 0.9)";
     context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
     
-    // Button neon border
+    // Button neon border (more subtle)
     context.shadowColor = "#ff6600";
-    context.shadowBlur = 15;
+    context.shadowBlur = 8;
     context.strokeStyle = "#ff6600";
     context.lineWidth = 2;
     context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
     context.shadowBlur = 0;
     
     // Button text with orange neon
-    context.font = "bold 14px 'Courier New', monospace";
+    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 14px 'Courier New', monospace";
     context.textAlign = "center";
     drawNeonText("RESTART", buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5, "#ff6600", "#ff6600");
     
@@ -1531,31 +1559,22 @@ function drawLevelCompleteOverlay() {
     context.fillStyle = gradient;
     context.fillRect(0, overlayY, canvas.width, overlayHeight);
     
-    // Draw neon borders at top and bottom
+    // Draw neon borders at top and bottom (more subtle)
     context.shadowColor = "#00ff00";
-    context.shadowBlur = 20;
+    context.shadowBlur = 10;
     context.fillStyle = "#00ff00";
     context.fillRect(0, overlayY, canvas.width, 3); // Top border
     context.fillRect(0, overlayY + overlayHeight - 3, canvas.width, 3); // Bottom border
     context.shadowBlur = 0;
     
-    // Helper function to draw neon text (reuse from status bar)
+    // Helper function to draw neon text (more subtle version)
     function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff", fontSize = "24px") {
         context.font = `bold ${fontSize} 'Courier New', monospace`;
         
-        // Draw outer glow
-        context.shadowColor = glowColor;
-        context.shadowBlur = 30;
+        // Draw text without glow - just the color
+        context.shadowBlur = 0;
         context.fillStyle = color;
         context.fillText(text, x, y);
-        
-        // Draw inner bright text
-        context.shadowBlur = 15;
-        context.fillStyle = "#ffffff";
-        context.fillText(text, x, y);
-        
-        // Reset shadow
-        context.shadowBlur = 0;
     }
     
     // Main completion message with green neon glow
