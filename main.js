@@ -295,7 +295,8 @@ let playerPos = { x: 0, y: 0 }; // Current player position in grid coordinates
 let playerPixelPos = { x: 0, y: 0 }; // Current player position in pixel coordinates
 let isPlayerMoving = false;
 let moveAnimationProgress = 0;
-let moveDuration = 0.25; // Animation duration in seconds
+let moveDuration = 0.25; // Base animation duration in seconds
+let currentMoveDuration = 0.25; // Current animation duration (can be adjusted for continuous movement)
 let moveStartPos = { x: 0, y: 0 };
 let moveTargetPos = { x: 0, y: 0 };
 let movingBox = null; // Box being pushed (if any)
@@ -526,8 +527,11 @@ function createCanvas() {
 function gameLoop(timeStamp) {
     secondsPassed = (timeStamp - oldTimeStamp) / 1000;
     oldTimeStamp = timeStamp;
-    update(secondsPassed);
+    
+    // Clamp deltaTime to prevent large jumps that can cause judder
     secondsPassed = Math.min(secondsPassed, 0.1);
+    
+    update(secondsPassed);
     draw();
     window.requestAnimationFrame(gameLoop);
 }
@@ -707,8 +711,8 @@ function updatePlayerMovement(deltaTime) {
     
     // Update camera during movement for smooth panning
     if (levelNeedsPanning) {
-        // Use linear interpolation during continuous input to avoid pause between movements
-        const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
+        // Use adaptive interpolation for smoother continuous movement
+        const t = getInterpolationValue(moveAnimationProgress);
         const currentPlayerX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
         const currentPlayerY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
         
@@ -841,8 +845,8 @@ function getCurrentPlayerPixelPos() {
         }
         
         // Interpolate position during movement
-        // Use linear interpolation during continuous input to avoid pause between movements
-        const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
+        // Use adaptive interpolation for smoother continuous movement
+        const t = getInterpolationValue(moveAnimationProgress);
         const lerpX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
         const lerpY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
         
@@ -860,8 +864,8 @@ function getCurrentPlayerPixelPos() {
         }
         
         // Interpolate position during movement
-        // Use linear interpolation during continuous input to avoid pause between movements
-        const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
+        // Use adaptive interpolation for smoother continuous movement
+        const t = getInterpolationValue(moveAnimationProgress);
         const lerpX = moveStartPos.x + (moveTargetPos.x - moveStartPos.x) * t;
         const lerpY = moveStartPos.y + (moveTargetPos.y - moveStartPos.y) * t;
         
@@ -891,8 +895,8 @@ function getCurrentBoxPixelPos(boxIndex) {
     }
     
     // Interpolate position during movement
-    // Use linear interpolation during continuous input to avoid pause between movements
-    const t = isContinuousInputActive() ? moveAnimationProgress : easeInOutQuad(moveAnimationProgress);
+    // Use adaptive interpolation for smoother continuous movement
+    const t = getInterpolationValue(moveAnimationProgress);
     const lerpX = movingBox.startPos.x + (movingBox.targetPos.x - movingBox.startPos.x) * t;
     const lerpY = movingBox.startPos.y + (movingBox.targetPos.y - movingBox.startPos.y) * t;
     
@@ -918,8 +922,27 @@ function findBoxAt(x, y) {
     return currentLevel.boxes.findIndex(box => box.x === x && box.y === y);
 }
 
+function isBoxOnGoal(boxIndex) {
+    const box = currentLevel.boxes[boxIndex];
+    return currentLevel.goals.some(goal => goal.x === box.x && goal.y === box.y);
+}
+
 function easeInOutQuad(t) {
     return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+function smoothstep(t) {
+    return t * t * (3 - 2 * t);
+}
+
+function getInterpolationValue(progress) {
+    // Use linear interpolation for continuous movement to avoid pauses
+    // Use eased interpolation for single movements for natural feel
+    if (isContinuousInputActive()) {
+        return progress; // Linear interpolation - constant speed
+    } else {
+        return easeInOutQuad(progress); // Eased interpolation - natural feel
+    }
 }
 
 function updateCameraPosition() {
@@ -1106,7 +1129,8 @@ function drawGameplay() {
     // Draw boxes with smooth movement
     currentLevel.boxes.forEach((box, index) => {
         const pixelPos = getCurrentBoxPixelPos(index);
-        drawBoxTile(pixelPos.x, pixelPos.y);
+        const isOnGoal = isBoxOnGoal(index);
+        drawBoxTile(pixelPos.x, pixelPos.y, isOnGoal);
     });
     
     // Draw player with smooth movement
@@ -1157,9 +1181,42 @@ function drawGoalTile(x, y) {
     );
 }
 
-function drawBoxTile(x, y) {
-    // Using crate_01.png sprite from spriteSheet
-    const sprite = textureAtlas.frames["crate_01.png"];
+function drawBoxTile(x, y, isOnGoal = false) {
+    // Use different sprites based on whether box is on goal or not
+    let spriteName;
+    
+    if (isOnGoal) {
+        spriteName = "crate_01.png"; // Brighter sprite for boxes on goals
+    } else {
+        spriteName = "crate_11.png"; // Darker sprite for boxes not on goals
+    }
+    
+    const sprite = textureAtlas.frames[spriteName];
+    
+    // Fallback to crate_01.png if the specified sprite doesn't exist
+    if (!sprite) {
+        spriteName = "crate_01.png";
+        const fallbackSprite = textureAtlas.frames[spriteName];
+        console.log(`Sprite "${spriteName}" not found, using fallback crate_01.png`);
+    }
+    
+    if (isOnGoal) {
+        // Draw a subtle glow behind the box when it's on a goal
+        context.save();
+        context.globalAlpha = 0.6;
+        context.fillStyle = "#00FF00"; // Green glow
+        context.fillRect(x - 2, y - 2, tileSize + 4, tileSize + 4);
+        context.restore();
+        
+        // Draw the box with a slight color tint
+        context.save();
+        context.globalCompositeOperation = "multiply";
+        context.fillStyle = "#CCFFCC"; // Light green tint
+        context.fillRect(x, y, tileSize, tileSize);
+        context.globalCompositeOperation = "source-over";
+        context.restore();
+    }
+    
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
