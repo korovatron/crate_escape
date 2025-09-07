@@ -618,9 +618,32 @@ function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
+    setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
     window.requestAnimationFrame(gameLoop);
     gameLoad();
+}
+
+// Handle PWA background/foreground transitions to fix stuck input
+function setupBackgroundAppHandler() {
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            // App returned to foreground - clear all stuck input states
+            pressedKeys.clear();
+            
+            // Reset touch state
+            isTouchActive = false;
+            touchMoveDirection.x = 0;
+            touchMoveDirection.y = 0;
+            swipeProcessed = false;
+            
+            // Clear any ongoing touch timer
+            if (touchMoveTimer) {
+                clearInterval(touchMoveTimer);
+                touchMoveTimer = null;
+            }
+        }
+    });
 }
 // #endregion
 
