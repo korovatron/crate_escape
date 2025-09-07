@@ -1859,7 +1859,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 147
         [
-            "'reduction of (Mas Sasquatch 8)'",
             "       #####",
             "########   #",
             "#.   .  @#.#",
@@ -1874,7 +1873,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 148
         [
-            "'from (Original 18)'",
             "###########",
             "#  .  #   #",
             "# #.  @   #",
@@ -1886,7 +1884,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 149
         [
-            "'from (Boxxle 43)'",
             " ####",
             "##  ###",
             "#@$   #",
@@ -1903,7 +1900,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 150
         [
-            "'from (Original 47)'",
             "     ####",
             " #####  #",
             " #     $#######",
@@ -1916,7 +1912,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 151
         [
-            "'from (Original 47)'",
             "   ####",
             "   #  #",
             " ###  #",
@@ -1931,7 +1926,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 152
         [
-            "'reduced (Mas Sasquatch 23)'",
             "###### ####",
             "#     #    #",
             "#.##  #$##  #",
@@ -1945,7 +1939,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 153
         [
-            "'reduction of (Revenge 306)'",
             "#############",
             "#.# @#  #   #",
             "#.#$$   # $ #",
@@ -1960,7 +1953,6 @@ const SOKOBAN_LEVELS = {
 
         // Level 154
         [
-            "'Take the long way home.'",
             " ############################",
             " #                          #",
             " # ######################## #",
@@ -4794,13 +4786,13 @@ const SOKOBAN_LEVELS = {
 // Helper functions for level access
 const LevelManager = {
     // Get a specific level by set and number (1-indexed)
-    getLevel: function(setName, levelNumber) {
+    getLevel: function (setName, levelNumber) {
         const set = SOKOBAN_LEVELS[setName];
         if (!set) {
             console.error(`Level set "${setName}" not found`);
             return null;
         }
-        
+
         // Special handling for demo level (single level, not an array of levels)
         if (setName === 'demo') {
             if (levelNumber === 1) {
@@ -4810,41 +4802,41 @@ const LevelManager = {
                 return null;
             }
         }
-        
+
         const level = set[levelNumber - 1]; // Convert to 0-indexed
         if (!level) {
             console.error(`Level ${levelNumber} not found in set "${setName}"`);
             return null;
         }
-        
+
         return level;
     },
 
     // Get the demo level
-    getDemoLevel: function() {
+    getDemoLevel: function () {
         return SOKOBAN_LEVELS.demo;
     },
 
     // Get total number of levels in a set
-    getLevelCount: function(setName) {
+    getLevelCount: function (setName) {
         const set = SOKOBAN_LEVELS[setName];
         if (!set) return 0;
-        
+
         // Special handling for demo level (single level, not an array of levels)
         if (setName === 'demo') {
             return 1;
         }
-        
+
         return set.length;
     },
 
     // Get all available set names
-    getAvailableSets: function() {
+    getAvailableSets: function () {
         return Object.keys(SOKOBAN_LEVELS).filter(key => key !== 'demo');
     },
 
     // Parse a level string array into a more usable format
-    parseLevel: function(levelArray) {
+    parseLevel: function (levelArray) {
         const level = {
             grid: [],
             width: 0,
@@ -4862,11 +4854,11 @@ const LevelManager = {
         for (let y = 0; y < levelArray.length; y++) {
             const row = levelArray[y];
             level.grid[y] = [];
-            
+
             for (let x = 0; x < level.width; x++) {
                 const char = x < row.length ? row[x] : ' ';
                 level.grid[y][x] = char;
-                
+
                 switch (char) {
                     case '@': // Player
                         level.playerStart = { x, y };
@@ -4900,15 +4892,15 @@ const LevelManager = {
     },
 
     // Get a parsed level ready for game use
-    getParsedLevel: function(setName, levelNumber) {
+    getParsedLevel: function (setName, levelNumber) {
         const levelArray = this.getLevel(setName, levelNumber);
         if (!levelArray) return null;
-        
+
         return this.parseLevel(levelArray);
     },
 
     // Get parsed demo level
-    getParsedDemoLevel: function() {
+    getParsedDemoLevel: function () {
         return this.parseLevel(SOKOBAN_LEVELS.demo);
     }
 };
