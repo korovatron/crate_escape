@@ -357,22 +357,17 @@ let currentGameState = GAME_STATES.TITLE;
 
 // Level selection variables
 let levelSelectOption = 'start'; // 'start', 'set', 'level'
-let selectedSet = 'Microban';
+let selectedSet = Object.keys(SOKOBAN_LEVELS)[0];
 let selectedLevel = 1;
 
 // Level progression variables
-let currentSetName = 'Microban';
+let currentSetName = Object.keys(SOKOBAN_LEVELS)[0];
 let isGameComplete = false;
 let levelCompletionStartTime = 0;
 
-// Level progression order: Microban -> Sasquatch_I -> Sasquatch_II -> Sasquatch_III
+// Level progression order: automatically generated from levels.js order
 // Level counts are automatically calculated from SOKOBAN_LEVELS
-const LEVEL_PROGRESSION = [
-    { setName: 'Microban' },
-    { setName: 'Sasquatch_I' },
-    { setName: 'Sasquatch_II' },
-    { setName: 'Sasquatch_III' }
-];
+const LEVEL_PROGRESSION = Object.keys(SOKOBAN_LEVELS).map(setName => ({ setName }));
 
 // Function to get the number of levels in a set
 function getLevelCount(setName) {
@@ -388,7 +383,7 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = 'Microban'; // Start with Microban levels
+let currentSet = Object.keys(SOKOBAN_LEVELS)[0]; // Start with first set from levels.js
 let currentLevelNumber = 1; // Start with level 1
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
@@ -2766,7 +2761,7 @@ function handleLevelSelectClick(x, y) {
 function startSelectedLevel() {
     if (levelSelectOption === 'start') {
         // Start from beginning - reset to first level
-        currentSet = 'Microban';
+        currentSet = Object.keys(SOKOBAN_LEVELS)[0];
         currentLevelNumber = 1;
     } else {
         // Start from selected level
