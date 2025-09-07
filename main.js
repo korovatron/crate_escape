@@ -292,6 +292,10 @@ function setupCanvasEventListeners() {
                 
                 // Check for button taps during gameplay
                 if (currentGameState === GAME_STATES.PLAYING) {
+                    if (isClickOnOverviewButton(canvasPos.x, canvasPos.y)) {
+                        toggleOverviewMode();
+                        return;
+                    }
                     if (isClickOnTryAgainButton(canvasPos.x, canvasPos.y)) {
                         restartCurrentLevel();
                         return;
@@ -394,6 +398,17 @@ let levelOffsetY = 0;
 let cameraX = 0; // Camera position in world coordinates
 let cameraY = 0;
 let levelNeedsPanning = false; // Whether level is larger than screen
+
+// Overview mode variables
+let overviewMode = false; // Current overview mode state
+let overviewScale = 1;
+let overviewOffsetX = 0;
+let overviewOffsetY = 0;
+
+// Overview tutorial variables
+let overviewTutorialShown = false; // Track if tutorial has been shown this level
+let overviewTutorialStartTime = 0; // When tutorial started
+let overviewTutorialDuration = 10000; // 10 seconds total duration
 
 // Status bar configuration
 const STATUS_BAR_HEIGHT = 60;
@@ -684,6 +699,12 @@ function loadLevel(setName, levelNumber, isRestart = false) {
         attemptCount = 1;
     }
     
+    // Reset overview tutorial for new levels (not restarts)
+    if (!isRestart) {
+        overviewTutorialShown = false;
+        overviewMode = false; // Ensure we start in normal mode
+    }
+    
     // Calculate optimal tile size for this level and screen
     tileSize = calculateOptimalTileSize();
     
@@ -760,6 +781,11 @@ function loadLevel(setName, levelNumber, isRestart = false) {
 // #region Update Game State
 // Player movement functions
 function attemptPlayerMove(direction) {
+    // Block player movement when in overview mode
+    if (overviewMode) {
+        return false;
+    }
+    
     const newX = playerPos.x + direction.x;
     const newY = playerPos.y + direction.y;
     
@@ -1155,34 +1181,66 @@ function restartCurrentLevel() {
     }
 }
 
+function isClickOnOverviewButton(x, y) {
+    const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
+    if (!showOverviewButton) return false;
+    
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const buttonSpacing = 8;
+    const rightMargin = 10;
+    
+    // Use same calculations as drawStatusBar
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
+    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    const overviewButtonX = restartButtonX - buttonSize - buttonSpacing;
+    const overviewButtonY = exitButtonY;
+    
+    return x >= overviewButtonX && x <= overviewButtonX + buttonSize &&
+           y >= overviewButtonY && y <= overviewButtonY + buttonSize;
+}
+
+function toggleOverviewMode() {
+    overviewMode = !overviewMode;
+    
+    // Clear any pending input states when switching modes
+    pressedKeys.clear();
+    lastKeyTime.clear();
+    
+    // Reset input tracking
+    lastInputType = overviewMode ? "Overview On" : "Overview Off";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
+}
+
 function isClickOnTryAgainButton(x, y) {
     const isMobile = canvas.width < 600;
-    const buttonWidth = isMobile ? 70 : 90;
-    const buttonHeight = isMobile ? 30 : 40;
+    const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const buttonSpacing = 8;
     const rightMargin = 10;
-    const buttonSpacing = 10;
     
-    const tryAgainButtonX = canvas.width - buttonWidth - rightMargin;
-    const tryAgainButtonY = isMobile ? 15 : 10;
+    // Use same calculations as drawStatusBar
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
+    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    const restartButtonY = exitButtonY;
     
-    return x >= tryAgainButtonX && x <= tryAgainButtonX + buttonWidth &&
-           y >= tryAgainButtonY && y <= tryAgainButtonY + buttonHeight;
+    return x >= restartButtonX && x <= restartButtonX + buttonSize &&
+           y >= restartButtonY && y <= restartButtonY + buttonSize;
 }
 
 function isClickOnExitButton(x, y) {
     const isMobile = canvas.width < 600;
-    const buttonWidth = isMobile ? 70 : 90;
-    const buttonHeight = isMobile ? 30 : 40;
+    const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
     const rightMargin = 10;
-    const buttonSpacing = 10;
     
-    const tryAgainButtonX = canvas.width - buttonWidth - rightMargin;
-    const tryAgainButtonY = isMobile ? 15 : 10;
-    const exitButtonX = tryAgainButtonX - buttonWidth - buttonSpacing;
-    const exitButtonY = tryAgainButtonY;
+    // Use same calculations as drawStatusBar
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
     
-    return x >= exitButtonX && x <= exitButtonX + buttonWidth &&
-           y >= exitButtonY && y <= exitButtonY + buttonHeight;
+    return x >= exitButtonX && x <= exitButtonX + buttonSize &&
+           y >= exitButtonY && y <= exitButtonY + buttonSize;
 }
 
 function getTouchCanvasPosition(touch) {
@@ -1640,6 +1698,161 @@ function drawGameplay() {
         return;
     }
     
+    if (overviewMode) {
+        drawOverviewMode();
+    } else {
+        drawNormalGameplay();
+    }
+}
+
+function drawOverviewMode() {
+    // Save the context state
+    context.save();
+    
+    // Disable image smoothing to prevent scaling artifacts
+    context.imageSmoothingEnabled = false;
+    
+    // Clip the drawing area to exclude the status bar
+    context.beginPath();
+    context.rect(0, STATUS_BAR_HEIGHT, canvas.width, canvas.height - STATUS_BAR_HEIGHT);
+    context.clip();
+    
+    // Calculate safe tile size for overview to avoid scaling artifacts
+    const playableWidth = canvas.width;
+    const playableHeight = canvas.height - STATUS_BAR_HEIGHT;
+    
+    // Define safe tile sizes that avoid scaling artifacts
+    const safeTileSizes = [4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64];
+    
+    // Calculate max tile size that fits the overview area with padding
+    const padding = 20; // Small padding for overview
+    const availableWidth = playableWidth - padding;
+    const availableHeight = playableHeight - padding;
+    
+    const maxTileWidth = Math.floor(availableWidth / currentLevel.width);
+    const maxTileHeight = Math.floor(availableHeight / currentLevel.height);
+    const maxPossibleTileSize = Math.min(maxTileWidth, maxTileHeight);
+    
+    // Find the largest safe tile size for overview
+    let overviewTileSize = 4; // Minimum safe size
+    for (let size of safeTileSizes) {
+        if (size <= maxPossibleTileSize) {
+            overviewTileSize = size;
+        } else {
+            break;
+        }
+    }
+    
+    // Calculate level dimensions with safe tile size
+    const levelPixelWidth = currentLevel.width * overviewTileSize;
+    const levelPixelHeight = currentLevel.height * overviewTileSize;
+    
+    // Center the overview (no scaling needed now)
+    const overviewOffsetX = Math.round((playableWidth - levelPixelWidth) / 2);
+    const overviewOffsetY = Math.round(STATUS_BAR_HEIGHT + (playableHeight - levelPixelHeight) / 2);
+    
+    // Apply translation only (no scaling)
+    context.translate(overviewOffsetX, overviewOffsetY);
+    
+    // Draw the level grid with the safe overview tile size
+    for (let y = 0; y < currentLevel.height; y++) {
+        for (let x = 0; x < currentLevel.width; x++) {
+            const tileX = x * overviewTileSize;
+            const tileY = y * overviewTileSize;
+            
+            const char = currentLevel.grid[y][x];
+            
+            // Temporarily set tileSize for drawing functions
+            const originalTileSize = tileSize;
+            tileSize = overviewTileSize;
+            
+            // Draw background/floor for all tiles
+            drawFloorTile(tileX, tileY);
+            
+            // Draw the appropriate sprite based on the character
+            switch (char) {
+                case '#': // Wall
+                    drawWallTile(tileX, tileY);
+                    break;
+                case '.': // Goal
+                    drawGoalTile(tileX, tileY);
+                    break;
+                // Skip drawing static crates and player from grid - we'll draw current positions below
+                case '$': // Original crate position (skip)
+                case '@': // Original player position (skip)
+                case '*': // Original crate on goal (just draw goal)
+                case '+': // Original player on goal (just draw goal)
+                    if (char === '*' || char === '+') {
+                        drawGoalTile(tileX, tileY);
+                    }
+                    break;
+            }
+            
+            // Restore original tileSize
+            tileSize = originalTileSize;
+        }
+    }
+    
+    // Temporarily set tileSize for dynamic elements
+    const originalTileSize = tileSize;
+    tileSize = overviewTileSize;
+    
+    // Draw boxes at current positions
+    currentLevel.boxes.forEach((box, index) => {
+        const boxX = box.x * overviewTileSize;
+        const boxY = box.y * overviewTileSize;
+        const isOnGoal = isBoxOnGoal(index);
+        drawBoxTile(boxX, boxY, isOnGoal);
+    });
+    
+    // Draw player at current position  
+    const playerX = playerPos.x * overviewTileSize;
+    const playerY = playerPos.y * overviewTileSize;
+    drawPlayerTile(playerX, playerY);
+    
+    // Restore original tileSize
+    tileSize = originalTileSize;
+    
+    // Restore the context state
+    context.restore();
+    
+    // Add overview mode visual indicators on top of everything
+    // Semi-transparent green overlay to match the active button
+    context.fillStyle = "rgba(0, 255, 0, 0.15)"; // 15% green tint
+    context.fillRect(0, STATUS_BAR_HEIGHT, canvas.width, canvas.height - STATUS_BAR_HEIGHT);
+    
+    // Large "OVERVIEW MODE" watermark
+    context.save();
+    const isMobile = canvas.width < 600;
+    const fontSize = isMobile ? "bold 24px 'Courier New', monospace" : "bold 36px 'Courier New', monospace";
+    context.font = fontSize;
+    context.textAlign = "center";
+    context.globalAlpha = 0.7; // Semi-transparent
+    
+    // Position text in the center of playable area
+    const centerX = canvas.width / 2;
+    const centerY = STATUS_BAR_HEIGHT + (canvas.height - STATUS_BAR_HEIGHT) / 2;
+    
+    // Draw text with green neon effect to match button
+    context.shadowColor = "#00ff00";
+    context.shadowBlur = 15;
+    context.fillStyle = "#00ff00";
+    context.fillText("OVERVIEW MODE", centerX, centerY - 20);
+    
+    // Add subtitle
+    const subtitleFont = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
+    context.font = subtitleFont;
+    context.shadowBlur = 10;
+    context.fillText("Click or tap 👁 to return to game", centerX, centerY + 20);
+    
+    context.restore();
+    
+    // Draw status bar on top of everything
+    drawStatusBar();
+}
+
+function drawNormalGameplay() {
+    
     // Save the context state
     context.save();
     
@@ -1705,6 +1918,80 @@ function drawGameplay() {
     
     // Draw status bar on top of everything
     drawStatusBar();
+    
+    // Draw overview tutorial overlay if needed
+    drawOverviewTutorial();
+}
+
+function drawOverviewTutorial() {
+    // Only show tutorial if it was triggered and within duration
+    if (!overviewTutorialShown || overviewTutorialStartTime === 0) return;
+    
+    const elapsed = Date.now() - overviewTutorialStartTime;
+    
+    // Tutorial has expired
+    if (elapsed > overviewTutorialDuration) {
+        overviewTutorialStartTime = 0; // Reset
+        return;
+    }
+    
+    // Calculate fade alpha (1.0 for first 3 seconds, then fade out over remaining 7 seconds)
+    const fadeStartTime = 3000; // Show full opacity for 3 seconds
+    let alpha = 1.0;
+    if (elapsed > fadeStartTime) {
+        const fadeElapsed = elapsed - fadeStartTime;
+        const fadeRemaining = overviewTutorialDuration - fadeStartTime;
+        alpha = 1.0 - (fadeElapsed / fadeRemaining);
+    }
+    
+    // Don't draw if completely faded
+    if (alpha <= 0) return;
+    
+    context.save();
+    context.globalAlpha = alpha;
+    
+    const isMobile = canvas.width < 600;
+    
+    // Semi-transparent background
+    context.fillStyle = "rgba(0, 0, 0, 0.7)";
+    const boxWidth = isMobile ? 280 : 350;
+    const boxHeight = isMobile ? 80 : 100;
+    const boxX = (canvas.width - boxWidth) / 2;
+    const boxY = (canvas.height - boxHeight) / 2;
+    
+    // Rounded rectangle background
+    context.beginPath();
+    const radius = 10;
+    context.roundRect(boxX, boxY, boxWidth, boxHeight, radius);
+    context.fill();
+    
+    // Border with purple glow to match button
+    context.shadowColor = "#ff00ff";
+    context.shadowBlur = 15;
+    context.strokeStyle = "#ff00ff";
+    context.lineWidth = 2;
+    context.stroke();
+    context.shadowBlur = 0;
+    
+    // Tutorial text
+    context.textAlign = "center";
+    context.fillStyle = "#ffffff";
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    // Main instruction
+    const mainFont = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
+    context.font = mainFont;
+    context.fillText("Press 👁 to get an overview", centerX, centerY - 5);
+    
+    // Subtitle
+    const subFont = isMobile ? "14px 'Courier New', monospace" : "16px 'Courier New', monospace";
+    context.font = subFont;
+    context.fillStyle = "#cccccc";
+    context.fillText("of the entire level", centerX, centerY + 18);
+    
+    context.restore();
 }
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
@@ -1861,21 +2148,34 @@ function drawStatusBar() {
     context.font = fontSize;
     context.textAlign = "left";
     
-    // Draw buttons (BACK and TRY AGAIN)
-    const buttonWidth = isMobile ? 70 : 90;
-    const buttonHeight = isMobile ? 30 : 40;
-    const buttonSpacing = 10;
+    // Draw buttons (BACK, TRY AGAIN, and optionally OVERVIEW) - now square for icons
+    const buttonSize = isMobile ? 35 : 45; // Square buttons since we're using icons
+    const buttonSpacing = 8; // Reduced spacing since buttons are smaller
     const rightMargin = 10;
     
-    // TRY AGAIN button (right side)
-    const tryAgainButtonX = canvas.width - buttonWidth - rightMargin;
-    const tryAgainButtonY = isMobile ? 15 : 10;
+    // Calculate number of buttons to show
+    const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
+    const numButtons = showOverviewButton ? 3 : 2;
     
-    // EXIT button (left of TRY AGAIN button)
-    const backButtonX = tryAgainButtonX - buttonWidth - buttonSpacing;
-    const backButtonY = tryAgainButtonY;
+    // Trigger overview tutorial when button first appears
+    if (showOverviewButton && !overviewTutorialShown && !overviewMode) {
+        overviewTutorialShown = true;
+        overviewTutorialStartTime = Date.now();
+    }
     
-    const reservedButtonSpace = (buttonWidth * 2) + buttonSpacing + rightMargin + 20; // Both buttons + spacing + padding
+    // EXIT button (rightmost - primary action)
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
+    
+    // RESTART button (left of EXIT button - secondary action)
+    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    const restartButtonY = exitButtonY;
+    
+    // OVERVIEW button (leftmost when shown - optional tertiary action)
+    const overviewButtonX = restartButtonX - buttonSize - buttonSpacing;
+    const overviewButtonY = exitButtonY;
+    
+    const reservedButtonSpace = (buttonSize * numButtons) + (buttonSpacing * (numButtons - 1)) + rightMargin + 20; // All buttons + spacing + padding
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
@@ -1886,7 +2186,11 @@ function drawStatusBar() {
         const moveText = `Moves: ${moveCount}`;
         const attemptText = `Attempts: ${attemptCount}`;
         
-        drawNeonText(levelText, 15, 25, "#00ffff", "#00ffff");
+        // Add overview mode indicator if active
+        const levelDisplayText = overviewMode ? `${levelText} [OVERVIEW]` : levelText;
+        const levelColor = overviewMode ? "#ff00ff" : "#00ffff"; // Magenta when in overview mode
+        
+        drawNeonText(levelDisplayText, 15, 25, levelColor, levelColor);
         
         // Draw moves and attempts separately to maintain colors
         drawNeonText(moveText, 15, 45, "#00ff88", "#00ff88");
@@ -1894,7 +2198,9 @@ function drawStatusBar() {
         drawNeonText(attemptText, 15 + moveTextWidth + 20, 45, "#ffff00", "#ffff00");
     } else {
         // Desktop layout: Single row with proper spacing
-        const levelText = `${currentSet} - Level ${currentLevelNumber}`;
+        const baseLevel = `${currentSet} - Level ${currentLevelNumber}`;
+        const levelText = overviewMode ? `${baseLevel} [OVERVIEW]` : baseLevel;
+        const levelColor = overviewMode ? "#ff00ff" : "#00ffff"; // Magenta when in overview mode
         const moveText = `Moves: ${moveCount}`;
         const attemptText = `Attempts: ${attemptCount}`;
         
@@ -1908,69 +2214,102 @@ function drawStatusBar() {
         
         if (totalTextWidth <= availableTextWidth) {
             // All text fits - use normal spacing
-            drawNeonText(levelText, 15, 35, "#00ffff", "#00ffff");
+            drawNeonText(levelText, 15, 35, levelColor, levelColor);
             drawNeonText(moveText, 15 + levelTextWidth + 30, 35, "#00ff88", "#00ff88");
             drawNeonText(attemptText, 15 + levelTextWidth + 30 + moveTextWidth + 30, 35, "#ffff00", "#ffff00");
         } else {
             // Text doesn't fit - use abbreviated format
-            const shortLevelText = `${currentSet} - Lv${currentLevelNumber}`;
+            const shortBaseLevel = `${currentSet} - Lv${currentLevelNumber}`;
+            const shortLevelText = overviewMode ? `${shortBaseLevel} [OV]` : shortBaseLevel;
             const shortStatsText = `${moveCount}m ${attemptCount}a`;
             
-            drawNeonText(shortLevelText, 15, 35, "#00ffff", "#00ffff");
+            drawNeonText(shortLevelText, 15, 35, levelColor, levelColor);
             const shortLevelWidth = context.measureText(shortLevelText).width;
             drawNeonText(shortStatsText, 15 + shortLevelWidth + 20, 35, "#00ff88", "#00ff88");
         }
     }
     
-    // Draw EXIT button
+    // Draw EXIT button (rightmost)
     // Button neon glow background (cyan/blue color)
     context.shadowColor = "#00ccff";
     context.shadowBlur = 12;
     context.fillStyle = "rgba(0, 204, 255, 0.2)";
-    context.fillRect(backButtonX - 5, backButtonY - 5, buttonWidth + 10, buttonHeight + 10);
+    context.fillRect(exitButtonX - 5, exitButtonY - 5, buttonSize + 10, buttonSize + 10);
     
     // Button background
     context.shadowBlur = 0;
     context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(backButtonX, backButtonY, buttonWidth, buttonHeight);
+    context.fillRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
     
     // Button neon border
     context.shadowColor = "#00ccff";
     context.shadowBlur = 8;
     context.strokeStyle = "#00ccff";
     context.lineWidth = 2;
-    context.strokeRect(backButtonX, backButtonY, buttonWidth, buttonHeight);
+    context.strokeRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
     context.shadowBlur = 0;
     
     // Button text with cyan neon
-    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 14px 'Courier New', monospace";
+    context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
     context.textAlign = "center";
-    drawNeonText("EXIT", backButtonX + buttonWidth / 2, backButtonY + buttonHeight / 2 + 5, "#00ccff", "#00ccff");
+    drawNeonText("✕", exitButtonX + buttonSize / 2, exitButtonY + buttonSize / 2 + 5, "#00ccff", "#00ccff");
     
-    // Draw TRY AGAIN button
+    // Draw RESTART button (middle)
     // Button neon glow background (orange color)
     context.shadowColor = "#ff6600";
     context.shadowBlur = 12;
     context.fillStyle = "rgba(255, 102, 0, 0.2)";
-    context.fillRect(tryAgainButtonX - 5, tryAgainButtonY - 5, buttonWidth + 10, buttonHeight + 10);
+    context.fillRect(restartButtonX - 5, restartButtonY - 5, buttonSize + 10, buttonSize + 10);
     
     // Button background
     context.shadowBlur = 0;
     context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(tryAgainButtonX, tryAgainButtonY, buttonWidth, buttonHeight);
+    context.fillRect(restartButtonX, restartButtonY, buttonSize, buttonSize);
     
     // Button neon border
     context.shadowColor = "#ff6600";
     context.shadowBlur = 8;
     context.strokeStyle = "#ff6600";
     context.lineWidth = 2;
-    context.strokeRect(tryAgainButtonX, tryAgainButtonY, buttonWidth, buttonHeight);
+    context.strokeRect(restartButtonX, restartButtonY, buttonSize, buttonSize);
     context.shadowBlur = 0;
     
     // Button text with orange neon
-    context.font = isMobile ? "bold 10px 'Courier New', monospace" : "bold 12px 'Courier New', monospace";
+    context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
     context.textAlign = "center";
-    drawNeonText("TRY AGAIN", tryAgainButtonX + buttonWidth / 2, tryAgainButtonY + buttonHeight / 2 + 5, "#ff6600", "#ff6600");
+    drawNeonText("↻", restartButtonX + buttonSize / 2, restartButtonY + buttonSize / 2 + 5, "#ff6600", "#ff6600");
+    
+    // Draw OVERVIEW button (leftmost when shown)
+    if (showOverviewButton) {
+        // Different appearance based on overview mode state
+        const isActive = overviewMode;
+        const glowColor = isActive ? "#00ff00" : "#ff00ff"; // Green when active, magenta when inactive
+        const backgroundColor = isActive ? "rgba(0, 255, 0, 0.3)" : "rgba(255, 0, 255, 0.2)";
+        
+        // Button neon glow background
+        context.shadowColor = glowColor;
+        context.shadowBlur = 12;
+        context.fillStyle = backgroundColor;
+        context.fillRect(overviewButtonX - 5, overviewButtonY - 5, buttonSize + 10, buttonSize + 10);
+        
+        // Button background
+        context.shadowBlur = 0;
+        context.fillStyle = isActive ? "rgba(20, 40, 20, 0.9)" : "rgba(30, 30, 30, 0.9)";
+        context.fillRect(overviewButtonX, overviewButtonY, buttonSize, buttonSize);
+        
+        // Button neon border
+        context.shadowColor = glowColor;
+        context.shadowBlur = 8;
+        context.strokeStyle = glowColor;
+        context.lineWidth = 2;
+        context.strokeRect(overviewButtonX, overviewButtonY, buttonSize, buttonSize);
+        context.shadowBlur = 0;
+        
+        // Button text with appropriate neon color
+        context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
+        context.textAlign = "center";
+        drawNeonText("👁", overviewButtonX + buttonSize / 2, overviewButtonY + buttonSize / 2 + 5, glowColor, glowColor);
+    }
     
     // Reset text alignment
     context.textAlign = "left";
