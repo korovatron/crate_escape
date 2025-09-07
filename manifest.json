@@ -1,7 +1,7 @@
 {
   "name": "Crate Escape",
   "short_name": "Crate Escape",
-  "description": "A classic box pushing puzzle game",
+  "description": "A classic Sokoban style puzzle game",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1a1a1a",

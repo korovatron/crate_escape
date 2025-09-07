@@ -625,60 +625,7 @@ function createCanvas() {
 // #endregion
 
 // #region Game Loop
-let wasDocumentHidden = false;
-
-function updateCameraPosition() {
-    if (levelNeedsPanning) {
-        const halfScreenWidth = canvas.width / 2;
-        const halfScreenHeight = canvas.height / 2;
-        const levelPixelWidth = currentLevel.width * tileSize;
-        const levelPixelHeight = currentLevel.height * tileSize;
-        
-        // Handle X axis (horizontal)
-        if (levelPixelWidth > canvas.width) {
-            const desiredCameraX = player.x * tileSize + tileSize / 2 - halfScreenWidth;
-            cameraX = Math.round(Math.max(0, Math.min(levelPixelWidth - canvas.width, desiredCameraX)));
-        } else {
-            cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
-        }
-        
-        // Handle Y axis (vertical)
-        if (levelPixelHeight > canvas.height) {
-            const desiredCameraY = player.y * tileSize + tileSize / 2 - halfScreenHeight;
-            cameraY = Math.round(Math.max(0, Math.min(
-                levelPixelHeight - canvas.height,
-                desiredCameraY
-            )));
-        } else {
-            cameraY = Math.round(-(canvas.height - levelPixelHeight) / 2);
-        }
-    } else {
-        cameraX = 0;
-        cameraY = 0;
-    }
-}
-
 function gameLoop(timeStamp) {
-    // Handle app coming back from background - reset animations
-    if (document.hidden !== wasDocumentHidden) {
-        wasDocumentHidden = document.hidden;
-        if (!document.hidden) {
-            // App just came back to foreground - complete any in-progress movement
-            if (isPlayerMoving) {
-                // Snap to final position instead of continuing animation
-                player.x = moveTargetPos.x;
-                player.y = moveTargetPos.y;
-                isPlayerMoving = false;
-                moveAnimationProgress = 0;
-                // Update camera to final position
-                updateCameraPosition();
-            }
-            // Reset the timer to prevent huge delta
-            oldTimeStamp = timeStamp;
-            return;
-        }
-    }
-    
     secondsPassed = (timeStamp - oldTimeStamp) / 1000;
     oldTimeStamp = timeStamp;
     
