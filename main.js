@@ -1213,16 +1213,20 @@ function isClickOnOverviewButton(x, y) {
     
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
-    const restartButtonWidth = isMobile ? 75 : 90; // Wider restart button to fit 3-digit attempt counts
-    const buttonSpacing = 8;
     const rightMargin = 10;
     
-    // Use same calculations as drawStatusBar
+    // Use same position calculation as drawStatusBar (aligned with exit button)
     const exitButtonX = canvas.width - buttonSize - rightMargin;
-    const exitButtonY = isMobile ? 15 : 10;
-    const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing; // Use restartButtonWidth, not buttonSize
-    const overviewButtonX = restartButtonX - buttonSize - buttonSpacing;
-    const overviewButtonY = exitButtonY;
+    const overviewButtonX = exitButtonX; // Align horizontally with exit button
+    
+    // Center vertically on the green overlay (same calculation as drawStatusBar)
+    const titleHeight = isMobile ? 24 : 36;
+    const subtitleHeight = isMobile ? 14 : 18;
+    const textSpacing = 10;
+    const verticalPadding = 15;
+    const overlayHeight = titleHeight + subtitleHeight + textSpacing + (verticalPadding * 2);
+    const overlayY = STATUS_BAR_HEIGHT + 10;
+    const overviewButtonY = overlayY + (overlayHeight / 2) - (buttonSize / 2); // Center on green overlay
     
     return x >= overviewButtonX && x <= overviewButtonX + buttonSize &&
            y >= overviewButtonY && y <= overviewButtonY + buttonSize;
@@ -2202,9 +2206,9 @@ function drawStatusBar() {
     const buttonSpacing = 8; // Reduced spacing since buttons are smaller
     const rightMargin = 10;
     
-    // Calculate number of buttons to show
+    // Calculate number of buttons in status bar (overview button now on playfield)
     const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
-    const numButtons = showOverviewButton ? 3 : 2;
+    const numButtons = 2; // Only exit and restart buttons in status bar
     
     // Trigger overview tutorial when button first appears
     if (showOverviewButton && !overviewTutorialShown && !overviewMode) {
@@ -2220,11 +2224,19 @@ function drawStatusBar() {
     const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing;
     const restartButtonY = exitButtonY;
     
-    // OVERVIEW button (leftmost when shown - optional tertiary action)
-    const overviewButtonX = restartButtonX - buttonSize - buttonSpacing;
-    const overviewButtonY = exitButtonY;
+    // OVERVIEW button (positioned on playfield overlay, aligned with exit button)
+    const overviewButtonX = exitButtonX; // Align horizontally with exit button
     
-    const reservedButtonSpace = (buttonSize * 2) + restartButtonWidth + (buttonSpacing * (numButtons - 1)) + rightMargin + 20; // All buttons + spacing + padding
+    // Center vertically on the green overlay when in overview mode
+    const titleHeight = isMobile ? 24 : 36;
+    const subtitleHeight = isMobile ? 14 : 18;
+    const textSpacing = 10;
+    const verticalPadding = 15;
+    const overlayHeight = titleHeight + subtitleHeight + textSpacing + (verticalPadding * 2);
+    const overlayY = STATUS_BAR_HEIGHT + 10;
+    const overviewButtonY = overlayY + (overlayHeight / 2) - (buttonSize / 2); // Center on green overlay
+    
+    const reservedButtonSpace = (buttonSize * 2) + restartButtonWidth + (buttonSpacing * 1) + rightMargin + 20; // Exit + restart buttons only
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
@@ -2233,10 +2245,10 @@ function drawStatusBar() {
     const setNameText = currentSet;
     const levelNumberText = `Level ${currentLevelNumber}`;
     
-    // Add overview mode indicator if active
-    const setDisplayText = overviewMode ? `${setNameText} [OVERVIEW]` : setNameText;
-    const setColor = overviewMode ? "#e6cc00" : "#e6cc00"; // Same golden yellow in both modes
-    const levelColor = overviewMode ? "#e6cc00" : "#e6cc00"; // Same color for level number
+    // Use bright yellow for both set name and level number
+    const setDisplayText = setNameText; // Remove overview indicator
+    const setColor = "#ffff00"; // Bright yellow
+    const levelColor = "#ffff00"; // Bright yellow
     
     // Left side: Set name (top) and level number (bottom)
     drawNeonText(setDisplayText, 15, 25, setColor, setColor);
@@ -2336,10 +2348,10 @@ function drawStatusBar() {
     
     // Draw OVERVIEW button (leftmost when shown)
     if (showOverviewButton) {
-        // Different appearance based on overview mode state
+        // Different appearance based on overview mode state (semi-transparent overlay)
         const isActive = overviewMode;
         const glowColor = isActive ? "#00ff00" : "#ff00ff"; // Green when active, magenta when inactive
-        const backgroundColor = isActive ? "rgba(0, 255, 0, 0.3)" : "rgba(255, 0, 255, 0.2)";
+        const backgroundColor = isActive ? "rgba(0, 255, 0, 0.2)" : "rgba(255, 0, 255, 0.15)"; // More transparent for overlay
         
         // Button neon glow background
         context.shadowColor = glowColor;
@@ -2347,9 +2359,9 @@ function drawStatusBar() {
         context.fillStyle = backgroundColor;
         context.fillRect(overviewButtonX - 5, overviewButtonY - 5, buttonSize + 10, buttonSize + 10);
         
-        // Button background
+        // Button background (more transparent for overlay)
         context.shadowBlur = 0;
-        context.fillStyle = isActive ? "rgba(20, 40, 20, 0.9)" : "rgba(30, 30, 30, 0.9)";
+        context.fillStyle = isActive ? "rgba(20, 40, 20, 0.7)" : "rgba(30, 30, 30, 0.7)";
         context.fillRect(overviewButtonX, overviewButtonY, buttonSize, buttonSize);
         
         // Button neon border
