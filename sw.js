@@ -1,11 +1,10 @@
-const CACHE_NAME = 'crate-escape-9-9-25:22:00';
+const CACHE_NAME = 'crate-escape-v2.0';
 const urlsToCache = [
   './',
   './index.html',
   './main.js',
   './levels.js',
   './assets/images/spriteSheet.png',
-  './assets/images/crateEscapeCartoon.png',
   './assets/images/footprintLogo.png',
   './assets/images/pushLogo.png',
   './apple-touch-icon.png',
