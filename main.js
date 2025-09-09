@@ -739,8 +739,8 @@ function loadLevel(setName, levelNumber, isRestart = false) {
                 desiredCameraY
             )));
         } else {
-            // Level fits vertically - center it in playable area
-            cameraY = Math.round(-(playableHeight - levelPixelHeight) / 2);
+            // Level fits vertically - center it in playfield (match offset mode positioning)
+            cameraY = Math.round(-((playableHeight - levelPixelHeight) / 2 + STATUS_BAR_HEIGHT));
         }
     } else {
         // No panning needed, reset camera to 0
@@ -895,8 +895,8 @@ function updatePlayerMovement(deltaTime) {
             const desiredCameraY = currentPlayerY * tileSize + tileSize / 2 - halfPlayableHeight - STATUS_BAR_HEIGHT;
             cameraY = Math.round(Math.max(-STATUS_BAR_HEIGHT, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
         } else {
-            // Level fits vertically - keep centered in playable area
-            cameraY = Math.round(-(playableHeight - levelPixelHeight) / 2);
+            // Level fits vertically - keep centered in playable area (match offset mode behavior)
+            cameraY = Math.round(-((playableHeight - levelPixelHeight) / 2 + STATUS_BAR_HEIGHT));
         }
     }
     
@@ -1284,8 +1284,8 @@ function updateCameraPosition() {
         const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfPlayableHeight - STATUS_BAR_HEIGHT;
         cameraY = Math.round(Math.max(-STATUS_BAR_HEIGHT, Math.min(levelPixelHeight - canvas.height, desiredCameraY)));
     } else {
-        // Level fits vertically - keep centered in playable area
-        cameraY = Math.round(-(playableHeight - levelPixelHeight) / 2);
+        // Level fits vertically - keep centered in playable area (match offset mode behavior)
+        cameraY = Math.round(-((playableHeight - levelPixelHeight) / 2 + STATUS_BAR_HEIGHT));
     }
 }
 
@@ -2827,6 +2827,7 @@ function recalculateLevelLayout() {
         
         // Handle Y axis (vertical) - account for status bar
         if (levelPixelHeight > playableHeight) {
+            console.log(`Level is taller than playable area: levelPixelHeight=${levelPixelHeight}, playableHeight=${playableHeight}`);
             // Level is taller than playable area - center player in visible game area
             const desiredCameraY = playerPos.y * tileSize + tileSize / 2 - halfPlayableHeight - STATUS_BAR_HEIGHT;
             cameraY = Math.round(Math.max(-STATUS_BAR_HEIGHT, Math.min(
@@ -2834,8 +2835,12 @@ function recalculateLevelLayout() {
                 desiredCameraY
             )));
         } else {
-            // Level fits vertically - center it in playable area
-            cameraY = Math.round(-(playableHeight - levelPixelHeight) / 2);
+            console.log(`Level fits vertically: levelPixelHeight=${levelPixelHeight}, playableHeight=${playableHeight}`);
+            // Level fits vertically - center it in playable area (match offset mode behavior)
+            // Offset mode: levelOffsetY = (playableHeight - levelPixelHeight) / 2 + STATUS_BAR_HEIGHT
+            // Camera mode: need to negate this since camera position is subtracted from render positions
+            cameraY = Math.round(-((playableHeight - levelPixelHeight) / 2 + STATUS_BAR_HEIGHT));
+            console.log(`recalculateLevelLayout: Camera mode vertical centering: cameraY=${cameraY}, playableHeight=${playableHeight}, levelPixelHeight=${levelPixelHeight}`);
         }
     } else {
         // No panning needed, reset camera and use level centering
