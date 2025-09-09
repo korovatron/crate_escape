@@ -2261,7 +2261,7 @@ function drawStatusBar() {
     const isMobilePortrait = isMobile && isPortrait;
     
     // Adjust spacing and font size for mobile portrait to save space
-    const numberPadding = isMobilePortrait ? 8 : 12; // Closer to icons in portrait
+    const numberPadding = isMobilePortrait ? 4 : 12; // Even closer to icons in portrait
     
     // Use smaller font for push/move counts in mobile portrait (match attempt count size)
     const originalFont = context.font;
@@ -2293,9 +2293,13 @@ function drawStatusBar() {
     // Draw push count
     drawNeonText(pushText, pushCountX, iconY + 6, "#00ff00", "#00ff00"); // Green for pushes
     
-    // Draw icons at calculated positions
+    // Draw icons at calculated positions with smooth scaling
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
     context.drawImage(footprintLogo, footprintIconX, iconY - iconSize / 2, iconSize, iconSize);
     context.drawImage(pushLogo, boxIconX, iconY - iconSize / 2, iconSize, iconSize);
+    context.restore();
     
     // Restore original font and text alignment
     context.font = originalFont;
