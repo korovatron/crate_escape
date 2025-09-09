@@ -1999,49 +1999,44 @@ function drawOverviewTutorial() {
     context.save();
     context.globalAlpha = alpha;
     
+    // Match the green overview overlay styling exactly, but use magenta
     const isMobile = canvas.width < 600;
+    const fontSize = isMobile ? "bold 24px 'Courier New', monospace" : "bold 36px 'Courier New', monospace";
+    const subtitleFont = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
     
-    // Semi-transparent background
-    context.fillStyle = "rgba(0, 0, 0, 0.7)";
-    const boxWidth = isMobile ? 280 : 350;
-    const boxHeight = isMobile ? 80 : 100;
-    const boxX = (canvas.width - boxWidth) / 2;
-    // Center in playable area (below status bar)
-    const tutorialPlayableHeight = canvas.height - STATUS_BAR_HEIGHT;
-    const boxY = STATUS_BAR_HEIGHT + (tutorialPlayableHeight - boxHeight) / 2;
+    // Calculate dimensions to match overview overlay exactly
+    const titleHeight = isMobile ? 24 : 36;
+    const subtitleHeight = isMobile ? 14 : 18;
+    const textSpacing = 10;
+    const verticalPadding = 15;
     
-    // Rounded rectangle background
-    context.beginPath();
-    const radius = 10;
-    context.roundRect(boxX, boxY, boxWidth, boxHeight, radius);
-    context.fill();
+    // Calculate compact overlay dimensions (same as green overlay)
+    const overlayHeight = titleHeight + subtitleHeight + textSpacing + (verticalPadding * 2);
+    const overlayY = STATUS_BAR_HEIGHT + 10; // Same position as green overlay
     
-    // Border with purple glow to match button
+    // Semi-transparent magenta overlay - same size as green overlay
+    context.fillStyle = "rgba(255, 0, 255, 0.15)"; // 15% magenta tint (matches overview button)
+    context.fillRect(0, overlayY, canvas.width, overlayHeight);
+    
+    // Large tutorial title
+    context.font = fontSize;
+    context.textAlign = "center";
+    context.globalAlpha = alpha * 0.7; // Semi-transparent text
+    
+    // Position text in the center of the compact overlay (same as green overlay)
+    const centerX = canvas.width / 2;
+    const textCenterY = overlayY + verticalPadding + titleHeight / 2;
+    
+    // Draw text with magenta neon effect to match button
     context.shadowColor = "#ff00ff";
     context.shadowBlur = 15;
-    context.strokeStyle = "#ff00ff";
-    context.lineWidth = 2;
-    context.stroke();
-    context.shadowBlur = 0;
+    context.fillStyle = "#ff00ff";
+    context.fillText("OVERVIEW AVAILABLE", centerX, textCenterY);
     
-    // Tutorial text
-    context.textAlign = "center";
-    context.fillStyle = "#ffffff";
-    
-    const centerX = canvas.width / 2;
-    // Center text in playable area (below status bar)
-    const centerY = STATUS_BAR_HEIGHT + tutorialPlayableHeight / 2;
-    
-    // Main instruction
-    const mainFont = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
-    context.font = mainFont;
-    context.fillText("Press ⊙ to get an overview", centerX, centerY - 5);
-    
-    // Subtitle
-    const subFont = isMobile ? "14px 'Courier New', monospace" : "16px 'Courier New', monospace";
-    context.font = subFont;
-    context.fillStyle = "#cccccc";
-    context.fillText("of the entire level", centerX, centerY + 18);
+    // Subtitle with tutorial instruction
+    context.font = subtitleFont;
+    context.shadowBlur = 10;
+    context.fillText("Tap ⊙ button to see full level", centerX, textCenterY + titleHeight/2 + textSpacing + subtitleHeight/2);
     
     context.restore();
 }
@@ -2260,11 +2255,21 @@ function drawStatusBar() {
     
     const iconSize = isMobile ? 30 : 40; // Larger icons to take advantage of status bar height
     const iconSpacing = 8; // Small gap between the two icons
-    const numberPadding = 12; // Space between numbers and icons
     
-    // Use larger font for numbers to take advantage of status bar height
+    // Detect mobile portrait mode for space optimization
+    const isPortrait = canvas.height > canvas.width;
+    const isMobilePortrait = isMobile && isPortrait;
+    
+    // Adjust spacing and font size for mobile portrait to save space
+    const numberPadding = isMobilePortrait ? 8 : 12; // Closer to icons in portrait
+    
+    // Use smaller font for push/move counts in mobile portrait (match attempt count size)
     const originalFont = context.font;
-    context.font = isMobile ? "bold 24px 'Courier New', monospace" : "bold 30px 'Courier New', monospace";
+    if (isMobilePortrait) {
+        context.font = "bold 16px 'Courier New', monospace"; // Match attempt count font
+    } else {
+        context.font = isMobile ? "bold 24px 'Courier New', monospace" : "bold 30px 'Courier New', monospace";
+    }
     context.textAlign = "center";
     
     // Measure text widths for perfect positioning
