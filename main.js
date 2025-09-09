@@ -1,4 +1,5 @@
-// DEBUG VERSION 9.9.2025-B - CACHE REFRESH AGAIN
+// DEBUG VERSION 9.9.2025-C - GREEN UPDATES
+console.log("LOADED: Main.js with GREEN updates - Sept 9 2025");
 // #region Event Handlers & Input
 "use strict";
 const pressedKeys = new Set();
@@ -413,6 +414,7 @@ let overviewTutorialDuration = 5000; // 5 seconds total duration
 // Status bar configuration
 const STATUS_BAR_HEIGHT = 60;
 let moveCount = 0;
+let pushCount = 0; // Track successful box pushes
 let attemptCount = 1; // Start at 1 since first play is attempt 1
 
 // Player movement variables
@@ -505,6 +507,8 @@ function calculateOptimalTileSize() {
 }
 
 const spriteSheet = new Image();
+const footprintLogo = new Image();
+const pushLogo = new Image();
 const textureAtlas = {
   spriteSheet,
   frames: {
@@ -619,10 +623,26 @@ const playerSprite = textureAtlas.frames["player_03.png"];
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 1;
+    const numberImages = 3; // spriteSheet, footprintLogo, pushLogo
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    footprintLogo.src = "assets/images/footprintLogo.png";
+    footprintLogo.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    pushLogo.src = "assets/images/pushLogo.png";
+    pushLogo.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
             createCanvas();
@@ -693,6 +713,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     
     // Reset move count for level load/restart
     moveCount = 0;
+    pushCount = 0;
     
     // Only reset attempt count for new levels, not restarts
     if (!isRestart) {
@@ -830,6 +851,11 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
     
     // Increment move count
     moveCount++;
+    
+    // Increment push count if pushing a box
+    if (boxIndex !== null) {
+        pushCount++;
+    }
     
     moveStartPos = { x: playerPos.x, y: playerPos.y };
     moveTargetPos = { x: targetX, y: targetY };
@@ -1187,13 +1213,14 @@ function isClickOnOverviewButton(x, y) {
     
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const restartButtonWidth = isMobile ? 75 : 90; // Wider restart button to fit 3-digit attempt counts
     const buttonSpacing = 8;
     const rightMargin = 10;
     
     // Use same calculations as drawStatusBar
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
-    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing; // Use restartButtonWidth, not buttonSize
     const overviewButtonX = restartButtonX - buttonSize - buttonSpacing;
     const overviewButtonY = exitButtonY;
     
@@ -1217,16 +1244,17 @@ function toggleOverviewMode() {
 function isClickOnTryAgainButton(x, y) {
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const restartButtonWidth = isMobile ? 75 : 90; // Wider restart button to fit 3-digit attempt counts
     const buttonSpacing = 8;
     const rightMargin = 10;
     
     // Use same calculations as drawStatusBar
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
-    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing;
     const restartButtonY = exitButtonY;
     
-    return x >= restartButtonX && x <= restartButtonX + buttonSize &&
+    return x >= restartButtonX && x <= restartButtonX + restartButtonWidth &&
            y >= restartButtonY && y <= restartButtonY + buttonSize;
 }
 
@@ -1827,7 +1855,7 @@ function drawOverviewMode() {
     context.font = fontSize;
     const titleMetrics = context.measureText("OVERVIEW MODE");
     context.font = subtitleFont;
-    const subtitleMetrics = context.measureText("Click or tap 👁 to return to game");
+    const subtitleMetrics = context.measureText("Click or tap ⊙ to return to game");
     
     const titleHeight = isMobile ? 24 : 36;
     const subtitleHeight = isMobile ? 14 : 18;
@@ -1860,7 +1888,7 @@ function drawOverviewMode() {
     // Add subtitle
     context.font = subtitleFont;
     context.shadowBlur = 10;
-    context.fillText("Click or tap 👁 to return to game", centerX, textCenterY + titleHeight/2 + textSpacing + subtitleHeight/2);
+    context.fillText("Click or tap ⊙ to return to game", centerX, textCenterY + titleHeight/2 + textSpacing + subtitleHeight/2);
     
     context.restore();
     
@@ -2003,7 +2031,7 @@ function drawOverviewTutorial() {
     // Main instruction
     const mainFont = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
     context.font = mainFont;
-    context.fillText("Press 👁 to get an overview", centerX, centerY - 5);
+    context.fillText("Press ⊙ to get an overview", centerX, centerY - 5);
     
     // Subtitle
     const subFont = isMobile ? "14px 'Courier New', monospace" : "16px 'Courier New', monospace";
@@ -2146,9 +2174,9 @@ function drawStatusBar() {
     context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     
     // Draw neon border at bottom of status bar (more subtle)
-    context.shadowColor = "#00ffff";
+    context.shadowColor = "#e6cc00";
     context.shadowBlur = 8;
-    context.fillStyle = "#00ffff";
+    context.fillStyle = "#e6cc00";
     context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
     context.shadowBlur = 0;
     
@@ -2168,8 +2196,9 @@ function drawStatusBar() {
     context.font = fontSize;
     context.textAlign = "left";
     
-    // Draw buttons (BACK, TRY AGAIN, and optionally OVERVIEW) - now square for icons
-    const buttonSize = isMobile ? 35 : 45; // Square buttons since we're using icons
+    // Draw buttons (EXIT, RESTART with attempt count, and optionally OVERVIEW)
+    const buttonSize = isMobile ? 35 : 45; // Square buttons for exit and overview
+    const restartButtonWidth = isMobile ? 75 : 90; // Wider restart button to fit 3-digit attempt counts
     const buttonSpacing = 8; // Reduced spacing since buttons are smaller
     const rightMargin = 10;
     
@@ -2187,67 +2216,73 @@ function drawStatusBar() {
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
     
-    // RESTART button (left of EXIT button - secondary action)
-    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    // RESTART button (left of EXIT button - secondary action) - wider to fit attempt count
+    const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing;
     const restartButtonY = exitButtonY;
     
     // OVERVIEW button (leftmost when shown - optional tertiary action)
     const overviewButtonX = restartButtonX - buttonSize - buttonSpacing;
     const overviewButtonY = exitButtonY;
     
-    const reservedButtonSpace = (buttonSize * numButtons) + (buttonSpacing * (numButtons - 1)) + rightMargin + 20; // All buttons + spacing + padding
+    const reservedButtonSpace = (buttonSize * 2) + restartButtonWidth + (buttonSpacing * (numButtons - 1)) + rightMargin + 20; // All buttons + spacing + padding
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
     
-    if (isMobile) {
-        // Mobile layout: Stack text in two rows with full text
-        const levelText = `${currentSet} - Level ${currentLevelNumber}`;
-        const moveText = `Moves: ${moveCount}`;
-        const attemptText = `Attempts: ${attemptCount}`;
-        
-        // Add overview mode indicator if active
-        const levelDisplayText = overviewMode ? `${levelText} [OVERVIEW]` : levelText;
-        const levelColor = overviewMode ? "#ff00ff" : "#00ffff"; // Magenta when in overview mode
-        
-        drawNeonText(levelDisplayText, 15, 25, levelColor, levelColor);
-        
-        // Draw moves and attempts separately to maintain colors
-        drawNeonText(moveText, 15, 45, "#00ff88", "#00ff88");
-        const moveTextWidth = context.measureText(moveText).width;
-        drawNeonText(attemptText, 15 + moveTextWidth + 20, 45, "#ffff00", "#ffff00");
-    } else {
-        // Desktop layout: Single row with proper spacing
-        const baseLevel = `${currentSet} - Level ${currentLevelNumber}`;
-        const levelText = overviewMode ? `${baseLevel} [OVERVIEW]` : baseLevel;
-        const levelColor = overviewMode ? "#ff00ff" : "#00ffff"; // Magenta when in overview mode
-        const moveText = `Moves: ${moveCount}`;
-        const attemptText = `Attempts: ${attemptCount}`;
-        
-        // Measure text widths
-        const levelTextWidth = context.measureText(levelText).width;
-        const moveTextWidth = context.measureText(moveText).width;
-        const attemptTextWidth = context.measureText(attemptText).width;
-        
-        // Calculate total width needed
-        const totalTextWidth = levelTextWidth + moveTextWidth + attemptTextWidth + 60; // 60px for spacing
-        
-        if (totalTextWidth <= availableTextWidth) {
-            // All text fits - use normal spacing
-            drawNeonText(levelText, 15, 35, levelColor, levelColor);
-            drawNeonText(moveText, 15 + levelTextWidth + 30, 35, "#00ff88", "#00ff88");
-            drawNeonText(attemptText, 15 + levelTextWidth + 30 + moveTextWidth + 30, 35, "#ffff00", "#ffff00");
-        } else {
-            // Text doesn't fit - use abbreviated format
-            const shortBaseLevel = `${currentSet} - Lv${currentLevelNumber}`;
-            const shortLevelText = overviewMode ? `${shortBaseLevel} [OV]` : shortBaseLevel;
-            const shortStatsText = `${moveCount}m ${attemptCount}a`;
-            
-            drawNeonText(shortLevelText, 15, 35, levelColor, levelColor);
-            const shortLevelWidth = context.measureText(shortLevelText).width;
-            drawNeonText(shortStatsText, 15 + shortLevelWidth + 20, 35, "#00ff88", "#00ff88");
-        }
-    }
+    // New layout: Set name and level number on separate lines, moves/pushes centered with icons
+    const setNameText = currentSet;
+    const levelNumberText = `Level ${currentLevelNumber}`;
+    
+    // Add overview mode indicator if active
+    const setDisplayText = overviewMode ? `${setNameText} [OVERVIEW]` : setNameText;
+    const setColor = overviewMode ? "#e6cc00" : "#e6cc00"; // Same golden yellow in both modes
+    const levelColor = overviewMode ? "#e6cc00" : "#e6cc00"; // Same color for level number
+    
+    // Left side: Set name (top) and level number (bottom)
+    drawNeonText(setDisplayText, 15, 25, setColor, setColor);
+    drawNeonText(levelNumberText, 15, 45, levelColor, levelColor);
+    
+    // Center area: [move count] [footprint icon] [box icon] [push count]
+    // Use true canvas center, not adjusted for button area
+    const canvasCenterX = canvas.width / 2;
+    
+    const iconSize = isMobile ? 30 : 40; // Larger icons to take advantage of status bar height
+    const iconSpacing = 8; // Small gap between the two icons
+    const numberPadding = 12; // Space between numbers and icons
+    
+    // Use larger font for numbers to take advantage of status bar height
+    const originalFont = context.font;
+    context.font = isMobile ? "bold 24px 'Courier New', monospace" : "bold 30px 'Courier New', monospace";
+    context.textAlign = "center";
+    
+    // Measure text widths for perfect positioning
+    const moveText = moveCount.toString();
+    const pushText = pushCount.toString();
+    const moveTextWidth = context.measureText(moveText).width;
+    const pushTextWidth = context.measureText(pushText).width;
+    
+    // Position icons so the center point is between them at canvas center
+    const footprintIconX = canvasCenterX - iconSize - iconSpacing / 2;
+    const boxIconX = canvasCenterX + iconSpacing / 2;
+    const iconY = 30; // Vertically centered in 60px status bar
+    
+    // Position numbers relative to the icons
+    const moveCountX = footprintIconX - numberPadding - moveTextWidth / 2;
+    const pushCountX = boxIconX + iconSize + numberPadding + pushTextWidth / 2;
+    
+    // Draw move count
+    drawNeonText(moveText, moveCountX, iconY + 6, "#00aaff", "#00aaff"); // Blue for moves
+    
+    // Draw push count
+    drawNeonText(pushText, pushCountX, iconY + 6, "#00ff00", "#00ff00"); // Green for pushes
+    
+    // Draw icons at calculated positions
+    context.drawImage(footprintLogo, footprintIconX, iconY - iconSize / 2, iconSize, iconSize);
+    context.drawImage(pushLogo, boxIconX, iconY - iconSize / 2, iconSize, iconSize);
+    
+    // Restore original font and text alignment
+    context.font = originalFont;
+    context.textAlign = "left";
     
     // Draw EXIT button (rightmost)
     // Button neon glow background (cyan/blue color)
@@ -2279,25 +2314,25 @@ function drawStatusBar() {
     context.shadowColor = "#ff6600";
     context.shadowBlur = 12;
     context.fillStyle = "rgba(255, 102, 0, 0.2)";
-    context.fillRect(restartButtonX - 5, restartButtonY - 5, buttonSize + 10, buttonSize + 10);
+    context.fillRect(restartButtonX - 5, restartButtonY - 5, restartButtonWidth + 10, buttonSize + 10);
     
     // Button background
     context.shadowBlur = 0;
     context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(restartButtonX, restartButtonY, buttonSize, buttonSize);
+    context.fillRect(restartButtonX, restartButtonY, restartButtonWidth, buttonSize);
     
     // Button neon border
     context.shadowColor = "#ff6600";
     context.shadowBlur = 8;
     context.strokeStyle = "#ff6600";
     context.lineWidth = 2;
-    context.strokeRect(restartButtonX, restartButtonY, buttonSize, buttonSize);
+    context.strokeRect(restartButtonX, restartButtonY, restartButtonWidth, buttonSize);
     context.shadowBlur = 0;
     
-    // Button text with orange neon
+    // Button text with orange neon - restart symbol and attempt count
     context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
     context.textAlign = "center";
-    drawNeonText("↻", restartButtonX + buttonSize / 2, restartButtonY + buttonSize / 2 + 5, "#ff6600", "#ff6600");
+    drawNeonText(`↻ ${attemptCount}`, restartButtonX + restartButtonWidth / 2, restartButtonY + buttonSize / 2 + 5, "#ff6600", "#ff6600");
     
     // Draw OVERVIEW button (leftmost when shown)
     if (showOverviewButton) {
@@ -2328,7 +2363,7 @@ function drawStatusBar() {
         // Button text with appropriate neon color
         context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
         context.textAlign = "center";
-        drawNeonText("👁", overviewButtonX + buttonSize / 2, overviewButtonY + buttonSize / 2 + 5, glowColor, glowColor);
+        drawNeonText("⊙", overviewButtonX + buttonSize / 2, overviewButtonY + buttonSize / 2 + 5, glowColor, glowColor);
     }
     
     // Reset text alignment
@@ -2424,7 +2459,7 @@ function drawLevelCompleteOverlay() {
     drawResponsiveText(subtitle, centerX, centerY + 10, subtitleColor, 24);
     
     // Show completion stats with gold neon
-    const statsText = `COMPLETED IN ${moveCount} MOVES (ATTEMPT ${attemptCount})`;
+    const statsText = `COMPLETED IN ${moveCount} MOVES, ${pushCount} PUSHES (ATTEMPT ${attemptCount})`;
     drawResponsiveText(statsText, centerX, centerY + 40, "#ffdd00", 20);
     
     // Instructions with pulsing effect
@@ -2526,8 +2561,9 @@ function drawLevelSelectScreen() {
     context.fillStyle = "#00ff00";
     context.fillText("START GAME", centerX, adjustedStartButtonY + startButtonHeight / 2 + 8);
     
-    // Instructions
-    context.font = `${fontSize - 4}px 'Courier New', monospace`;
+    // Instructions - larger font for mobile to reduce graininess
+    const instructionFontSize = isMobile ? 18 : (fontSize - 4); // Use 18px on mobile instead of 16px
+    context.font = `${instructionFontSize}px 'Courier New', monospace`;
     context.fillStyle = "#ffffff"; // Changed from #cccccc to white for better mobile readability
     if (isMobile) {
         context.fillText("TAP ARROWS TO CHANGE • TAP START BUTTON", centerX, adjustedInstructionsY);
