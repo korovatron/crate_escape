@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-icons-ui-v1';
+const CACHE_NAME = 'crate-escape-icons-ui-v2-force-refresh';
 const urlsToCache = [
   './',
   './index.html',
