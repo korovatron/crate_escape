@@ -1,3 +1,4 @@
+// DEBUG VERSION 9.9.2025-B - CACHE REFRESH AGAIN
 // #region Event Handlers & Input
 "use strict";
 const pressedKeys = new Set();
@@ -145,6 +146,10 @@ function setupCanvasEventListeners() {
         
         // Check for button clicks during gameplay
         if (currentGameState === GAME_STATES.PLAYING) {
+            if (isClickOnOverviewButton(mouseX, mouseY)) {
+                toggleOverviewMode();
+                return;
+            }
             if (isClickOnTryAgainButton(mouseX, mouseY)) {
                 restartCurrentLevel();
                 return;
@@ -403,7 +408,7 @@ let overviewOffsetY = 0;
 // Overview tutorial variables
 let overviewTutorialShown = false; // Track if tutorial has been shown this level
 let overviewTutorialStartTime = 0; // When tutorial started
-let overviewTutorialDuration = 10000; // 10 seconds total duration
+let overviewTutorialDuration = 5000; // 5 seconds total duration
 
 // Status bar configuration
 const STATUS_BAR_HEIGHT = 60;
@@ -1812,33 +1817,50 @@ function drawOverviewMode() {
     context.restore();
     
     // Add overview mode visual indicators on top of everything
-    // Semi-transparent green overlay to match the active button
-    context.fillStyle = "rgba(0, 255, 0, 0.15)"; // 15% green tint
-    context.fillRect(0, STATUS_BAR_HEIGHT, canvas.width, canvas.height - STATUS_BAR_HEIGHT);
-    
-    // Large "OVERVIEW MODE" watermark
+    // Calculate text dimensions for compact overlay
     context.save();
     const isMobile = canvas.width < 600;
     const fontSize = isMobile ? "bold 24px 'Courier New', monospace" : "bold 36px 'Courier New', monospace";
+    const subtitleFont = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
+    
+    // Measure text to calculate overlay height
+    context.font = fontSize;
+    const titleMetrics = context.measureText("OVERVIEW MODE");
+    context.font = subtitleFont;
+    const subtitleMetrics = context.measureText("Click or tap 👁 to return to game");
+    
+    const titleHeight = isMobile ? 24 : 36;
+    const subtitleHeight = isMobile ? 14 : 18;
+    const textSpacing = 10;
+    const verticalPadding = 15;
+    
+    // Calculate compact overlay dimensions
+    const overlayHeight = titleHeight + subtitleHeight + textSpacing + (verticalPadding * 2);
+    const overlayY = STATUS_BAR_HEIGHT + 10; // Small gap below status bar
+    
+    // Semi-transparent green overlay - compact size
+    context.fillStyle = "rgba(0, 255, 0, 0.15)"; // 15% green tint
+    context.fillRect(0, overlayY, canvas.width, overlayHeight);
+    
+    // Large "OVERVIEW MODE" watermark
     context.font = fontSize;
     context.textAlign = "center";
     context.globalAlpha = 0.7; // Semi-transparent
     
-    // Position text in the center of playable area
+    // Position text in the center of the compact overlay
     const centerX = canvas.width / 2;
-    const centerY = STATUS_BAR_HEIGHT + (canvas.height - STATUS_BAR_HEIGHT) / 2;
+    const textCenterY = overlayY + verticalPadding + titleHeight / 2;
     
     // Draw text with green neon effect to match button
     context.shadowColor = "#00ff00";
     context.shadowBlur = 15;
     context.fillStyle = "#00ff00";
-    context.fillText("OVERVIEW MODE", centerX, centerY - 20);
+    context.fillText("OVERVIEW MODE", centerX, textCenterY);
     
     // Add subtitle
-    const subtitleFont = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
     context.font = subtitleFont;
     context.shadowBlur = 10;
-    context.fillText("Click or tap 👁 to return to game", centerX, centerY + 20);
+    context.fillText("Click or tap 👁 to return to game", centerX, textCenterY + titleHeight/2 + textSpacing + subtitleHeight/2);
     
     context.restore();
     
@@ -1930,7 +1952,7 @@ function drawOverviewTutorial() {
         return;
     }
     
-    // Calculate fade alpha (1.0 for first 3 seconds, then fade out over remaining 7 seconds)
+    // Calculate fade alpha (1.0 for first 3 seconds, then fade out over remaining 2 seconds)
     const fadeStartTime = 3000; // Show full opacity for 3 seconds
     let alpha = 1.0;
     if (elapsed > fadeStartTime) {
@@ -1952,7 +1974,9 @@ function drawOverviewTutorial() {
     const boxWidth = isMobile ? 280 : 350;
     const boxHeight = isMobile ? 80 : 100;
     const boxX = (canvas.width - boxWidth) / 2;
-    const boxY = (canvas.height - boxHeight) / 2;
+    // Center in playable area (below status bar)
+    const tutorialPlayableHeight = canvas.height - STATUS_BAR_HEIGHT;
+    const boxY = STATUS_BAR_HEIGHT + (tutorialPlayableHeight - boxHeight) / 2;
     
     // Rounded rectangle background
     context.beginPath();
@@ -1973,7 +1997,8 @@ function drawOverviewTutorial() {
     context.fillStyle = "#ffffff";
     
     const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    // Center text in playable area (below status bar)
+    const centerY = STATUS_BAR_HEIGHT + tutorialPlayableHeight / 2;
     
     // Main instruction
     const mainFont = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
@@ -2852,7 +2877,7 @@ function recalculateLevelLayout() {
         levelOffsetY = Math.floor((canvas.height - STATUS_BAR_HEIGHT - currentLevel.height * tileSize) / 2) + STATUS_BAR_HEIGHT;
     }
     
-    console.log(`Screen resized - New tile size: ${tileSize}px, Panning: ${levelNeedsPanning}, Camera: (${cameraX}, ${cameraY})`);
+    console.log(`DEBUG-B: Screen resized - New tile size: ${tileSize}px, Panning: ${levelNeedsPanning}, Camera: (${cameraX}, ${cameraY})`);
 }
 function getMouseClickPosition(canvas, event) {
     let rect = canvas.getBoundingClientRect();
