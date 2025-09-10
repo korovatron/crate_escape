@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-v2.8';
+const CACHE_NAME = 'crate-escape-v2.9';
 const urlsToCache = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const urlsToCache = [
   './assets/images/spriteSheet.png',
   './assets/images/footprintLogo.png',
   './assets/images/pushLogo.png',
+  './assets/images/cartoonLogo.png',
   './apple-touch-icon.png',
   './manifest.json',
   // Google Fonts - these will be cached when first loaded
