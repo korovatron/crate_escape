@@ -421,11 +421,6 @@ let overviewScale = 1;
 let overviewOffsetX = 0;
 let overviewOffsetY = 0;
 
-// Overview tutorial variables
-let overviewTutorialShown = false; // Track if tutorial has been shown this level
-let overviewTutorialStartTime = 0; // When tutorial started
-let overviewTutorialDuration = 5000; // 5 seconds total duration
-
 // Status bar configuration
 const STATUS_BAR_HEIGHT = 60;
 let moveCount = 0;
@@ -787,9 +782,8 @@ function loadLevel(setName, levelNumber, isRestart = false) {
         saveLastPlayedLevel(setName, levelNumber);
     }
     
-    // Reset overview tutorial for new levels (not restarts)
+    // Reset overview mode for new levels (not restarts)
     if (!isRestart) {
-        overviewTutorialShown = false;
         overviewMode = false; // Ensure we start in normal mode
     }
     
@@ -2040,78 +2034,6 @@ function drawNormalGameplay() {
     
     // Draw status bar on top of everything
     drawStatusBar();
-    
-    // Draw overview tutorial overlay if needed
-    drawOverviewTutorial();
-}
-
-function drawOverviewTutorial() {
-    // Only show tutorial if it was triggered and within duration
-    if (!overviewTutorialShown || overviewTutorialStartTime === 0) return;
-    
-    const elapsed = Date.now() - overviewTutorialStartTime;
-    
-    // Tutorial has expired
-    if (elapsed > overviewTutorialDuration) {
-        overviewTutorialStartTime = 0; // Reset
-        return;
-    }
-    
-    // Calculate fade alpha (1.0 for first 3 seconds, then fade out over remaining 2 seconds)
-    const fadeStartTime = 3000; // Show full opacity for 3 seconds
-    let alpha = 1.0;
-    if (elapsed > fadeStartTime) {
-        const fadeElapsed = elapsed - fadeStartTime;
-        const fadeRemaining = overviewTutorialDuration - fadeStartTime;
-        alpha = 1.0 - (fadeElapsed / fadeRemaining);
-    }
-    
-    // Don't draw if completely faded
-    if (alpha <= 0) return;
-    
-    context.save();
-    context.globalAlpha = alpha;
-    
-    // Match the green overview overlay styling exactly, but use magenta
-    const isMobile = canvas.width < 600;
-    const fontSize = isMobile ? "bold 24px 'Courier New', monospace" : "bold 36px 'Courier New', monospace";
-    const subtitleFont = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
-    
-    // Calculate dimensions to match overview overlay exactly
-    const titleHeight = isMobile ? 24 : 36;
-    const subtitleHeight = isMobile ? 14 : 18;
-    const textSpacing = 10;
-    const verticalPadding = 15;
-    
-    // Calculate compact overlay dimensions (same as green overlay)
-    const overlayHeight = titleHeight + subtitleHeight + textSpacing + (verticalPadding * 2);
-    const overlayY = STATUS_BAR_HEIGHT + 10; // Same position as green overlay
-    
-    // Semi-transparent magenta overlay - same size as green overlay
-    context.fillStyle = "rgba(255, 0, 255, 0.15)"; // 15% magenta tint (matches overview button)
-    context.fillRect(0, overlayY, canvas.width, overlayHeight);
-    
-    // Large tutorial title
-    context.font = fontSize;
-    context.textAlign = "center";
-    context.globalAlpha = alpha * 0.7; // Semi-transparent text
-    
-    // Position text in the center of the compact overlay (same as green overlay)
-    const centerX = canvas.width / 2;
-    const textCenterY = overlayY + verticalPadding + titleHeight / 2;
-    
-    // Draw text with magenta neon effect to match button
-    context.shadowColor = "#ff00ff";
-    context.shadowBlur = 15;
-    context.fillStyle = "#ff00ff";
-    context.fillText("OVERVIEW AVAILABLE", centerX, textCenterY);
-    
-    // Subtitle with tutorial instruction
-    context.font = subtitleFont;
-    context.shadowBlur = 10;
-    context.fillText("Tap ⊙ button to see full level", centerX, textCenterY + titleHeight/2 + textSpacing + subtitleHeight/2);
-    
-    context.restore();
 }
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
@@ -2277,13 +2199,7 @@ function drawStatusBar() {
     // Calculate number of buttons in status bar (overview button now on playfield)
     const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
     const numButtons = 2; // Only exit and restart buttons in status bar
-    
-    // Trigger overview tutorial when button first appears
-    if (showOverviewButton && !overviewTutorialShown && !overviewMode) {
-        overviewTutorialShown = true;
-        overviewTutorialStartTime = Date.now();
-    }
-    
+
     // EXIT button (rightmost - primary action)
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
