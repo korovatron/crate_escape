@@ -364,7 +364,19 @@ let currentGameState = GAME_STATES.TITLE;
 // Level selection variables
 let levelSelectOption = 'start'; // 'start', 'set', 'level'
 let selectedSet = Object.keys(SOKOBAN_LEVELS)[0];
-let selectedLevel = 1;
+let selectedLevel = 0; // No level selected initially
+
+// Grid-based level selection variables
+let currentLevelPage = 0;
+let levelsPerPage = 1; // Will be calculated based on screen size
+let pageCalculatedForLastPlayed = false; // Flag to track if we've calculated page for last played level
+let hasLastPlayedLevel = false; // Flag to indicate if we loaded a last played level
+let gridColumns = 1; // Will be calculated based on screen size
+let gridRows = 1; // Will be calculated based on screen size
+
+// Progress tracking with IndexedDB
+let progressDB = null;
+let levelProgress = new Map(); // Cache for level progress: key = "setName_levelNumber", value = {attempted: boolean, completed: boolean}
 
 // Level progression variables
 let currentSetName = Object.keys(SOKOBAN_LEVELS)[0];
@@ -655,8 +667,47 @@ function createCanvas() {
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
+    
+    // Initialize progress tracking database
+    initProgressDatabase().then(async () => {
+        console.log('Database initialization completed');
+        
+        if (progressDB) {
+            await loadLevelProgress();
+            console.log('Level progress loaded');
+            
+            // Load last played level to set initial level selector position
+            const lastPlayed = await loadLastPlayedLevel();
+            console.log('Last played query result:', lastPlayed);
+            
+            if (lastPlayed) {
+                // If player has played before, set the level selector to their last played level
+                currentSet = lastPlayed.setName;
+                currentLevelNumber = lastPlayed.levelNumber;
+                selectedSet = lastPlayed.setName;
+                hasLastPlayedLevel = true;
+                
+                console.log(`Set level selector to last played: ${currentSet} level ${currentLevelNumber}`);
+            } else {
+                // First time player - ensure we start with the first set from levels.js
+                const firstSetName = Object.keys(SOKOBAN_LEVELS)[0];
+                currentSet = firstSetName;
+                currentLevelNumber = 1;
+                selectedSet = firstSetName;
+                currentLevelPage = 0;
+                
+                console.log(`New player - starting with first set: ${currentSet}`);
+            }
+        } else {
+            console.log('Database not available, using defaults');
+        }
+        
+        // Keep the original game flow - start at title screen
+        // The level selector initialization will be used when entering level select mode
+        console.log('Database initialization complete, keeping title screen start');
+    });
+    
     window.requestAnimationFrame(gameLoop);
-    gameLoad();
 }
 
 // Handle PWA background/foreground transitions to fix stuck input
@@ -718,6 +769,10 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     // Only reset attempt count for new levels, not restarts
     if (!isRestart) {
         attemptCount = 1;
+        // Mark level as attempted when first loaded (not on restart)
+        markLevelAttempted(setName, levelNumber);
+        // Save as last played level
+        saveLastPlayedLevel(setName, levelNumber);
     }
     
     // Reset overview tutorial for new levels (not restarts)
@@ -1139,6 +1194,9 @@ function checkLevelCompletion() {
     if (currentGameState === GAME_STATES.PLAYING && isLevelComplete()) {
         currentGameState = GAME_STATES.LEVEL_COMPLETE;
         levelCompletionStartTime = Date.now();
+        
+        // Mark level as completed for progress tracking
+        markLevelCompleted(currentSet, currentLevelNumber);
     }
 }
 
@@ -2514,8 +2572,55 @@ function drawLevelCompleteOverlay() {
 function initializeLevelSelect() {
     // Get the first set name from levels.js instead of hardcoding
     const setNames = Object.keys(SOKOBAN_LEVELS);
-    selectedSet = setNames[0]; // First set in the data
-    selectedLevel = 1;
+    
+    // Only reset to first set if we don't have a last played level
+    if (!hasLastPlayedLevel) {
+        selectedSet = setNames[0]; // First set in the data
+        currentLevelPage = 0;
+    }
+    // If we have a last played level, selectedSet is already set correctly
+    
+    selectedLevel = 0; // No level selected initially
+    calculateGridLayout();
+}
+
+function calculateGridLayout() {
+    const isMobile = canvas.width < 600;
+    const isTablet = canvas.width >= 600 && canvas.width < 1024;
+    const isDesktop = canvas.width >= 1024;
+    
+    const buttonSize = isMobile ? 35 : 45; // Same size as exit button
+    const buttonSpacing = 8;
+    
+    // Available area for the grid (leave space for header, set selector, and navigation)
+    const headerHeight = canvas.height * 0.35; // Top 35% for title and set selector
+    const footerHeight = canvas.height * 0.15; // Bottom 15% for navigation and instructions
+    const availableHeight = canvas.height - headerHeight - footerHeight;
+    const availableWidth = canvas.width - 40; // 20px margin on each side
+    
+    // Calculate how many buttons could fit horizontally
+    const maxPossibleColumns = Math.floor(availableWidth / (buttonSize + buttonSpacing));
+    
+    // Set reasonable column limits based on screen size
+    let maxColumns;
+    if (isMobile) {
+        maxColumns = maxPossibleColumns; // Use all available space on mobile
+    } else if (isTablet) {
+        maxColumns = Math.min(maxPossibleColumns, 12); // Max 12 columns on tablet
+    } else { // Desktop
+        maxColumns = Math.min(maxPossibleColumns, 10); // Max 10 columns on desktop for better UX
+    }
+    
+    // Calculate rows
+    gridColumns = Math.max(1, maxColumns);
+    gridRows = Math.max(1, Math.floor(availableHeight / (buttonSize + buttonSpacing)));
+    
+    levelsPerPage = gridColumns * gridRows;
+    
+    // Adjust current page if it's out of bounds
+    const maxLevel = getLevelCount(selectedSet);
+    const maxPages = Math.ceil(maxLevel / levelsPerPage);
+    currentLevelPage = Math.min(currentLevelPage, maxPages - 1);
 }
 
 function drawLevelSelectScreen() {
@@ -2523,76 +2628,175 @@ function drawLevelSelectScreen() {
     context.fillStyle = "#000000";
     context.fillRect(0, 0, canvas.width, canvas.height);
     
+    // Calculate grid layout first
+    calculateGridLayout();
+    
+    // If this is the first time showing the level selector and we have a last played level,
+    // calculate the correct page to show that level
+    if (!pageCalculatedForLastPlayed && hasLastPlayedLevel && selectedSet === currentSet) {
+        currentLevelPage = Math.floor((currentLevelNumber - 1) / levelsPerPage);
+        pageCalculatedForLastPlayed = true;
+        console.log(`Calculated page ${currentLevelPage} for last played level ${currentLevelNumber} in set ${selectedSet}`);
+    }
+    
     const centerX = canvas.width / 2;
     const isMobile = canvas.width < 600;
-    const isLandscape = canvas.width > canvas.height;
-    const fontSize = isMobile ? 20 : 24;
     const titleFontSize = isMobile ? 28 : 36;
+    const fontSize = isMobile ? 16 : 20;
     
-    // Responsive layout based on screen height
-    const availableHeight = canvas.height;
-    const titleY = availableHeight * 0.12; // 12% from top
-    const setY = availableHeight * 0.32; // 32% from top
-    const levelY = availableHeight * 0.52; // 52% from top
-    const startButtonY = availableHeight * 0.72; // 72% from top
-    const instructionsY = availableHeight * 0.92; // 92% from top
-    
-    // Adjust spacing for very short screens (landscape mobile)
-    const spacing = isLandscape && isMobile ? 0.15 : 0.20; // Tighter spacing in landscape
-    const adjustedSetY = isLandscape && isMobile ? availableHeight * 0.25 : setY;
-    const adjustedLevelY = isLandscape && isMobile ? availableHeight * 0.40 : levelY;
-    const adjustedStartButtonY = isLandscape && isMobile ? availableHeight * 0.60 : startButtonY;
-    const adjustedInstructionsY = isLandscape && isMobile ? availableHeight * 0.85 : instructionsY;
+    // Calculate layout areas
+    const headerHeight = canvas.height * 0.35;
+    const footerHeight = canvas.height * 0.15;
+    const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     
     // Title
     context.font = `bold ${titleFontSize}px 'Courier New', monospace`;
     context.fillStyle = "#00ffff";
     context.textAlign = "center";
-    context.fillText("SELECT LEVEL", centerX, titleY);
+    context.fillText("SELECT LEVEL", centerX, headerHeight * 0.2);
     
-    // Button dimensions
+    // Set selector
+    const setY = headerHeight * 0.5;
     const buttonWidth = isMobile ? 40 : 50;
     const buttonHeight = isMobile ? 30 : 40;
     const indicatorWidth = isMobile ? 200 : 250;
     const indicatorHeight = isMobile ? 40 : 50;
     
-    // Set selector
-    drawSelector("SET", selectedSet, centerX, adjustedSetY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
+    drawSelector("SET", selectedSet, centerX, setY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
     
-    // Level selector
+    // Draw level grid
+    drawLevelGrid(headerHeight, gridAreaHeight);
+    
+    // Draw page navigation if needed
     const maxLevel = getLevelCount(selectedSet);
-    drawSelector("LEVEL", `${selectedLevel} / ${maxLevel}`, centerX, adjustedLevelY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'level', fontSize);
-    
-    // Start game button
-    const startButtonWidth = isMobile ? 200 : 250;
-    const startButtonHeight = isMobile ? 50 : 60;
-    const startButtonX = centerX - startButtonWidth / 2;
-    
-    // Start button background
-    context.fillStyle = "rgba(0, 255, 0, 0.2)";
-    context.fillRect(startButtonX, adjustedStartButtonY, startButtonWidth, startButtonHeight);
-    
-    // Start button border
-    context.strokeStyle = "#00ff00";
-    context.lineWidth = 2;
-    context.strokeRect(startButtonX, adjustedStartButtonY, startButtonWidth, startButtonHeight);
-    
-    // Start button text
-    context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
-    context.fillStyle = "#00ff00";
-    context.fillText("START GAME", centerX, adjustedStartButtonY + startButtonHeight / 2 + 8);
-    
-    // Instructions - larger font for mobile to reduce graininess
-    const instructionFontSize = isMobile ? 18 : (fontSize - 4); // Use 18px on mobile instead of 16px
-    context.font = `${instructionFontSize}px 'Courier New', monospace`;
-    context.fillStyle = "#ffffff"; // Changed from #cccccc to white for better mobile readability
-    if (isMobile) {
-        context.fillText("TAP ARROWS TO CHANGE • TAP START BUTTON", centerX, adjustedInstructionsY);
-    } else {
-        context.fillText("CLICK ARROWS TO CHANGE • CLICK START OR PRESS SPACE", centerX, adjustedInstructionsY);
+    const maxPages = Math.ceil(maxLevel / levelsPerPage);
+    if (maxPages > 1) {
+        drawPageNavigation(headerHeight + gridAreaHeight + 20, maxPages);
     }
     
     context.textAlign = "left";
+}
+
+function drawLevelGrid(gridStartY, gridAreaHeight) {
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45;
+    const buttonSpacing = 8;
+    const fontSize = isMobile ? 14 : 16;
+    
+    const maxLevel = getLevelCount(selectedSet);
+    const startLevel = currentLevelPage * levelsPerPage + 1;
+    const endLevel = Math.min(startLevel + levelsPerPage - 1, maxLevel);
+    
+    // Center the grid in the available area
+    const gridWidth = gridColumns * (buttonSize + buttonSpacing) - buttonSpacing;
+    const gridHeight = gridRows * (buttonSize + buttonSpacing) - buttonSpacing;
+    const gridStartX = (canvas.width - gridWidth) / 2;
+    const centeredGridStartY = gridStartY + (gridAreaHeight - gridHeight) / 2;
+    
+    let levelNumber = startLevel;
+    
+    for (let row = 0; row < gridRows && levelNumber <= endLevel; row++) {
+        for (let col = 0; col < gridColumns && levelNumber <= endLevel; col++) {
+            const x = gridStartX + col * (buttonSize + buttonSpacing);
+            const y = centeredGridStartY + row * (buttonSize + buttonSpacing);
+            
+            drawLevelButton(x, y, buttonSize, levelNumber, fontSize);
+            levelNumber++;
+        }
+    }
+}
+
+function drawLevelButton(x, y, size, levelNumber, fontSize) {
+    const isSelected = levelNumber === selectedLevel;
+    const progressStatus = getLevelProgressStatus(selectedSet, levelNumber);
+    
+    // Determine colors based on progress status
+    let backgroundColor, borderColor, textColor;
+    
+    if (isSelected) {
+        // Selected button - always use cyan with thicker border
+        backgroundColor = "rgba(0, 204, 255, 0.4)";
+        borderColor = "#00ccff";
+        textColor = "#00ccff";
+    } else {
+        switch (progressStatus) {
+            case 'completed':
+                // Green for completed levels
+                backgroundColor = "rgba(0, 255, 0, 0.2)";
+                borderColor = "#00ff00";
+                textColor = "#00ff00";
+                break;
+            case 'attempted':
+                // Amber for attempted but not completed
+                backgroundColor = "rgba(255, 191, 0, 0.2)";
+                borderColor = "#ffbf00";
+                textColor = "#ffbf00";
+                break;
+            case 'never_played':
+            default:
+                // Blue for never played (default)
+                backgroundColor = "rgba(0, 204, 255, 0.2)";
+                borderColor = "#00ccff";
+                textColor = "#00ccff";
+                break;
+        }
+    }
+    
+    // Button background
+    context.fillStyle = backgroundColor;
+    context.fillRect(x, y, size, size);
+    
+    // Button border
+    context.strokeStyle = borderColor;
+    context.lineWidth = isSelected ? 3 : 2;
+    context.strokeRect(x, y, size, size);
+    
+    // Button text (level number)
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.fillStyle = textColor;
+    context.textAlign = "center";
+    context.fillText(levelNumber.toString(), x + size / 2, y + size / 2 + fontSize / 3);
+}
+
+function drawPageNavigation(navY, maxPages) {
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 30 : 35;
+    const fontSize = isMobile ? 14 : 16;
+    const centerX = canvas.width / 2;
+    
+    // Page info text
+    context.font = `${fontSize}px 'Courier New', monospace`;
+    context.fillStyle = "#ffffff";
+    context.textAlign = "center";
+    context.fillText(`Page ${currentLevelPage + 1} of ${maxPages}`, centerX, navY);
+    
+    // Previous page button
+    if (currentLevelPage > 0) {
+        const prevX = centerX - 80;
+        context.fillStyle = "rgba(255, 255, 255, 0.2)";
+        context.fillRect(prevX, navY + 10, buttonSize, buttonSize);
+        context.strokeStyle = "#ffffff";
+        context.lineWidth = 2;
+        context.strokeRect(prevX, navY + 10, buttonSize, buttonSize);
+        context.fillStyle = "#ffffff";
+        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        context.textAlign = "center";
+        context.fillText("◀", prevX + buttonSize / 2, navY + 10 + buttonSize / 2 + fontSize / 3);
+    }
+    
+    // Next page button
+    if (currentLevelPage < maxPages - 1) {
+        const nextX = centerX + 80 - buttonSize;
+        context.fillStyle = "rgba(255, 255, 255, 0.2)";
+        context.fillRect(nextX, navY + 10, buttonSize, buttonSize);
+        context.strokeStyle = "#ffffff";
+        context.lineWidth = 2;
+        context.strokeRect(nextX, navY + 10, buttonSize, buttonSize);
+        context.fillStyle = "#ffffff";
+        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        context.textAlign = "center";
+        context.fillText("▶", nextX + buttonSize / 2, navY + 10 + buttonSize / 2 + fontSize / 3);
+    }
 }
 
 function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, type, fontSize) {
@@ -2682,36 +2886,38 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
 
 function handleLevelSelectInput(key) {
     switch (key) {
+        case 'ArrowLeft':
+            // Change to previous set
+            handleLevelSelectLeft();
+            break;
+        case 'ArrowRight':
+            // Change to next set
+            handleLevelSelectRight();
+            break;
         case 'ArrowUp':
-            if (levelSelectOption === 'start') {
-                levelSelectOption = 'choose';
-            } else {
-                // In choose mode, up changes to previous set
-                handleLevelSelectLeft();
+            // Previous page
+            if (currentLevelPage > 0) {
+                currentLevelPage--;
             }
             break;
         case 'ArrowDown':
-            if (levelSelectOption === 'choose') {
-                levelSelectOption = 'start';
-            } else {
-                // In start mode, down goes to choose mode
-                levelSelectOption = 'choose';
-            }
-            break;
-        case 'ArrowLeft':
-            if (levelSelectOption === 'choose') {
-                // Left decreases level
-                handleLevelSelectUp();
-            }
-            break;
-        case 'ArrowRight':
-            if (levelSelectOption === 'choose') {
-                // Right increases level
-                handleLevelSelectDown();
+            // Next page
+            const maxLevel = getLevelCount(selectedSet);
+            const maxPages = Math.ceil(maxLevel / levelsPerPage);
+            if (currentLevelPage < maxPages - 1) {
+                currentLevelPage++;
             }
             break;
         case ' ':
-            startSelectedLevel();
+            // Start level 1 if no level is selected, otherwise start selected level
+            const levelToStart = selectedLevel > 0 ? selectedLevel : 1;
+            currentSet = selectedSet;
+            currentLevelNumber = levelToStart;
+            loadLevel(currentSet, currentLevelNumber);
+            currentGameState = GAME_STATES.PLAYING;
+            lastInputType = "Game Started!";
+            lastInputTime = Date.now();
+            inputFadeTimer = 2000;
             break;
         case 'Escape':
             currentGameState = GAME_STATES.TITLE;
@@ -2727,12 +2933,14 @@ function handleLevelSelectLeft() {
     
     if (currentSetIndex > 0) {
         selectedSet = setNames[currentSetIndex - 1];
-        selectedLevel = 1; // Reset to level 1 when changing sets
+        selectedLevel = 0; // No level selected when changing sets
     } else {
         // Wrap around to last set
         selectedSet = setNames[setNames.length - 1];
-        selectedLevel = 1;
+        selectedLevel = 0;
     }
+    currentLevelPage = 0; // Reset to first page
+    calculateGridLayout(); // Recalculate for new set
 }
 
 function handleLevelSelectRight() {
@@ -2743,12 +2951,14 @@ function handleLevelSelectRight() {
     
     if (currentSetIndex < setNames.length - 1) {
         selectedSet = setNames[currentSetIndex + 1];
-        selectedLevel = 1; // Reset to level 1 when changing sets
+        selectedLevel = 0; // No level selected when changing sets
     } else {
         // Wrap around to first set
         selectedSet = setNames[0];
-        selectedLevel = 1;
+        selectedLevel = 0;
     }
+    currentLevelPage = 0; // Reset to first page
+    calculateGridLayout(); // Recalculate for new set
 }
 
 function handleLevelSelectUp() {
@@ -2772,10 +2982,8 @@ function handleLevelSelectDown() {
 }
 
 function handleLevelSelectClick(x, y) {
-    if (!window.levelSelectButtons) return;
-    
-    // Check set navigation buttons
-    if (window.levelSelectButtons.set) {
+    // Check set navigation buttons (if they exist from the old system)
+    if (window.levelSelectButtons && window.levelSelectButtons.set) {
         const leftBtn = window.levelSelectButtons.set.left;
         const rightBtn = window.levelSelectButtons.set.right;
         
@@ -2785,7 +2993,9 @@ function handleLevelSelectClick(x, y) {
             const sets = Object.keys(SOKOBAN_LEVELS);
             const currentIndex = sets.indexOf(selectedSet);
             selectedSet = sets[(currentIndex - 1 + sets.length) % sets.length];
-            selectedLevel = 1; // Reset to first level in new set
+            selectedLevel = 0; // No level selected when changing sets
+            currentLevelPage = 0; // Reset to first page
+            calculateGridLayout(); // Recalculate for new set
             return;
         }
         
@@ -2795,49 +3005,105 @@ function handleLevelSelectClick(x, y) {
             const sets = Object.keys(SOKOBAN_LEVELS);
             const currentIndex = sets.indexOf(selectedSet);
             selectedSet = sets[(currentIndex + 1) % sets.length];
-            selectedLevel = 1; // Reset to first level in new set
+            selectedLevel = 0; // No level selected when changing sets
+            currentLevelPage = 0; // Reset to first page
+            calculateGridLayout(); // Recalculate for new set
             return;
         }
     }
     
-    // Check level navigation buttons
-    if (window.levelSelectButtons.level) {
-        const leftBtn = window.levelSelectButtons.level.left;
-        const rightBtn = window.levelSelectButtons.level.right;
-        
-        // Left level button
-        if (x >= leftBtn.x && x <= leftBtn.x + leftBtn.width &&
-            y >= leftBtn.y && y <= leftBtn.y + leftBtn.height) {
-            const maxLevel = getLevelCount(selectedSet);
-            selectedLevel = selectedLevel > 1 ? selectedLevel - 1 : maxLevel;
-            return;
+    // Check level grid buttons
+    if (isClickOnLevelGrid(x, y)) {
+        return;
+    }
+    
+    // Check page navigation buttons
+    if (isClickOnPageNavigation(x, y)) {
+        return;
+    }
+}
+
+function isClickOnLevelGrid(x, y) {
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45;
+    const buttonSpacing = 8;
+    
+    const headerHeight = canvas.height * 0.35;
+    const footerHeight = canvas.height * 0.15;
+    const gridAreaHeight = canvas.height - headerHeight - footerHeight;
+    
+    const maxLevel = getLevelCount(selectedSet);
+    const startLevel = currentLevelPage * levelsPerPage + 1;
+    const endLevel = Math.min(startLevel + levelsPerPage - 1, maxLevel);
+    
+    // Center the grid in the available area
+    const gridWidth = gridColumns * (buttonSize + buttonSpacing) - buttonSpacing;
+    const gridHeight = gridRows * (buttonSize + buttonSpacing) - buttonSpacing;
+    const gridStartX = (canvas.width - gridWidth) / 2;
+    const centeredGridStartY = headerHeight + (gridAreaHeight - gridHeight) / 2;
+    
+    let levelNumber = startLevel;
+    
+    for (let row = 0; row < gridRows && levelNumber <= endLevel; row++) {
+        for (let col = 0; col < gridColumns && levelNumber <= endLevel; col++) {
+            const buttonX = gridStartX + col * (buttonSize + buttonSpacing);
+            const buttonY = centeredGridStartY + row * (buttonSize + buttonSpacing);
+            
+            // Check if click is on this button
+            if (x >= buttonX && x <= buttonX + buttonSize &&
+                y >= buttonY && y <= buttonY + buttonSize) {
+                // Start the clicked level
+                selectedLevel = levelNumber;
+                currentSet = selectedSet;
+                currentLevelNumber = selectedLevel;
+                loadLevel(currentSet, currentLevelNumber);
+                currentGameState = GAME_STATES.PLAYING;
+                lastInputType = "Game Started!";
+                lastInputTime = Date.now();
+                inputFadeTimer = 2000;
+                return true;
+            }
+            levelNumber++;
         }
-        
-        // Right level button
-        if (x >= rightBtn.x && x <= rightBtn.x + rightBtn.width &&
-            y >= rightBtn.y && y <= rightBtn.y + rightBtn.height) {
-            const maxLevel = getLevelCount(selectedSet);
-            selectedLevel = selectedLevel < maxLevel ? selectedLevel + 1 : 1;
-            return;
+    }
+    return false;
+}
+
+function isClickOnPageNavigation(x, y) {
+    const maxLevel = getLevelCount(selectedSet);
+    const maxPages = Math.ceil(maxLevel / levelsPerPage);
+    
+    if (maxPages <= 1) return false; // No pagination needed
+    
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 30 : 35;
+    const headerHeight = canvas.height * 0.35;
+    const footerHeight = canvas.height * 0.15;
+    const gridAreaHeight = canvas.height - headerHeight - footerHeight;
+    const navY = headerHeight + gridAreaHeight + 20;
+    const centerX = canvas.width / 2;
+    
+    // Previous page button
+    if (currentLevelPage > 0) {
+        const prevX = centerX - 80;
+        if (x >= prevX && x <= prevX + buttonSize &&
+            y >= navY + 10 && y <= navY + 10 + buttonSize) {
+            currentLevelPage--;
+            return true;
         }
     }
     
-    // Check start game button
-    if (window.levelSelectButtons.start) {
-        const startBtn = window.levelSelectButtons.start;
-        if (x >= startBtn.x && x <= startBtn.x + startBtn.width &&
-            y >= startBtn.y && y <= startBtn.y + startBtn.height) {
-            // Start the selected level directly
-            currentSet = selectedSet;
-            currentLevelNumber = selectedLevel;
-            loadLevel(currentSet, currentLevelNumber);
-            currentGameState = GAME_STATES.PLAYING;
-            lastInputType = "Game Started!";
-            lastInputTime = Date.now();
-            inputFadeTimer = 2000;
-            return;
+    // Next page button
+    if (currentLevelPage < maxPages - 1) {
+        const nextX = centerX + 80 - buttonSize;
+        if (x >= nextX && x <= nextX + buttonSize &&
+            y >= navY + 10 && y <= navY + 10 + buttonSize) {
+            currentLevelPage++;
+            return true;
         }
     }
+    
+    return false;
 }
 
 function startSelectedLevel() {
@@ -2875,6 +3141,11 @@ function resizeCanvas() {
     // Recalculate tile size and level positioning for new screen dimensions
     if (currentLevel) {
         recalculateLevelLayout();
+    }
+    
+    // Recalculate grid layout if in level select mode
+    if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+        calculateGridLayout();
     }
 }
 
@@ -2943,4 +3214,220 @@ function getMouseClickPosition(canvas, event) {
     mouseX = Math.round(x / scale);
     mouseY = Math.round(y / scale);
 }
+
+// #region Progress Tracking with IndexedDB
+
+async function initProgressDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('CrateEscapeProgress', 3); // Increment version for enhanced progress tracking
+        
+        request.onerror = () => {
+            console.error('Failed to open IndexedDB:', request.error);
+            resolve(null); // Continue without progress tracking if DB fails
+        };
+        
+        request.onsuccess = () => {
+            progressDB = request.result;
+            console.log('Progress database initialized');
+            resolve(progressDB);
+        };
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            
+            // Create object store for level progress
+            if (!db.objectStoreNames.contains('levelProgress')) {
+                const store = db.createObjectStore('levelProgress', { keyPath: 'id' });
+                store.createIndex('setName', 'setName', { unique: false });
+                store.createIndex('levelNumber', 'levelNumber', { unique: false });
+            }
+            
+            // Create object store for last played level
+            if (!db.objectStoreNames.contains('lastPlayed')) {
+                const lastPlayedStore = db.createObjectStore('lastPlayed', { keyPath: 'id' });
+            }
+        };
+    });
+}
+
+async function loadLevelProgress() {
+    if (!progressDB) return;
+    
+    try {
+        const transaction = progressDB.transaction(['levelProgress'], 'readonly');
+        const store = transaction.objectStore('levelProgress');
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+            levelProgress.clear();
+            request.result.forEach(record => {
+                const key = `${record.setName}_${record.levelNumber}`;
+                levelProgress.set(key, {
+                    attempted: record.attempted,
+                    completed: record.completed
+                });
+            });
+            console.log(`Loaded progress for ${levelProgress.size} levels`);
+        };
+    } catch (error) {
+        console.error('Error loading level progress:', error);
+    }
+}
+
+async function saveLevelProgress(setName, levelNumber, attempted, completed, moves = null, pushes = null) {
+    if (!progressDB) return;
+    
+    const key = `${setName}_${levelNumber}`;
+    const id = key; // Use the key as the ID for IndexedDB
+    
+    try {
+        const transaction = progressDB.transaction(['levelProgress'], 'readwrite');
+        const store = transaction.objectStore('levelProgress');
+        
+        // Get existing record to preserve best scores
+        const existingRequest = store.get(id);
+        const existing = await new Promise((resolve) => {
+            existingRequest.onsuccess = () => resolve(existingRequest.result);
+            existingRequest.onerror = () => resolve(null);
+        });
+        
+        // Calculate best scores
+        let bestMoves = existing?.bestMoves || null;
+        let bestPushes = existing?.bestPushes || null;
+        let completionCount = existing?.completionCount || 0;
+        
+        // If completing the level, update best scores and increment completion count
+        if (completed && moves !== null && pushes !== null) {
+            // Update best moves if this is better (or first completion)
+            if (bestMoves === null || moves < bestMoves) {
+                bestMoves = moves;
+            }
+            
+            // Update best pushes if this is better (or first completion)
+            if (bestPushes === null || pushes < bestPushes) {
+                bestPushes = pushes;
+            }
+            
+            // Increment completion count
+            completionCount++;
+        }
+        
+        const record = {
+            id: id,
+            setName: setName,
+            levelNumber: levelNumber,
+            attempted: attempted,
+            completed: completed,
+            bestMoves: bestMoves,
+            bestPushes: bestPushes,
+            completionCount: completionCount,
+            lastPlayed: new Date().toISOString(),
+            lastCompletionDate: completed ? new Date().toISOString() : (existing?.lastCompletionDate || null)
+        };
+        
+        await store.put(record);
+        
+        // Update local cache with enhanced data
+        levelProgress.set(key, { 
+            attempted, 
+            completed, 
+            bestMoves, 
+            bestPushes, 
+            completionCount 
+        });
+        
+        if (completed && moves !== null && pushes !== null) {
+            console.log(`Level completed: ${setName} Level ${levelNumber} - Moves: ${moves}, Pushes: ${pushes} (Best: ${bestMoves}/${bestPushes})`);
+        } else {
+            console.log(`Saved progress: ${setName} Level ${levelNumber} - Attempted: ${attempted}, Completed: ${completed}`);
+        }
+    } catch (error) {
+        console.error('Error saving level progress:', error);
+    }
+}
+
+function getLevelProgressStatus(setName, levelNumber) {
+    const key = `${setName}_${levelNumber}`;
+    const progress = levelProgress.get(key);
+    
+    if (!progress || !progress.attempted) {
+        return 'never_played'; // Blue
+    } else if (progress.completed) {
+        return 'completed'; // Green
+    } else {
+        return 'attempted'; // Amber
+    }
+}
+
+async function markLevelAttempted(setName, levelNumber) {
+    const key = `${setName}_${levelNumber}`;
+    const current = levelProgress.get(key) || { attempted: false, completed: false };
+    
+    if (!current.attempted) {
+        await saveLevelProgress(setName, levelNumber, true, current.completed);
+    }
+}
+
+async function markLevelCompleted(setName, levelNumber) {
+    await saveLevelProgress(setName, levelNumber, true, true, moveCount, pushCount);
+}
+
+// Save the last played level to IndexedDB
+async function saveLastPlayedLevel(setName, levelNumber) {
+    if (!progressDB) return;
+    
+    try {
+        const transaction = progressDB.transaction(['lastPlayed'], 'readwrite');
+        const store = transaction.objectStore('lastPlayed');
+        
+        await store.put({
+            id: 'lastPlayed',
+            setName: setName,
+            levelNumber: levelNumber,
+            timestamp: Date.now()
+        });
+        
+        console.log(`Saved last played: ${setName} level ${levelNumber}`);
+    } catch (error) {
+        console.error('Failed to save last played level:', error);
+    }
+}
+
+// Load the last played level from IndexedDB
+async function loadLastPlayedLevel() {
+    if (!progressDB) return null;
+    
+    try {
+        const transaction = progressDB.transaction(['lastPlayed'], 'readonly');
+        const store = transaction.objectStore('lastPlayed');
+        const request = store.get('lastPlayed');
+        
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => {
+                const result = request.result;
+                if (result) {
+                    console.log(`Loaded last played: ${result.setName} level ${result.levelNumber}`);
+                    resolve({
+                        setName: result.setName,
+                        levelNumber: result.levelNumber
+                    });
+                } else {
+                    console.log('No last played level found');
+                    resolve(null);
+                }
+            };
+            
+            request.onerror = () => {
+                console.error('Failed to load last played level:', request.error);
+                resolve(null);
+            };
+        });
+    } catch (error) {
+        console.error('Failed to load last played level:', error);
+        return null;
+    }
+}
+
+// #endregion
+
 // #endregion
