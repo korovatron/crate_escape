@@ -38,9 +38,10 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
-    // Handle exit to title with Escape key
+    // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
-        currentGameState = GAME_STATES.TITLE;
+        currentGameState = GAME_STATES.LEVEL_SELECT;
+        initializeLevelSelect();
         return;
     }
     
@@ -156,7 +157,8 @@ function setupCanvasEventListeners() {
                 return;
             }
             if (isClickOnExitButton(mouseX, mouseY)) {
-                currentGameState = GAME_STATES.TITLE;
+                currentGameState = GAME_STATES.LEVEL_SELECT;
+                initializeLevelSelect();
                 return;
             }
         }
@@ -307,7 +309,8 @@ function setupCanvasEventListeners() {
                         return;
                     }
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
-                        currentGameState = GAME_STATES.TITLE;
+                        currentGameState = GAME_STATES.LEVEL_SELECT;
+                        initializeLevelSelect();
                         return;
                     }
                 }
@@ -1513,7 +1516,12 @@ function drawTitleScreen() {
     const logoX = (canvas.width - logoWidth) / 2;
     const logoY = yPos;
     
+    // Apply same high-quality rendering settings as push/move icons
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
     context.drawImage(cartoonLogo, logoX, logoY, logoWidth, logoHeight);
+    context.restore();
     
     // Update yPos to be after the logo
     yPos = logoY + logoHeight;
@@ -2229,6 +2237,14 @@ function drawLevelInfo() {
     context.fillText(`Goals: ${currentLevel.goals.length}`, 20, 90);
 }
 
+// Helper function to draw neon text (global scope)
+function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff") {
+    // Draw text without glow - just the color
+    context.shadowBlur = 0;
+    context.fillStyle = color;
+    context.fillText(text, x, y);
+}
+
 function drawStatusBar() {
     // Draw dark background with subtle gradient
     const gradient = context.createLinearGradient(0, 0, 0, STATUS_BAR_HEIGHT);
@@ -2243,14 +2259,6 @@ function drawStatusBar() {
     context.fillStyle = "#e6cc00";
     context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
     context.shadowBlur = 0;
-    
-    // Helper function to draw neon text
-    function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff") {
-        // Draw text without glow - just the color
-        context.shadowBlur = 0;
-        context.fillStyle = color;
-        context.fillText(text, x, y);
-    }
     
     // Responsive layout based on screen width
     const isMobile = canvas.width < 600;
@@ -2390,10 +2398,10 @@ function drawStatusBar() {
     context.strokeRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
     context.shadowBlur = 0;
     
-    // Button text with cyan neon
+    // Button text with cyan neon - back arrow instead of cross
     context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
     context.textAlign = "center";
-    drawNeonText("✕", exitButtonX + buttonSize / 2, exitButtonY + buttonSize / 2 + 5, "#00ccff", "#00ccff");
+    drawNeonText("◀", exitButtonX + buttonSize / 2, exitButtonY + buttonSize / 2 + 5, "#00ccff", "#00ccff");
     
     // Draw RESTART button (middle)
     // Button neon glow background (orange color)
@@ -2666,14 +2674,14 @@ function drawLevelSelectScreen() {
     const footerHeight = canvas.height * 0.15;
     const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     
-    // Title
+    // Title - moved slightly lower to avoid conflict with back button
     context.font = `bold ${titleFontSize}px 'Courier New', monospace`;
     context.fillStyle = "#00ffff";
     context.textAlign = "center";
-    context.fillText("SELECT LEVEL", centerX, headerHeight * 0.2);
+    context.fillText("SELECT LEVEL", centerX, headerHeight * 0.35);
     
-    // Set selector
-    const setY = headerHeight * 0.5;
+    // Set selector - moved further down to avoid overlap with title on landscape screens
+    const setY = headerHeight * 0.85;
     const buttonWidth = isMobile ? 30 : 35; // Match page navigation button size
     const buttonHeight = isMobile ? 30 : 35; // Match page navigation button size
     const indicatorWidth = isMobile ? 200 : 250;
@@ -2690,7 +2698,36 @@ function drawLevelSelectScreen() {
     if (maxPages > 1) {
         drawPageNavigation(headerHeight + gridAreaHeight + 20, maxPages);
     }
+
+    // Draw back button (same as exit button in gameplay)
+    const buttonSize = isMobile ? 35 : 45; // Same size as gameplay exit button
+    const exitButtonX = canvas.width - buttonSize - 10;
+    const exitButtonY = 10;
     
+    // Button neon glow background (cyan/blue color)
+    context.shadowColor = "#00ccff";
+    context.shadowBlur = 12;
+    context.fillStyle = "rgba(0, 204, 255, 0.2)";
+    context.fillRect(exitButtonX - 5, exitButtonY - 5, buttonSize + 10, buttonSize + 10);
+    
+    // Button background
+    context.shadowBlur = 0;
+    context.fillStyle = "rgba(30, 30, 30, 0.9)";
+    context.fillRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
+    
+    // Button neon border
+    context.shadowColor = "#00ccff";
+    context.shadowBlur = 8;
+    context.strokeStyle = "#00ccff";
+    context.lineWidth = 2;
+    context.strokeRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
+    context.shadowBlur = 0;
+    
+    // Button text with cyan neon - back arrow
+    context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
+    context.textAlign = "center";
+    drawNeonText("◀", exitButtonX + buttonSize / 2, exitButtonY + buttonSize / 2 + 5, "#00ccff", "#00ccff");
+
     context.textAlign = "left";
 }
 
@@ -2935,6 +2972,7 @@ function handleLevelSelectInput(key) {
             inputFadeTimer = 2000;
             break;
         case 'Escape':
+            // Back button behavior: level select goes to title
             currentGameState = GAME_STATES.TITLE;
             break;
     }
@@ -2997,6 +3035,19 @@ function handleLevelSelectDown() {
 }
 
 function handleLevelSelectClick(x, y) {
+    // Check back button click (same position as exit button in gameplay)
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45;
+    const exitButtonX = canvas.width - buttonSize - 10;
+    const exitButtonY = 10;
+    
+    if (x >= exitButtonX && x <= exitButtonX + buttonSize &&
+        y >= exitButtonY && y <= exitButtonY + buttonSize) {
+        // Go back to title screen
+        currentGameState = GAME_STATES.TITLE;
+        return;
+    }
+
     // Check set navigation buttons (if they exist from the old system)
     if (window.levelSelectButtons && window.levelSelectButtons.set) {
         const leftBtn = window.levelSelectButtons.set.left;
