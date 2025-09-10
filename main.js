@@ -2566,6 +2566,16 @@ function drawLevelCompleteOverlay() {
     // Reset text alignment
     context.textAlign = "left";
 }
+
+async function exitToLevelSelect() {
+    await loadLevelProgress(); // Refresh progress data first
+    currentGameState = GAME_STATES.LEVEL_SELECT; // Then change state
+    
+    // Debug: Check the specific level that was just played
+    const currentLevelKey = `${currentSet}_${currentLevelNumber}`;
+    const currentProgress = levelProgress.get(currentLevelKey);
+    console.log(`DEBUG: Exited from ${currentLevelKey}, progress:`, currentProgress);
+}
 // #endregion
 
 // #region Level Selection System
@@ -2707,39 +2717,31 @@ function drawLevelGrid(gridStartY, gridAreaHeight) {
 }
 
 function drawLevelButton(x, y, size, levelNumber, fontSize) {
-    const isSelected = levelNumber === selectedLevel;
     const progressStatus = getLevelProgressStatus(selectedSet, levelNumber);
     
-    // Determine colors based on progress status
+    // Determine colors based on progress status only
     let backgroundColor, borderColor, textColor;
     
-    if (isSelected) {
-        // Selected button - always use cyan with thicker border
-        backgroundColor = "rgba(0, 204, 255, 0.4)";
-        borderColor = "#00ccff";
-        textColor = "#00ccff";
-    } else {
-        switch (progressStatus) {
-            case 'completed':
-                // Green for completed levels
-                backgroundColor = "rgba(0, 255, 0, 0.2)";
-                borderColor = "#00ff00";
-                textColor = "#00ff00";
-                break;
-            case 'attempted':
-                // Amber for attempted but not completed
-                backgroundColor = "rgba(255, 191, 0, 0.2)";
-                borderColor = "#ffbf00";
-                textColor = "#ffbf00";
-                break;
-            case 'never_played':
-            default:
-                // Blue for never played (default)
-                backgroundColor = "rgba(0, 204, 255, 0.2)";
-                borderColor = "#00ccff";
-                textColor = "#00ccff";
-                break;
-        }
+    switch (progressStatus) {
+        case 'completed':
+            // Green for completed levels
+            backgroundColor = "rgba(0, 255, 0, 0.2)";
+            borderColor = "#00ff00";
+            textColor = "#00ff00";
+            break;
+        case 'attempted':
+            // Amber for attempted but not completed
+            backgroundColor = "rgba(255, 191, 0, 0.2)";
+            borderColor = "#ffbf00";
+            textColor = "#ffbf00";
+            break;
+        case 'never_played':
+        default:
+            // Blue for never played (default)
+            backgroundColor = "rgba(0, 204, 255, 0.2)";
+            borderColor = "#00ccff";
+            textColor = "#00ccff";
+            break;
     }
     
     // Button background
@@ -2748,7 +2750,7 @@ function drawLevelButton(x, y, size, levelNumber, fontSize) {
     
     // Button border
     context.strokeStyle = borderColor;
-    context.lineWidth = isSelected ? 3 : 2;
+    context.lineWidth = 2;
     context.strokeRect(x, y, size, size);
     
     // Button text (level number)
