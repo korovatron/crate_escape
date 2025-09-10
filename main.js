@@ -1480,14 +1480,14 @@ function drawTitleScreen() {
     const smallSize = baseSize * 0.7;
     const largeSize = baseSize * 1.3;
     
-    // Starting Y position - much closer to top on mobile landscape
+    // Starting Y position - more responsive to screen height
     let yPos;
     if (isMobileLandscape) {
-        yPos = canvas.height * 0.05; // Very close to top for landscape
+        yPos = Math.min(canvas.height * 0.05, 20); // Very close to top for landscape, but not less than 20px
     } else if (isMobilePortrait) {
-        yPos = canvas.height * 0.08;
+        yPos = Math.min(canvas.height * 0.06, 30); // Closer to top for portrait, ensuring content fits
     } else {
-        yPos = canvas.height * 0.1;
+        yPos = Math.min(canvas.height * 0.08, 40); // Desktop - closer to top to allow more content below
     }
     
     // Draw cartoon logo image instead of text title
@@ -1520,11 +1520,14 @@ function drawTitleScreen() {
     // Update yPos to be after the logo
     yPos = logoY + logoHeight;
     
-    // Add spacing after logo - balanced for mobile landscape
+    // Add spacing after logo - more responsive to screen height
+    const availableHeight = canvas.height - (logoY + logoHeight);
+    const spacingRatio = Math.min(0.15, availableHeight / (canvas.height * 8)); // Adaptive spacing
+    
     if (isMobileLandscape) {
-        yPos += logoHeight * 0.15; // Moderate spacing for landscape
+        yPos += logoHeight * Math.max(0.08, spacingRatio); // Tighter spacing for landscape
     } else {
-        yPos += logoHeight * 0.2; // Normal spacing for portrait/desktop
+        yPos += logoHeight * Math.max(0.12, spacingRatio * 1.5); // Normal spacing but responsive
     }
     
     // Instructions and info text - adjust size for mobile landscape
@@ -1554,8 +1557,10 @@ function drawTitleScreen() {
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
     yPos = drawWrappedText(context, "Push all crates to their designated positions before you can escape to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     
-    // Demo level preview - positioned right after main instruction with moderate spacing
-    yPos += lineHeight * (isMobileLandscape ? 1.5 : 2); // Moderate spacing for landscape
+    // Demo level preview - positioned after main instruction with responsive spacing
+    const remainingHeight = canvas.height - yPos;
+    const demoSpacingRatio = Math.min(2, remainingHeight / (canvas.height * 2)); // Adaptive spacing
+    yPos += lineHeight * (isMobileLandscape ? Math.max(1.2, demoSpacingRatio * 0.8) : Math.max(1.5, demoSpacingRatio));
     
     // Calculate demo tile size with pixel-perfect scaling to avoid artifacts
     let baseDemoTileSize;
