@@ -2618,7 +2618,7 @@ function drawLevelSelectScreen() {
     // Draw back button (same as exit button in gameplay)
     const buttonSize = isMobile ? 35 : 45; // Same size as gameplay exit button
     const exitButtonX = canvas.width - buttonSize - 10;
-    const exitButtonY = 10;
+    const exitButtonY = isMobile ? 15 : 10; // Match gameplay positioning exactly
     
     // Button neon glow background (cyan/blue color)
     context.shadowColor = "#00ccff";
