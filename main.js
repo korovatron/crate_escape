@@ -521,6 +521,7 @@ function calculateOptimalTileSize() {
 const spriteSheet = new Image();
 const footprintLogo = new Image();
 const pushLogo = new Image();
+const cartoonLogo = new Image();
 const textureAtlas = {
   spriteSheet,
   frames: {
@@ -635,7 +636,7 @@ const playerSprite = textureAtlas.frames["player_03.png"];
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 3; // spriteSheet, footprintLogo, pushLogo
+    const numberImages = 4; // spriteSheet, footprintLogo, pushLogo, cartoonLogo
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
@@ -655,6 +656,14 @@ function init() {
     
     pushLogo.src = "assets/images/pushLogo.png";
     pushLogo.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    cartoonLogo.src = "assets/images/cartoonLogo.png";
+    cartoonLogo.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
             createCanvas();
@@ -1484,37 +1493,36 @@ function drawTitleScreen() {
         yPos = canvas.height * 0.1;
     }
     
-    // Line 1: "The" - smaller, brighter industrial gray for visibility
-    context.fillStyle = "#BBBBBB"; // Brightened from #888888 to #BBBBBB
-    context.font = `${smallSize}px 'Roboto Condensed', 'Courier New', 'Monaco', 'Consolas', monospace`;
-    context.strokeStyle = "#555555"; // Lightened stroke too
-    context.lineWidth = 1;
-    context.fillText("The", canvas.width / 2, yPos);
-    context.strokeText("The", canvas.width / 2, yPos);
+    // Draw cartoon logo image instead of text title
+    const logoMaxWidth = isMobileLandscape ? canvas.width * 0.6 : canvas.width * 0.7;
+    const logoMaxHeight = isMobileLandscape ? canvas.height * 0.25 : canvas.height * 0.3;
     
-    // Line 2: "CRATE" - larger, industrial orange/rust color
-    yPos += largeSize * 1.2;
-    context.font = `900 ${largeSize}px 'Orbitron', 'Impact', 'Arial Black', 'Helvetica', 'Arial', sans-serif`;
-    context.fillStyle = "#CC6600";
-    context.strokeStyle = "#663300";
-    context.lineWidth = 2;
-    context.fillText("CRATE", canvas.width / 2, yPos);
-    context.strokeText("CRATE", canvas.width / 2, yPos);
+    // Calculate logo size maintaining aspect ratio
+    const logoAspectRatio = cartoonLogo.width / cartoonLogo.height;
+    let logoWidth, logoHeight;
     
-    // Line 3: "ESCAPE" - larger, steel blue/industrial color
-    yPos += largeSize * 1.2;
-    context.font = `900 ${largeSize}px 'Orbitron', 'Impact', 'Arial Black', 'Helvetica', 'Arial', sans-serif`;
-    context.fillStyle = "#4682B4";
-    context.strokeStyle = "#2F4F4F";
-    context.lineWidth = 2;
-    context.fillText("ESCAPE", canvas.width / 2, yPos);
-    context.strokeText("ESCAPE", canvas.width / 2, yPos);
-    
-    // Add spacing after title - balanced for mobile landscape
-    if (isMobileLandscape) {
-        yPos += largeSize * 0.6; // Moderate spacing - between tight (0.4) and normal (0.8)
+    if (logoMaxWidth / logoAspectRatio <= logoMaxHeight) {
+        logoWidth = logoMaxWidth;
+        logoHeight = logoMaxWidth / logoAspectRatio;
     } else {
-        yPos += largeSize * 0.8; // Normal spacing for portrait/desktop
+        logoHeight = logoMaxHeight;
+        logoWidth = logoMaxHeight * logoAspectRatio;
+    }
+    
+    // Center the logo
+    const logoX = (canvas.width - logoWidth) / 2;
+    const logoY = yPos;
+    
+    context.drawImage(cartoonLogo, logoX, logoY, logoWidth, logoHeight);
+    
+    // Update yPos to be after the logo
+    yPos = logoY + logoHeight;
+    
+    // Add spacing after logo - balanced for mobile landscape
+    if (isMobileLandscape) {
+        yPos += logoHeight * 0.15; // Moderate spacing for landscape
+    } else {
+        yPos += logoHeight * 0.2; // Normal spacing for portrait/desktop
     }
     
     // Instructions and info text - adjust size for mobile landscape
@@ -1540,9 +1548,9 @@ function drawTitleScreen() {
     }
     context.font = `400 ${mainInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#DDDDDD";
-    const maxTextWidth = canvas.width * 0.9; // Use more width on mobile
+    const maxTextWidth = Math.min(canvas.width * 0.9, 800); // Constrain width on wide displays
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
-    yPos = drawWrappedText(context, "Complete each level by pushing all crates into their designated positions.", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
+    yPos = drawWrappedText(context, "Push all crates to their designated positions before you can escape to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     
     // Demo level preview - positioned right after main instruction with moderate spacing
     yPos += lineHeight * (isMobileLandscape ? 1.5 : 2); // Moderate spacing for landscape
@@ -1697,7 +1705,6 @@ function drawTitleScreen() {
     context.font = `400 ${controlInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#CCCCCC";
     const controlInstructionLineHeight = controlInstructionSize * 1.3;
-    yPos = drawWrappedText(context, "Press R to retry the level. Press ESC to exit and choose a different level.", canvas.width / 2, yPos, maxTextWidth, controlInstructionLineHeight);
     
     // Start instruction - positioned after controls with pulsating effect like level complete
     yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Moderate spacing for landscape
@@ -2655,7 +2662,7 @@ function drawLevelSelectScreen() {
     const fontSize = isMobile ? 16 : 20;
     
     // Calculate layout areas
-    const headerHeight = canvas.height * 0.35;
+    const headerHeight = canvas.height * 0.18; // Reduced even further for tighter layout
     const footerHeight = canvas.height * 0.15;
     const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     
@@ -2667,12 +2674,12 @@ function drawLevelSelectScreen() {
     
     // Set selector
     const setY = headerHeight * 0.5;
-    const buttonWidth = isMobile ? 40 : 50;
-    const buttonHeight = isMobile ? 30 : 40;
+    const buttonWidth = isMobile ? 30 : 35; // Match page navigation button size
+    const buttonHeight = isMobile ? 30 : 35; // Match page navigation button size
     const indicatorWidth = isMobile ? 200 : 250;
     const indicatorHeight = isMobile ? 40 : 50;
     
-    drawSelector("SET", selectedSet, centerX, setY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
+    drawSelector("", selectedSet, centerX, setY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
     
     // Draw level grid
     drawLevelGrid(headerHeight, gridAreaHeight);
@@ -2763,7 +2770,7 @@ function drawLevelButton(x, y, size, levelNumber, fontSize) {
 function drawPageNavigation(navY, maxPages) {
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 30 : 35;
-    const fontSize = isMobile ? 14 : 16;
+    const fontSize = isMobile ? 16 : 20; // Use same font size as main UI elements
     const centerX = canvas.width / 2;
     
     // Page info text
@@ -2772,32 +2779,36 @@ function drawPageNavigation(navY, maxPages) {
     context.textAlign = "center";
     context.fillText(`Page ${currentLevelPage + 1} of ${maxPages}`, centerX, navY);
     
-    // Previous page button
+    // Calculate button positions on same line as text
+    const buttonY = navY - buttonSize / 2 - fontSize / 3; // Align with text baseline
+    const spacing = 80; // Increased distance from center to buttons
+    
+    // Previous page button (left of text)
     if (currentLevelPage > 0) {
-        const prevX = centerX - 80;
+        const prevX = centerX - spacing - buttonSize;
         context.fillStyle = "rgba(255, 255, 255, 0.2)";
-        context.fillRect(prevX, navY + 10, buttonSize, buttonSize);
+        context.fillRect(prevX, buttonY, buttonSize, buttonSize);
         context.strokeStyle = "#ffffff";
         context.lineWidth = 2;
-        context.strokeRect(prevX, navY + 10, buttonSize, buttonSize);
+        context.strokeRect(prevX, buttonY, buttonSize, buttonSize);
         context.fillStyle = "#ffffff";
         context.font = `bold ${fontSize}px 'Courier New', monospace`;
         context.textAlign = "center";
-        context.fillText("◀", prevX + buttonSize / 2, navY + 10 + buttonSize / 2 + fontSize / 3);
+        context.fillText("◀", prevX + buttonSize / 2, buttonY + buttonSize / 2 + fontSize / 3);
     }
     
-    // Next page button
+    // Next page button (right of text)
     if (currentLevelPage < maxPages - 1) {
-        const nextX = centerX + 80 - buttonSize;
+        const nextX = centerX + spacing;
         context.fillStyle = "rgba(255, 255, 255, 0.2)";
-        context.fillRect(nextX, navY + 10, buttonSize, buttonSize);
+        context.fillRect(nextX, buttonY, buttonSize, buttonSize);
         context.strokeStyle = "#ffffff";
         context.lineWidth = 2;
-        context.strokeRect(nextX, navY + 10, buttonSize, buttonSize);
+        context.strokeRect(nextX, buttonY, buttonSize, buttonSize);
         context.fillStyle = "#ffffff";
         context.font = `bold ${fontSize}px 'Courier New', monospace`;
         context.textAlign = "center";
-        context.fillText("▶", nextX + buttonSize / 2, navY + 10 + buttonSize / 2 + fontSize / 3);
+        context.fillText("▶", nextX + buttonSize / 2, buttonY + buttonSize / 2 + fontSize / 3);
     }
 }
 
@@ -2814,39 +2825,41 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
     // Button Y position - centered with the indicator box
     const buttonY = indicatorY + (indicatorHeight - buttonHeight) / 2;
     
-    // Left arrow button
+    // Left arrow button - updated to match page navigation style
     const leftButtonX = centerX - indicatorWidth / 2 - buttonWidth - 10;
     
     // Left button background
-    context.fillStyle = "rgba(255, 255, 255, 0.1)";
+    context.fillStyle = "rgba(255, 255, 255, 0.2)";
     context.fillRect(leftButtonX, buttonY, buttonWidth, buttonHeight);
     
     // Left button border
     context.strokeStyle = "#ffffff";
-    context.lineWidth = 1;
+    context.lineWidth = 2;
     context.strokeRect(leftButtonX, buttonY, buttonWidth, buttonHeight);
     
     // Left arrow text - centered in button
-    context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
     context.fillStyle = "#ffffff";
-    context.fillText("◄", leftButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 6);
+    context.textAlign = "center";
+    context.fillText("◀", leftButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + fontSize / 3);
     
-    // Right arrow button
+    // Right arrow button - updated to match page navigation style
     const rightButtonX = centerX + indicatorWidth / 2 + 10;
     
     // Right button background
-    context.fillStyle = "rgba(255, 255, 255, 0.1)";
+    context.fillStyle = "rgba(255, 255, 255, 0.2)";
     context.fillRect(rightButtonX, buttonY, buttonWidth, buttonHeight);
     
     // Right button border
     context.strokeStyle = "#ffffff";
-    context.lineWidth = 1;
+    context.lineWidth = 2;
     context.strokeRect(rightButtonX, buttonY, buttonWidth, buttonHeight);
     
     // Right arrow text - centered in button
-    context.font = `bold ${fontSize + 4}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
     context.fillStyle = "#ffffff";
-    context.fillText("►", rightButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 6);
+    context.textAlign = "center";
+    context.fillText("▶", rightButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + fontSize / 3);
     
     // Value indicator background
     const indicatorX = centerX - indicatorWidth / 2;
@@ -3030,7 +3043,7 @@ function isClickOnLevelGrid(x, y) {
     const buttonSize = isMobile ? 35 : 45;
     const buttonSpacing = 8;
     
-    const headerHeight = canvas.height * 0.35;
+    const headerHeight = canvas.height * 0.18; // Updated to match current layout
     const footerHeight = canvas.height * 0.15;
     const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     
@@ -3079,27 +3092,32 @@ function isClickOnPageNavigation(x, y) {
     
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 30 : 35;
-    const headerHeight = canvas.height * 0.35;
+    const fontSize = isMobile ? 16 : 20;
+    const headerHeight = canvas.height * 0.18; // Updated to match current layout
     const footerHeight = canvas.height * 0.15;
     const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     const navY = headerHeight + gridAreaHeight + 20;
     const centerX = canvas.width / 2;
     
-    // Previous page button
+    // Calculate button positions matching drawPageNavigation
+    const buttonY = navY - buttonSize / 2 - fontSize / 3;
+    const spacing = 80; // Same as in drawPageNavigation
+    
+    // Previous page button (left of text)
     if (currentLevelPage > 0) {
-        const prevX = centerX - 80;
+        const prevX = centerX - spacing - buttonSize;
         if (x >= prevX && x <= prevX + buttonSize &&
-            y >= navY + 10 && y <= navY + 10 + buttonSize) {
+            y >= buttonY && y <= buttonY + buttonSize) {
             currentLevelPage--;
             return true;
         }
     }
     
-    // Next page button
+    // Next page button (right of text)
     if (currentLevelPage < maxPages - 1) {
-        const nextX = centerX + 80 - buttonSize;
+        const nextX = centerX + spacing;
         if (x >= nextX && x <= nextX + buttonSize &&
-            y >= navY + 10 && y <= navY + 10 + buttonSize) {
+            y >= buttonY && y <= buttonY + buttonSize) {
             currentLevelPage++;
             return true;
         }
