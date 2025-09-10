@@ -1550,7 +1550,7 @@ function drawTitleScreen() {
     }
     context.font = `400 ${mainInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#DDDDDD";
-    const maxTextWidth = Math.min(canvas.width * 0.9, 800); // Constrain width on wide displays
+    const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
     yPos = drawWrappedText(context, "Push all crates to their designated positions before you can escape to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     
