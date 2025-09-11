@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-v3.0';
+const CACHE_NAME = 'crate-escape-v3.1';
 const urlsToCache = [
   './',
   './index.html',
@@ -8,7 +8,7 @@ const urlsToCache = [
   './assets/images/footprintLogo.png',
   './assets/images/pushLogo.png',
   './assets/images/cartoonLogo.png',
-  './apple-touch-icon.png',
+  './apple-touch-icon-v2.png',
   './manifest.json',
   // Google Fonts - these will be cached when first loaded
   'https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Roboto+Condensed:wght@300;400;700&display=swap'
@@ -111,8 +111,8 @@ self.addEventListener('push', event => {
     
     const options = {
       body: data.body || 'New notification from Crate Escape',
-      icon: './apple-touch-icon.png',
-      badge: './apple-touch-icon.png',
+      icon: './apple-touch-icon-v2.png',
+      badge: './apple-touch-icon-v2.png',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
