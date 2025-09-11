@@ -1754,7 +1754,7 @@ function drawTitleScreen() {
     }
     context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
-    context.fillText("a javascript game by Neil Kendall 2025", canvas.width / 2, yPos);
+    context.fillText("Created by Neil Kendall 2025", canvas.width / 2, yPos);
     
     context.restore();
 }
