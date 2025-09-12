@@ -439,6 +439,7 @@ let attemptCount = 1; // Start at 1 since first play is attempt 1
 let undoCount = 3; // Player can undo up to 3 moves per level
 let moveHistory = []; // Array to store game state snapshots
 let pendingUndoState = null; // State to apply after undo animation completes
+let isReverseAnimation = false; // Flag to indicate reverse animation for undo
 
 // Player movement variables
 let playerPos = { x: 0, y: 0 }; // Current player position in grid coordinates
@@ -817,6 +818,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     undoCount = 3;
     moveHistory = [];
     pendingUndoState = null;
+    isReverseAnimation = false;
     
     // Only reset attempt count for new levels, not restarts
     if (!isRestart) {
@@ -956,10 +958,39 @@ function undoLastMove() {
     // Start reverse animation
     isPlayerMoving = true;
     moveAnimationProgress = 0;
+    isReverseAnimation = true; // Enable reverse animation mode
     
     // Set up reverse movement animation
     moveStartPos = { x: currentPlayerPos.x, y: currentPlayerPos.y };
     moveTargetPos = { x: targetPlayerPos.x, y: targetPlayerPos.y };
+    
+    // Calculate ORIGINAL movement direction (what direction they moved to get here)
+    const originalDirection = {
+        x: currentPlayerPos.x - targetPlayerPos.x,
+        y: currentPlayerPos.y - targetPlayerPos.y
+    };
+    
+    // Set animation state based on ORIGINAL direction (for true rewind effect)
+    let originalAnimationState = 'idle';
+    if (originalDirection.x > 0) {
+        originalAnimationState = 'moving-right'; // They moved right originally
+    } else if (originalDirection.x < 0) {
+        originalAnimationState = 'moving-left'; // They moved left originally
+    } else if (originalDirection.y > 0) {
+        originalAnimationState = 'moving-down'; // They moved down originally
+    } else if (originalDirection.y < 0) {
+        originalAnimationState = 'moving-up'; // They moved up originally
+    }
+    
+    // Set animation state and start from the end of the sequence for reverse playback
+    playerAnimationState = originalAnimationState;
+    const frameSequence = playerAnimations[playerAnimationState];
+    if (frameSequence && frameSequence.length > 1) {
+        playerAnimationFrame = frameSequence.length - 1; // Start from last frame
+    } else {
+        playerAnimationFrame = 0;
+    }
+    playerAnimationTimer = 0;
     
     // Set up reverse box animation if a box was moved
     if (movedBoxIndex !== null) {
@@ -1142,8 +1173,9 @@ function updatePlayerMovement(deltaTime) {
             moveCount = pendingUndoState.moveCount;
             pushCount = pendingUndoState.pushCount;
             
-            // Clear pending undo state
+            // Clear pending undo state and reset reverse animation flag
             pendingUndoState = null;
+            isReverseAnimation = false;
         } else {
             // Normal movement completion - update final positions
             playerPos.x = moveTargetPos.x;
@@ -1191,8 +1223,16 @@ function updatePlayerAnimation(deltaTime) {
         
         const frameSequence = playerAnimations[playerAnimationState];
         if (frameSequence && frameSequence.length > 1) {
-            // Advance to next frame in sequence, cycling through frames
-            playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
+            if (isReverseAnimation) {
+                // Reverse animation: go backwards through frames
+                playerAnimationFrame--;
+                if (playerAnimationFrame < 0) {
+                    playerAnimationFrame = frameSequence.length - 1; // Wrap to end
+                }
+            } else {
+                // Normal animation: advance to next frame in sequence
+                playerAnimationFrame = (playerAnimationFrame + 1) % frameSequence.length;
+            }
         } else {
             // Single frame animations (like idle) stay at frame 0
             playerAnimationFrame = 0;
@@ -1500,7 +1540,11 @@ function isClickOnUndoButton(x, y) {
     const undoButtonX = restartButtonX - buttonSize - buttonSpacing;
     const undoButtonY = exitButtonY;
     
-    return x >= undoButtonX && x <= undoButtonX + buttonSize &&
+    // Extend click area to the left to include the undo counter (20px padding for counter area)
+    const undoClickAreaLeft = undoButtonX - 25; // Extra space to include counter and some padding
+    const undoClickAreaRight = undoButtonX + buttonSize;
+    
+    return x >= undoClickAreaLeft && x <= undoClickAreaRight &&
            y >= undoButtonY && y <= undoButtonY + buttonSize;
 }
 
@@ -2483,15 +2527,41 @@ function drawStatusBar() {
     context.drawImage(restartIcon, restartButtonX, restartButtonY, buttonSize, buttonSize);
     context.restore();
     
+    // Draw attempt count in center of restart button
+    context.save();
+    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 16px 'Courier New', monospace";
+    context.fillStyle = "#FF9E0A"; // Orange color
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    const restartCenterX = restartButtonX + buttonSize / 2;
+    const restartCenterY = restartButtonY + buttonSize / 2;
+    context.fillText(attemptCount.toString(), restartCenterX, restartCenterY);
+    context.restore();
+    
     // Draw UNDO button (left of restart button) - PNG icon with smooth scaling and transparency when disabled
     context.save();
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
     // Apply transparency when no undo uses are left
     if (undoCount <= 0) {
-        context.globalAlpha = 0.3; // Make button appear disabled
+        context.globalAlpha = 0.3; // Make button appear disabled but still visible
     }
     context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
+    context.restore();
+    
+    // Draw undo count to the left of undo button
+    context.save();
+    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 16px 'Courier New', monospace";
+    context.fillStyle = "#FF16AA"; // Pink/magenta color
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    // Apply same transparency as undo button when disabled
+    if (undoCount <= 0) {
+        context.globalAlpha = 0.3; // Make text appear disabled but still visible
+    }
+    const undoCountX = undoButtonX - 5; // 5px to the left of undo button
+    const undoCountY = undoButtonY + buttonSize / 2; // Vertically centered with button
+    context.fillText(undoCount.toString(), undoCountX, undoCountY);
     context.restore();
     
     // Draw OVERVIEW button (leftmost when shown)
