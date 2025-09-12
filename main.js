@@ -2551,7 +2551,7 @@ function drawStatusBar() {
     
     // Draw undo count to the left of undo button
     context.save();
-    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 16px 'Courier New', monospace";
+    context.font = isMobile ? "bold 20px 'Courier New', monospace" : "bold 24px 'Courier New', monospace";
     context.fillStyle = "#FF16AA"; // Pink/magenta color
     context.textAlign = "right";
     context.textBaseline = "middle";
