@@ -2474,9 +2474,9 @@ function drawStatusBar() {
     // Use smaller font for push/move counts in mobile portrait (match attempt count size)
     const originalFont = context.font;
     if (isMobilePortrait) {
-        context.font = "bold 16px 'Courier New', monospace"; // Match attempt count font
+        context.font = "bold 20px 'Courier New', monospace"; // Match undo count font size
     } else {
-        context.font = isMobile ? "bold 24px 'Courier New', monospace" : "bold 30px 'Courier New', monospace";
+        context.font = isMobile ? "bold 20px 'Courier New', monospace" : "bold 24px 'Courier New', monospace"; // Match undo count
     }
     context.textAlign = "center";
     
