@@ -520,6 +520,9 @@ const spriteSheet = new Image();
 const footprintLogo = new Image();
 const pushLogo = new Image();
 const cartoonLogo = new Image();
+const backIcon = new Image();
+const restartIcon = new Image();
+const undoIcon = new Image();
 const textureAtlas = {
   spriteSheet,
   frames: {
@@ -634,7 +637,7 @@ const playerSprite = textureAtlas.frames["player_03.png"];
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 4; // spriteSheet, footprintLogo, pushLogo, cartoonLogo
+    const numberImages = 7; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
@@ -662,6 +665,30 @@ function init() {
     
     cartoonLogo.src = "assets/images/cartoonLogo.png";
     cartoonLogo.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    backIcon.src = "assets/images/backIcon.png";
+    backIcon.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    restartIcon.src = "assets/images/restartIcon.png";
+    restartIcon.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    undoIcon.src = "assets/images/undoIcon.png";
+    undoIcon.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
             createCanvas();
@@ -1312,17 +1339,16 @@ function toggleOverviewMode() {
 function isClickOnTryAgainButton(x, y) {
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
-    const restartButtonWidth = isMobile ? 75 : 90; // Wider restart button to fit 3-digit attempt counts
     const buttonSpacing = 8;
     const rightMargin = 10;
     
     // Use same calculations as drawStatusBar
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
-    const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing;
+    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
     const restartButtonY = exitButtonY;
     
-    return x >= restartButtonX && x <= restartButtonX + restartButtonWidth &&
+    return x >= restartButtonX && x <= restartButtonX + buttonSize &&
            y >= restartButtonY && y <= restartButtonY + buttonSize;
 }
 
@@ -2187,6 +2213,8 @@ function drawStatusBar() {
     context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
     context.shadowBlur = 0;
     
+    // Third: Draw all UI elements on top of the black background
+    
     // Responsive layout based on screen width
     const isMobile = canvas.width < 600;
     const fontSize = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
@@ -2196,8 +2224,7 @@ function drawStatusBar() {
     context.textAlign = "left";
     
     // Draw buttons (EXIT, RESTART with attempt count, and optionally OVERVIEW)
-    const buttonSize = isMobile ? 35 : 45; // Square buttons for exit and overview
-    const restartButtonWidth = isMobile ? 75 : 90; // Wider restart button to fit 3-digit attempt counts
+    const buttonSize = isMobile ? 35 : 45; // Square buttons for exit and restart
     const buttonSpacing = 8; // Reduced spacing since buttons are smaller
     const rightMargin = 10;
     
@@ -2209,8 +2236,8 @@ function drawStatusBar() {
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
     
-    // RESTART button (left of EXIT button - secondary action) - wider to fit attempt count
-    const restartButtonX = exitButtonX - restartButtonWidth - buttonSpacing;
+    // RESTART button (left of EXIT button - secondary action) - now same size as exit button
+    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
     const restartButtonY = exitButtonY;
     
     // OVERVIEW button (positioned on playfield overlay, aligned with exit button)
@@ -2225,7 +2252,7 @@ function drawStatusBar() {
     const overlayY = STATUS_BAR_HEIGHT + 10;
     const overviewButtonY = overlayY + (overlayHeight / 2) - (buttonSize / 2); // Center on green overlay
     
-    const reservedButtonSpace = (buttonSize * 2) + restartButtonWidth + (buttonSpacing * 1) + rightMargin + 20; // Exit + restart buttons only
+    const reservedButtonSpace = (buttonSize * 2) + (buttonSpacing * 1) + rightMargin + 20; // Exit + restart buttons only
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
@@ -2299,55 +2326,19 @@ function drawStatusBar() {
     context.font = originalFont;
     context.textAlign = "left";
     
-    // Draw EXIT button (rightmost)
-    // Button neon glow background (cyan/blue color)
-    context.shadowColor = "#00ccff";
-    context.shadowBlur = 12;
-    context.fillStyle = "rgba(0, 204, 255, 0.2)";
-    context.fillRect(exitButtonX - 5, exitButtonY - 5, buttonSize + 10, buttonSize + 10);
+    // Draw EXIT button (rightmost) - PNG icon with smooth scaling
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(backIcon, exitButtonX, exitButtonY, buttonSize, buttonSize);
+    context.restore();
     
-    // Button background
-    context.shadowBlur = 0;
-    context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
-    
-    // Button neon border
-    context.shadowColor = "#00ccff";
-    context.shadowBlur = 8;
-    context.strokeStyle = "#00ccff";
-    context.lineWidth = 2;
-    context.strokeRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
-    context.shadowBlur = 0;
-    
-    // Button text with cyan neon - back arrow instead of cross
-    context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
-    context.textAlign = "center";
-    drawNeonText("◀", exitButtonX + buttonSize / 2, exitButtonY + buttonSize / 2 + 5, "#00ccff", "#00ccff");
-    
-    // Draw RESTART button (middle)
-    // Button neon glow background (orange color)
-    context.shadowColor = "#ff6600";
-    context.shadowBlur = 12;
-    context.fillStyle = "rgba(255, 102, 0, 0.2)";
-    context.fillRect(restartButtonX - 5, restartButtonY - 5, restartButtonWidth + 10, buttonSize + 10);
-    
-    // Button background
-    context.shadowBlur = 0;
-    context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(restartButtonX, restartButtonY, restartButtonWidth, buttonSize);
-    
-    // Button neon border
-    context.shadowColor = "#ff6600";
-    context.shadowBlur = 8;
-    context.strokeStyle = "#ff6600";
-    context.lineWidth = 2;
-    context.strokeRect(restartButtonX, restartButtonY, restartButtonWidth, buttonSize);
-    context.shadowBlur = 0;
-    
-    // Button text with orange neon - restart symbol and attempt count
-    context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
-    context.textAlign = "center";
-    drawNeonText(`↻ ${attemptCount}`, restartButtonX + restartButtonWidth / 2, restartButtonY + buttonSize / 2 + 5, "#ff6600", "#ff6600");
+    // Draw RESTART button (left of exit button) - PNG icon with smooth scaling
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(restartIcon, restartButtonX, restartButtonY, buttonSize, buttonSize);
+    context.restore();
     
     // Draw OVERVIEW button (leftmost when shown)
     if (showOverviewButton) {
@@ -2620,34 +2611,17 @@ function drawLevelSelectScreen() {
         drawPageNavigation(headerHeight + gridAreaHeight + 20, maxPages);
     }
 
-    // Draw back button (same as exit button in gameplay)
+    // Draw back button (same as exit button in gameplay) - just the PNG icon
     const buttonSize = isMobile ? 35 : 45; // Same size as gameplay exit button
     const exitButtonX = canvas.width - buttonSize - 10;
     const exitButtonY = isMobile ? 15 : 10; // Match gameplay positioning exactly
     
-    // Button neon glow background (cyan/blue color)
-    context.shadowColor = "#00ccff";
-    context.shadowBlur = 12;
-    context.fillStyle = "rgba(0, 204, 255, 0.2)";
-    context.fillRect(exitButtonX - 5, exitButtonY - 5, buttonSize + 10, buttonSize + 10);
-    
-    // Button background
-    context.shadowBlur = 0;
-    context.fillStyle = "rgba(30, 30, 30, 0.9)";
-    context.fillRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
-    
-    // Button neon border
-    context.shadowColor = "#00ccff";
-    context.shadowBlur = 8;
-    context.strokeStyle = "#00ccff";
-    context.lineWidth = 2;
-    context.strokeRect(exitButtonX, exitButtonY, buttonSize, buttonSize);
-    context.shadowBlur = 0;
-    
-    // Button text with cyan neon - back arrow
-    context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
-    context.textAlign = "center";
-    drawNeonText("◀", exitButtonX + buttonSize / 2, exitButtonY + buttonSize / 2 + 5, "#00ccff", "#00ccff");
+    // Draw backIcon.png with smooth scaling
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(backIcon, exitButtonX, exitButtonY, buttonSize, buttonSize);
+    context.restore();
 
     context.textAlign = "left";
 }
