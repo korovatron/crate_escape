@@ -438,6 +438,7 @@ let attemptCount = 1; // Start at 1 since first play is attempt 1
 // Undo system variables
 let undoCount = 3; // Player can undo up to 3 moves per level
 let moveHistory = []; // Array to store game state snapshots
+let pendingUndoState = null; // State to apply after undo animation completes
 
 // Player movement variables
 let playerPos = { x: 0, y: 0 }; // Current player position in grid coordinates
@@ -815,6 +816,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     // Reset undo system for level load/restart
     undoCount = 3;
     moveHistory = [];
+    pendingUndoState = null;
     
     // Only reset attempt count for new levels, not restarts
     if (!isRestart) {
@@ -930,21 +932,48 @@ function undoLastMove() {
     // Get the most recent saved state
     const previousState = moveHistory.pop();
     
-    // Restore the game state
-    playerPos.x = previousState.playerPos.x;
-    playerPos.y = previousState.playerPos.y;
-    playerPixelPos.x = playerPos.x * tileSize + levelOffsetX;
-    playerPixelPos.y = playerPos.y * tileSize + levelOffsetY;
+    // Calculate what needs to be animated in reverse
+    const currentPlayerPos = { x: playerPos.x, y: playerPos.y };
+    const targetPlayerPos = { x: previousState.playerPos.x, y: previousState.playerPos.y };
     
-    // Restore box positions
+    // Find any box that moved (compare current vs previous box positions)
+    let movedBoxIndex = null;
+    let currentBoxPos = null;
+    let targetBoxPos = null;
+    
     for (let i = 0; i < currentLevel.boxes.length; i++) {
-        currentLevel.boxes[i].x = previousState.boxes[i].x;
-        currentLevel.boxes[i].y = previousState.boxes[i].y;
+        const currentBox = currentLevel.boxes[i];
+        const previousBox = previousState.boxes[i];
+        
+        if (currentBox.x !== previousBox.x || currentBox.y !== previousBox.y) {
+            movedBoxIndex = i;
+            currentBoxPos = { x: currentBox.x, y: currentBox.y };
+            targetBoxPos = { x: previousBox.x, y: previousBox.y };
+            break; // Only one box moves per move
+        }
     }
     
-    // Restore move and push counts
-    moveCount = previousState.moveCount;
-    pushCount = previousState.pushCount;
+    // Start reverse animation
+    isPlayerMoving = true;
+    moveAnimationProgress = 0;
+    
+    // Set up reverse movement animation
+    moveStartPos = { x: currentPlayerPos.x, y: currentPlayerPos.y };
+    moveTargetPos = { x: targetPlayerPos.x, y: targetPlayerPos.y };
+    
+    // Set up reverse box animation if a box was moved
+    if (movedBoxIndex !== null) {
+        movingBox = {
+            index: movedBoxIndex,
+            startPos: { x: currentBoxPos.x, y: currentBoxPos.y },
+            targetPos: { x: targetBoxPos.x, y: targetBoxPos.y }
+        };
+    } else {
+        movingBox = null;
+    }
+    
+    // Store the previous state to apply after animation
+    pendingUndoState = previousState;
     
     // Decrement undo count
     undoCount--;
@@ -1097,9 +1126,29 @@ function updatePlayerMovement(deltaTime) {
         moveAnimationProgress = 1.0;
         isPlayerMoving = false;
         
-        // Update final positions
-        playerPos.x = moveTargetPos.x;
-        playerPos.y = moveTargetPos.y;
+        // Check if this was an undo animation
+        if (pendingUndoState) {
+            // Apply the undo state after reverse animation completes
+            playerPos.x = pendingUndoState.playerPos.x;
+            playerPos.y = pendingUndoState.playerPos.y;
+            
+            // Restore box positions
+            for (let i = 0; i < currentLevel.boxes.length; i++) {
+                currentLevel.boxes[i].x = pendingUndoState.boxes[i].x;
+                currentLevel.boxes[i].y = pendingUndoState.boxes[i].y;
+            }
+            
+            // Restore move and push counts
+            moveCount = pendingUndoState.moveCount;
+            pushCount = pendingUndoState.pushCount;
+            
+            // Clear pending undo state
+            pendingUndoState = null;
+        } else {
+            // Normal movement completion - update final positions
+            playerPos.x = moveTargetPos.x;
+            playerPos.y = moveTargetPos.y;
+        }
         
         // Update camera to follow player if panning is enabled
         updateCameraPosition();
