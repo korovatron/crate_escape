@@ -156,6 +156,10 @@ function setupCanvasEventListeners() {
                 restartCurrentLevel();
                 return;
             }
+            if (isClickOnUndoButton(mouseX, mouseY)) {
+                undoLastMove();
+                return;
+            }
             if (isClickOnExitButton(mouseX, mouseY)) {
                 currentGameState = GAME_STATES.LEVEL_SELECT;
                 initializeLevelSelect();
@@ -308,6 +312,10 @@ function setupCanvasEventListeners() {
                         restartCurrentLevel();
                         return;
                     }
+                    if (isClickOnUndoButton(canvasPos.x, canvasPos.y)) {
+                        undoLastMove();
+                        return;
+                    }
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
                         currentGameState = GAME_STATES.LEVEL_SELECT;
                         initializeLevelSelect();
@@ -426,6 +434,10 @@ const STATUS_BAR_HEIGHT = 60;
 let moveCount = 0;
 let pushCount = 0; // Track successful box pushes
 let attemptCount = 1; // Start at 1 since first play is attempt 1
+
+// Undo system variables
+let undoCount = 3; // Player can undo up to 3 moves per level
+let moveHistory = []; // Array to store game state snapshots
 
 // Player movement variables
 let playerPos = { x: 0, y: 0 }; // Current player position in grid coordinates
@@ -800,6 +812,10 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     moveCount = 0;
     pushCount = 0;
     
+    // Reset undo system for level load/restart
+    undoCount = 3;
+    moveHistory = [];
+    
     // Only reset attempt count for new levels, not restarts
     if (!isRestart) {
         attemptCount = 1;
@@ -888,6 +904,57 @@ function loadLevel(setName, levelNumber, isRestart = false) {
 // #endregion
 
 // #region Update Game State
+// Undo system functions
+function saveGameState() {
+    // Create a deep copy of the current game state
+    const gameState = {
+        playerPos: { x: playerPos.x, y: playerPos.y },
+        boxes: currentLevel.boxes.map(box => ({ x: box.x, y: box.y })),
+        moveCount: moveCount,
+        pushCount: pushCount
+    };
+    
+    // Add to history and limit to reasonable size
+    moveHistory.push(gameState);
+    if (moveHistory.length > 10) {
+        moveHistory.shift(); // Remove oldest state
+    }
+}
+
+function undoLastMove() {
+    // Check if undo is available
+    if (undoCount <= 0 || moveHistory.length === 0 || isPlayerMoving) {
+        return; // No undos left, no history, or player is currently moving
+    }
+    
+    // Get the most recent saved state
+    const previousState = moveHistory.pop();
+    
+    // Restore the game state
+    playerPos.x = previousState.playerPos.x;
+    playerPos.y = previousState.playerPos.y;
+    playerPixelPos.x = playerPos.x * tileSize + levelOffsetX;
+    playerPixelPos.y = playerPos.y * tileSize + levelOffsetY;
+    
+    // Restore box positions
+    for (let i = 0; i < currentLevel.boxes.length; i++) {
+        currentLevel.boxes[i].x = previousState.boxes[i].x;
+        currentLevel.boxes[i].y = previousState.boxes[i].y;
+    }
+    
+    // Restore move and push counts
+    moveCount = previousState.moveCount;
+    pushCount = previousState.pushCount;
+    
+    // Decrement undo count
+    undoCount--;
+    
+    // Visual feedback
+    lastInputType = "Undo";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
+}
+
 // Player movement functions
 function attemptPlayerMove(direction) {
     // Block player movement when in overview mode
@@ -923,9 +990,15 @@ function attemptPlayerMove(direction) {
             return false;
         }
         
+        // Save game state before making the move
+        saveGameState();
+        
         // Start movement with box pushing
         startPlayerMove(newX, newY, boxIndex, boxNewX, boxNewY, direction);
     } else {
+        // Save game state before making the move
+        saveGameState();
+        
         // Simple movement without box
         startPlayerMove(newX, newY, null, 0, 0, direction);
     }
@@ -1363,6 +1436,23 @@ function isClickOnExitButton(x, y) {
     
     return x >= exitButtonX && x <= exitButtonX + buttonSize &&
            y >= exitButtonY && y <= exitButtonY + buttonSize;
+}
+
+function isClickOnUndoButton(x, y) {
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const buttonSpacing = 8;
+    const rightMargin = 10;
+    
+    // Use same calculations as drawStatusBar
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
+    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
+    const undoButtonX = restartButtonX - buttonSize - buttonSpacing;
+    const undoButtonY = exitButtonY;
+    
+    return x >= undoButtonX && x <= undoButtonX + buttonSize &&
+           y >= undoButtonY && y <= undoButtonY + buttonSize;
 }
 
 function getTouchCanvasPosition(touch) {
@@ -2223,22 +2313,26 @@ function drawStatusBar() {
     context.font = fontSize;
     context.textAlign = "left";
     
-    // Draw buttons (EXIT, RESTART with attempt count, and optionally OVERVIEW)
-    const buttonSize = isMobile ? 35 : 45; // Square buttons for exit and restart
+    // Draw buttons (EXIT, RESTART, UNDO)
+    const buttonSize = isMobile ? 35 : 45; // Square buttons for all buttons
     const buttonSpacing = 8; // Reduced spacing since buttons are smaller
     const rightMargin = 10;
     
     // Calculate number of buttons in status bar (overview button now on playfield)
     const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
-    const numButtons = 2; // Only exit and restart buttons in status bar
+    const numButtons = 3; // Exit, restart, and undo buttons in status bar
 
     // EXIT button (rightmost - primary action)
     const exitButtonX = canvas.width - buttonSize - rightMargin;
     const exitButtonY = isMobile ? 15 : 10;
     
-    // RESTART button (left of EXIT button - secondary action) - now same size as exit button
+    // RESTART button (left of EXIT button - secondary action)
     const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
     const restartButtonY = exitButtonY;
+    
+    // UNDO button (left of RESTART button - tertiary action)
+    const undoButtonX = restartButtonX - buttonSize - buttonSpacing;
+    const undoButtonY = exitButtonY;
     
     // OVERVIEW button (positioned on playfield overlay, aligned with exit button)
     const overviewButtonX = exitButtonX; // Align horizontally with exit button
@@ -2252,7 +2346,7 @@ function drawStatusBar() {
     const overlayY = STATUS_BAR_HEIGHT + 10;
     const overviewButtonY = overlayY + (overlayHeight / 2) - (buttonSize / 2); // Center on green overlay
     
-    const reservedButtonSpace = (buttonSize * 2) + (buttonSpacing * 1) + rightMargin + 20; // Exit + restart buttons only
+    const reservedButtonSpace = (buttonSize * 3) + (buttonSpacing * 2) + rightMargin + 20; // Exit + restart + undo buttons
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
@@ -2338,6 +2432,17 @@ function drawStatusBar() {
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
     context.drawImage(restartIcon, restartButtonX, restartButtonY, buttonSize, buttonSize);
+    context.restore();
+    
+    // Draw UNDO button (left of restart button) - PNG icon with smooth scaling and transparency when disabled
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    // Apply transparency when no undo uses are left
+    if (undoCount <= 0) {
+        context.globalAlpha = 0.3; // Make button appear disabled
+    }
+    context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
     context.restore();
     
     // Draw OVERVIEW button (leftmost when shown)
