@@ -190,29 +190,7 @@ function setupCanvasEventListeners() {
             
             // Check for menu option clicks when menu is open
             if (isHamburgerMenuOpen) {
-                if (isClickOnMenuOption(mouseX, mouseY, 0)) {
-                    // Home (already on title screen - just close menu)
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else if (isClickOnMenuOption(mouseX, mouseY, 1)) {
-                    // Instructions
-                    currentGameState = GAME_STATES.INSTRUCTIONS;
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
-                    // Cloud Sync
-                    currentGameState = GAME_STATES.CLOUD_SYNC;
-                    acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
-                    // Credits
-                    currentGameState = GAME_STATES.CREDITS;
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else {
-                    // Click outside menu - close it
-                    isHamburgerMenuOpen = false;
+                if (handleMenuOptionClick(mouseX, mouseY)) {
                     return;
                 }
             }
@@ -242,30 +220,7 @@ function setupCanvasEventListeners() {
             
             // Check for menu option clicks when menu is open
             if (isHamburgerMenuOpen) {
-                if (isClickOnMenuOption(mouseX, mouseY, 0)) {
-                    // Home
-                    currentGameState = GAME_STATES.TITLE;
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else if (isClickOnMenuOption(mouseX, mouseY, 1)) {
-                    // Instructions
-                    currentGameState = GAME_STATES.INSTRUCTIONS;
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
-                    // Cloud Sync
-                    currentGameState = GAME_STATES.CLOUD_SYNC;
-                    acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
-                    // Credits
-                    currentGameState = GAME_STATES.CREDITS;
-                    isHamburgerMenuOpen = false;
-                    return;
-                } else {
-                    // Click outside menu - close it
-                    isHamburgerMenuOpen = false;
+                if (handleMenuOptionClick(mouseX, mouseY)) {
                     return;
                 }
             }
@@ -289,6 +244,16 @@ function setupCanvasEventListeners() {
             if (isClickOnBackButton(mouseX, mouseY)) {
                 currentGameState = GAME_STATES.TITLE;
                 return;
+            }
+            
+            // Check for iOS install specific buttons
+            if (currentGameState === GAME_STATES.IOS_INSTALL) {
+                if (isClickOnIOSInstallDismissButton(mouseX, mouseY)) {
+                    // User dismissed the iOS install prompt
+                    acknowledgeIOSInstallNotification();
+                    currentGameState = GAME_STATES.TITLE;
+                    return;
+                }
             }
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
             advanceToNextLevel();
@@ -485,9 +450,9 @@ function setupCanvasEventListeners() {
                 } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
                 } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
-                          currentGameState === GAME_STATES.SETTINGS || 
                           currentGameState === GAME_STATES.CREDITS ||
-                          currentGameState === GAME_STATES.CLOUD_SYNC) {
+                          currentGameState === GAME_STATES.CLOUD_SYNC ||
+                          currentGameState === GAME_STATES.IOS_INSTALL) {
                     // Check for hamburger menu click
                     if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
                         isHamburgerMenuOpen = !isHamburgerMenuOpen;
@@ -496,36 +461,20 @@ function setupCanvasEventListeners() {
                     
                     // Check for menu option clicks when menu is open
                     if (isHamburgerMenuOpen) {
-                        if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 0)) {
-                            // Home
-                            currentGameState = GAME_STATES.TITLE;
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 1)) {
-                            // Instructions
-                            currentGameState = GAME_STATES.INSTRUCTIONS;
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
-                            // Cloud Sync
-                            currentGameState = GAME_STATES.CLOUD_SYNC;
-                            acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
-                            // Credits
-                            currentGameState = GAME_STATES.CREDITS;
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else {
-                            // Click outside menu - close it
-                            isHamburgerMenuOpen = false;
+                        if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
                             return;
                         }
                     }
                     
                     // Check for back button click
                     if (isClickOnBackButton(canvasPos.x, canvasPos.y)) {
+                        currentGameState = GAME_STATES.TITLE;
+                        return;
+                    }
+                    
+                    // Check for iOS install screen dismiss button
+                    if (currentGameState === GAME_STATES.IOS_INSTALL && isClickOnIOSInstallDismissButton(canvasPos.x, canvasPos.y)) {
+                        acknowledgeIOSInstallNotification();
                         currentGameState = GAME_STATES.TITLE;
                         return;
                     }
@@ -582,13 +531,49 @@ const GAME_STATES = {
     LEVEL_COMPLETE: 'level_complete',
     INSTRUCTIONS: 'instructions',
     CREDITS: 'credits',
-    CLOUD_SYNC: 'cloud_sync'
+    CLOUD_SYNC: 'cloud_sync',
+    IOS_INSTALL: 'ios_install'
 };
 let currentGameState = GAME_STATES.TITLE;
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
 let hasAcknowledgedCloudSync = true; // Start as true to prevent flash, will be updated from IndexedDB
+let hasAcknowledgedIOSInstall = true; // Start as true to prevent flash, will be updated from IndexedDB
+
+// iOS PWA detection and notification management
+function isIOSSafariNotInstalled() {
+    // Check if it's iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
+    // Check if it's Safari (not Chrome, Firefox, etc. on iOS)
+    const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+    
+    // Check if NOT running as installed PWA
+    const isNotInstalled = !window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches;
+    
+    return isIOS && isSafari && isNotInstalled;
+}
+
+// Check if iOS install notification should be shown
+function shouldShowIOSInstallNotification() {
+    return isIOSSafariNotInstalled() && !hasAcknowledgedIOSInstall;
+}
+
+// Check if cloud sync notification should be shown
+function shouldShowCloudSyncNotification() {
+    return cloudSyncState === 'not_authenticated' && !hasAcknowledgedCloudSync;
+}
+
+// Get total notification count for hamburger menu badge
+function getNotificationCount() {
+    let count = 0;
+    
+    if (shouldShowCloudSyncNotification()) count++;
+    if (shouldShowIOSInstallNotification()) count++;
+    
+    return count;
+}
 
 // Helper function to acknowledge cloud sync notification and persist it
 function acknowledgeCloudSyncNotification() {
@@ -597,6 +582,16 @@ function acknowledgeCloudSyncNotification() {
     // Save to IndexedDB in background (don't block UI)
     saveSetting('hasAcknowledgedCloudSync', true).catch(error => {
         console.error('Failed to save cloud sync notification state:', error);
+    });
+}
+
+// Helper function to acknowledge iOS install notification and persist it
+function acknowledgeIOSInstallNotification() {
+    hasAcknowledgedIOSInstall = true; // Update UI state immediately
+    
+    // Save to IndexedDB in background (don't block UI)
+    saveSetting('hasAcknowledgedIOSInstall', true).catch(error => {
+        console.error('Failed to save iOS install notification state:', error);
     });
 }
 
@@ -978,6 +973,11 @@ function createCanvas() {
                 hasAcknowledgedCloudSync = isSignedIn; // If signed in, don't show notification
             }
             console.log('Cloud sync notification state loaded:', hasAcknowledgedCloudSync);
+            
+            // Load iOS install notification state
+            const savedIOSInstallState = await loadSetting('hasAcknowledgedIOSInstall', false);
+            hasAcknowledgedIOSInstall = savedIOSInstallState;
+            console.log('iOS install notification state loaded:', hasAcknowledgedIOSInstall);
             
             // Load last played level to set initial level selector position
             const lastPlayed = await loadLastPlayedLevel();
@@ -1842,6 +1842,62 @@ function isClickOnMenuOption(x, y, optionIndex) {
            y >= optionY && y <= optionY + optionHeight;
 }
 
+// Helper function to get current menu configuration
+function getCurrentMenuConfig() {
+    const baseOptions = ["Home", "Instructions", "Cloud Sync"];
+    const baseGameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC];
+    
+    // Add iOS Install option if user should see it
+    if (shouldShowIOSInstallNotification()) {
+        baseOptions.splice(2, 0, "📱 Install App"); // Insert before Cloud Sync
+        baseGameStates.splice(2, 0, GAME_STATES.IOS_INSTALL);
+    }
+    
+    // Add Credits at the end
+    baseOptions.push("Credits");
+    baseGameStates.push(GAME_STATES.CREDITS);
+    
+    return { options: baseOptions, gameStates: baseGameStates };
+}
+
+// Helper function to handle menu option clicks dynamically
+function handleMenuOptionClick(mouseX, mouseY) {
+    const menuConfig = getCurrentMenuConfig();
+    
+    for (let i = 0; i < menuConfig.options.length; i++) {
+        if (isClickOnMenuOption(mouseX, mouseY, i)) {
+            const targetState = menuConfig.gameStates[i];
+            
+            // Handle special cases
+            if (targetState === GAME_STATES.TITLE) {
+                // Home - just close menu (already on title screen)
+                isHamburgerMenuOpen = false;
+                return true;
+            } else if (targetState === GAME_STATES.CLOUD_SYNC) {
+                // Cloud Sync - dismiss notification when visiting
+                currentGameState = GAME_STATES.CLOUD_SYNC;
+                acknowledgeCloudSyncNotification();
+                isHamburgerMenuOpen = false;
+                return true;
+            } else if (targetState === GAME_STATES.IOS_INSTALL) {
+                // iOS Install - go to install screen
+                currentGameState = GAME_STATES.IOS_INSTALL;
+                isHamburgerMenuOpen = false;
+                return true;
+            } else {
+                // Regular navigation (Instructions, Credits)
+                currentGameState = targetState;
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+        }
+    }
+    
+    // No menu option was clicked - close menu
+    isHamburgerMenuOpen = false;
+    return true;
+}
+
 function isClickOnBackButton(x, y) {
     // Same positioning as game/level select back button
     const isMobile = canvas.width < 600;
@@ -1853,6 +1909,15 @@ function isClickOnBackButton(x, y) {
     
     return x >= exitButtonX && x <= exitButtonX + buttonSize &&
            y >= exitButtonY && y <= exitButtonY + buttonSize;
+}
+
+// Helper function to check if click is on iOS install dismiss button
+function isClickOnIOSInstallDismissButton(x, y) {
+    if (!window.iosInstallDismissButton) return false;
+    
+    const button = window.iosInstallDismissButton;
+    return x >= button.x && x <= button.x + button.width &&
+           y >= button.y && y <= button.y + button.height;
 }
 
 function isClickOnSignInButton(x, y) {
@@ -2521,6 +2586,8 @@ function draw() {
         drawCreditsScreen();
     } else if (currentGameState === GAME_STATES.CLOUD_SYNC) {
         drawCloudSyncScreen();
+    } else if (currentGameState === GAME_STATES.IOS_INSTALL) {
+        drawIOSInstallScreen();
     }
 }
 
@@ -2886,22 +2953,38 @@ function drawHamburgerMenu() {
     // Bottom line
     context.fillRect(margin + 8, margin + 8 + lineSpacing * 2, menuSize - 16, lineHeight);
     
-    // Draw cloud sync notification badge if user hasn't acknowledged it and isn't signed in
-    const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
-    if (!hasAcknowledgedCloudSync && !isSignedIn) {
-        const badgeSize = 8;
-        const badgeX = margin + menuSize - badgeSize + 2; // Top-right corner of hamburger menu
-        const badgeY = margin - 2;
+    // Draw notification badge if there are any pending notifications
+    const notificationCount = getNotificationCount();
+    if (notificationCount > 0) {
+        const badgeSize = 16; // Increased from 8 to 16 for better mobile visibility
+        const badgeX = margin + menuSize + 8; // Position to the right of hamburger menu
+        const badgeY = margin + (menuSize / 2); // Center vertically with hamburger menu
         
         // Draw red notification dot with glow
         context.save();
         context.shadowColor = "#FF0000";
-        context.shadowBlur = 6;
+        context.shadowBlur = 8; // Slightly larger glow for bigger badge
         context.fillStyle = "#FF3333";
         context.beginPath();
         context.arc(badgeX, badgeY, badgeSize / 2, 0, Math.PI * 2);
         context.fill();
         context.restore();
+        
+        // Draw count number if more than 1 notification
+        if (notificationCount > 1) {
+            const countFontSize = 12; // Increased from 8 to 12 for better mobile readability
+            context.font = `700 ${countFontSize}px 'Roboto Condensed', 'Arial', sans-serif`; // Slightly bolder
+            context.fillStyle = "#FFFFFF";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            
+            // Draw number on top of the red dot
+            context.fillText(notificationCount.toString(), badgeX, badgeY);
+            
+            // Reset text alignment for other text drawing
+            context.textAlign = "left";
+            context.textBaseline = "alphabetic";
+        }
     }
     
     // Draw menu options if menu is open
@@ -2910,7 +2993,23 @@ function drawHamburgerMenu() {
         const menuY = 70;
         const optionHeight = 40;
         const optionWidth = 150;
-        const totalOptions = 4; // Home, Instructions, Credits, Cloud Sync
+        // Build menu options dynamically based on what should be shown
+        const baseOptions = ["Home", "Instructions", "Cloud Sync"];
+        const baseGameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC];
+        
+        // Add iOS Install option if user should see it
+        if (shouldShowIOSInstallNotification()) {
+            baseOptions.splice(2, 0, "📱 Install App"); // Insert before Cloud Sync
+            baseGameStates.splice(2, 0, GAME_STATES.IOS_INSTALL);
+        }
+        
+        // Add Credits at the end
+        baseOptions.push("Credits");
+        baseGameStates.push(GAME_STATES.CREDITS);
+        
+        const options = baseOptions;
+        const gameStates = baseGameStates;
+        const totalOptions = options.length;
         
         // More opaque background for menu panel
         context.fillStyle = "rgba(0, 0, 0, 0.9)"; // Darker background for better contrast
@@ -2926,9 +3025,6 @@ function drawHamburgerMenu() {
         const fontSize = isMobile ? 16 : 18;
         context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
         context.textAlign = "left";
-        
-        const options = ["Home", "Instructions", "Cloud Sync", "Credits"];
-        const gameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC, GAME_STATES.CREDITS];
         
         for (let i = 0; i < options.length; i++) {
             const textY = menuY + (i * optionHeight) + (optionHeight / 2) + 6;
@@ -2949,7 +3045,7 @@ function drawHamburgerMenu() {
             context.fillText(options[i], menuX + 10, textY);
             
             // Add authentication status indicator for Cloud Sync option
-            if (i === 2) { // Cloud Sync is now at index 2
+            if (gameStates[i] === GAME_STATES.CLOUD_SYNC) { // Check by game state instead of index
                 const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
                 const indicator = isSignedIn ? "✓" : "✗";
                 const indicatorColor = isSignedIn ? "#00FF00" : "#FF0000"; // Green tick or red cross
@@ -2992,23 +3088,31 @@ function drawInstructionsScreen() {
     context.fillText("INSTRUCTIONS", canvas.width / 2, 80);
     
     // Instructions content
-    const textSize = isMobile ? 18 : 20;
-    const lineHeight = textSize * 1.5;
+    const textSize = isMobile ? 22 : 24; // Increased from 18/20 to 22/24
+    const lineHeight = textSize * 1.8; // Increased from 1.5 to 1.8 for better spacing
     context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#CCCCCC";
     
-    let yPos = 140;
+    let yPos = 150; // Slightly increased starting position to accommodate larger text
     const instructions = [
-        "• Push all crates onto goal positions (dark squares)",
+        "• Push all crates onto their goal positions",
         "• Use arrow keys or swipe to move",
         "• You can only push crates, not pull them",
-        "• Use the undo button to reverse moves",
-        "• Complete all levels to win!"
-    ];
+        "• Use the undo button to reverse moves (maximum three times per level attempt)",
+     ];
+    
+    // Calculate maximum text width with responsive constraints
+    const textMargin = isMobile ? 40 : 80;
+    const baseMaxWidth = canvas.width - (textMargin * 2);
+    
+    // Set a maximum width before text wrapping occurs (similar to title screen approach)
+    const maxContentWidth = isMobile ? 
+        Math.min(baseMaxWidth, canvas.width * 0.85) :  // Mobile: 85% of screen width or margin-constrained
+        Math.min(baseMaxWidth, 600); // Desktop: 600px max width or margin-constrained
     
     for (const instruction of instructions) {
-        context.fillText(instruction, canvas.width / 2, yPos);
-        yPos += lineHeight;
+        yPos = drawWrappedText(context, instruction, canvas.width / 2, yPos, maxContentWidth, lineHeight);
+        yPos += lineHeight * 0.8; // Larger gap between different bullet points
     }
     
     // Draw hamburger menu overlay (dims background) then menu on top
@@ -3033,12 +3137,12 @@ function drawCreditsScreen() {
     context.fillText("CREDITS", canvas.width / 2, 80);
     
     // Credits content
-    const textSize = isMobile ? 18 : 20;
-    const largeTextSize = isMobile ? 22 : 24; // Larger size for first line
-    const lineHeight = textSize * 1.5;
-    const largeLineHeight = largeTextSize * 1.5;
+    const textSize = isMobile ? 22 : 24; // Increased from 18/20 to 22/24 (same as instructions)
+    const largeTextSize = isMobile ? 26 : 28; // Increased from 22/24 to 26/28 for first line
+    const lineHeight = textSize * 1.8; // Increased from 1.5 to 1.8 for better spacing (same as instructions)
+    const largeLineHeight = largeTextSize * 1.8;
     
-    let yPos = 140;
+    let yPos = 150; // Slightly increased starting position to accommodate larger text
     const credits = [
         "Game Design & Programming: Neil Kendall",
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
@@ -3048,19 +3152,26 @@ function drawCreditsScreen() {
         "Created in 2025"
     ];
     
+    // Calculate maximum text width with responsive constraints (same as instructions)
+    const textMargin = isMobile ? 40 : 80;
+    const baseMaxWidth = canvas.width - (textMargin * 2);
+    const maxContentWidth = isMobile ? 
+        Math.min(baseMaxWidth, canvas.width * 0.85) :  // Mobile: 85% of screen width or margin-constrained
+        Math.min(baseMaxWidth, 600); // Desktop: 600px max width or margin-constrained
+    
     for (let i = 0; i < credits.length; i++) {
         if (i === 0) {
             // First line - larger and bolder
             context.font = `600 ${largeTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
             context.fillStyle = "#FFFFFF"; // Brighter white for emphasis
-            context.fillText(credits[i], canvas.width / 2, yPos);
-            yPos += largeLineHeight;
+            yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, largeLineHeight);
+            yPos += largeLineHeight * 0.8; // Larger gap after first line
         } else {
             // Rest of the credits - normal size
             context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
             context.fillStyle = "#CCCCCC";
-            context.fillText(credits[i], canvas.width / 2, yPos);
-            yPos += lineHeight;
+            yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, lineHeight);
+            yPos += lineHeight * 0.8; // Consistent gap between credits items (same as instructions)
         }
     }
     
@@ -3228,6 +3339,114 @@ function drawCloudSyncScreen() {
     drawHamburgerMenu();
 }
 
+function drawIOSInstallScreen() {
+    // Draw background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw back button
+    drawBackButton();
+    
+    // Title
+    const isMobile = canvas.width < 600;
+    const titleSize = isMobile ? 28 : 36;
+    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#00FFFF";
+    context.textAlign = "center";
+    context.fillText("📱 INSTALL APP", canvas.width / 2, 80);
+    
+    // Content
+    const textSize = isMobile ? 22 : 24; // Same as instructions page
+    const lineHeight = textSize * 1.8; // Same as instructions page
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    
+    let yPos = 150;
+    
+    // Calculate maximum text width with responsive constraints (same as instructions)
+    const textMargin = isMobile ? 40 : 80;
+    const baseMaxWidth = canvas.width - (textMargin * 2);
+    const maxContentWidth = isMobile ? 
+        Math.min(baseMaxWidth, canvas.width * 0.85) :  // Mobile: 85% of screen width or margin-constrained
+        Math.min(baseMaxWidth, 600); // Desktop: 600px max width or margin-constrained
+    
+    // Benefits section
+    context.fillStyle = "#FFFFFF"; // Brighter for emphasis
+    context.font = `600 ${textSize + 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+    yPos = drawWrappedText(context, "Why install Crate Escape?", canvas.width / 2, yPos, maxContentWidth, lineHeight);
+    yPos += lineHeight * 0.8;
+    
+    // Reset to normal style
+    context.fillStyle = "#CCCCCC";
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    
+    const benefits = [
+        "• Full-screen experience without browser UI",
+        "• Play offline anytime, anywhere",
+        "• Faster loading and better performance", 
+        "• Appears on your home screen like a native app",
+        "• No address bar or browser controls"
+    ];
+    
+    for (const benefit of benefits) {
+        yPos = drawWrappedText(context, benefit, canvas.width / 2, yPos, maxContentWidth, lineHeight);
+        yPos += lineHeight * 0.4; // Same spacing as instructions
+    }
+    
+    yPos += lineHeight * 0.6; // Extra space before instructions
+    
+    // Installation instructions
+    context.fillStyle = "#FFFFFF"; // Brighter for emphasis
+    context.font = `600 ${textSize + 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+    yPos = drawWrappedText(context, "How to install:", canvas.width / 2, yPos, maxContentWidth, lineHeight);
+    yPos += lineHeight * 0.8;
+    
+    // Reset to normal style
+    context.fillStyle = "#CCCCCC";
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    
+    const instructions = [
+        "1. Tap the Share button (⬆️) in Safari",
+        "2. Scroll down and tap 'Add to Home Screen'",
+        "3. Tap 'Add' to confirm installation",
+        "4. Find the app icon on your home screen!"
+    ];
+    
+    for (const instruction of instructions) {
+        yPos = drawWrappedText(context, instruction, canvas.width / 2, yPos, maxContentWidth, lineHeight);
+        yPos += lineHeight * 0.4;
+    }
+    
+    yPos += lineHeight * 1.2; // Extra space before button
+    
+    // "Not Interested" button
+    const buttonWidth = isMobile ? 180 : 200;
+    const buttonHeight = 45;
+    const buttonX = (canvas.width - buttonWidth) / 2;
+    const buttonY = yPos;
+    
+    // Button background
+    context.fillStyle = "#666666";
+    context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    
+    // Button text
+    context.fillStyle = "#FFFFFF";
+    context.font = `600 ${textSize - 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillText("NOT INTERESTED", canvas.width / 2, buttonY + buttonHeight/2 + 6);
+    
+    // Store button bounds for click detection
+    window.iosInstallDismissButton = {
+        x: buttonX,
+        y: buttonY,
+        width: buttonWidth,
+        height: buttonHeight
+    };
+    
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
+}
+
 function drawBackButton() {
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45;
@@ -3266,14 +3485,20 @@ function drawWrappedText(context, text, x, y, maxWidth, lineHeight) {
     }
     lines.push(line.trim());
     
-    // Second pass: draw the lines
+    // Second pass: draw the lines with tight internal spacing
     for (let i = 0; i < lines.length; i++) {
         context.fillText(lines[i], x, currentY);
-        currentY += lineHeight;
+        if (i < lines.length - 1) {
+            // Tight spacing between wrapped lines within the same text block
+            currentY += lineHeight * 0.9; // Closer spacing for wrapped lines
+        } else {
+            // Normal spacing after the last line
+            currentY += lineHeight;
+        }
     }
     
-    // Return the final Y position for continued layout
-    return currentY - lineHeight + (lineHeight * 0.3); // Adjust spacing after text block
+    // Return the final Y position for continued layout (no extra spacing added here)
+    return currentY;
 }
 
 function drawGameplay() {
