@@ -20,6 +20,12 @@ document.addEventListener('keydown', (e) => {
     // Handle game state transitions
     if (e.key === ' ') {
         if (currentGameState === GAME_STATES.TITLE) {
+            // Check for cloud sync updates when navigating to level select
+            if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
+                downloadGameProgress(true).catch(error => {
+                    console.log('Background cloud sync failed (non-critical):', error);
+                });
+            }
             currentGameState = GAME_STATES.LEVEL_SELECT;
             initializeLevelSelect();
             lastInputType = "Level Select";
@@ -40,6 +46,12 @@ document.addEventListener('keydown', (e) => {
     
     // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
+        // Check for cloud sync updates when navigating back to level select
+        if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
+            downloadGameProgress(true).catch(error => {
+                console.log('Background cloud sync failed (non-critical):', error);
+            });
+        }
         currentGameState = GAME_STATES.LEVEL_SELECT;
         initializeLevelSelect();
         return;
@@ -162,6 +174,7 @@ function setupCanvasEventListeners() {
             }
             if (isClickOnExitButton(mouseX, mouseY)) {
                 currentGameState = GAME_STATES.LEVEL_SELECT;
+                downloadGameProgress(true); // Silent cloud sync on navigation
                 initializeLevelSelect();
                 return;
             }
@@ -205,6 +218,7 @@ function setupCanvasEventListeners() {
             
             // Go to level select on click from title screen (if menu not open)
             currentGameState = GAME_STATES.LEVEL_SELECT;
+            downloadGameProgress(true); // Silent cloud sync on navigation
             initializeLevelSelect();
             lastInputType = "Level Select";
             lastInputTime = Date.now();
@@ -411,6 +425,7 @@ function setupCanvasEventListeners() {
                     }
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
                         currentGameState = GAME_STATES.LEVEL_SELECT;
+                        downloadGameProgress(true); // Silent cloud sync on navigation
                         initializeLevelSelect();
                         return;
                     }
@@ -454,6 +469,7 @@ function setupCanvasEventListeners() {
                     
                     // Go to level select on tap from title screen (if menu not open)
                     currentGameState = GAME_STATES.LEVEL_SELECT;
+                    downloadGameProgress(true); // Silent cloud sync on navigation
                     initializeLevelSelect();
                     lastInputType = "Level Select";
                     lastInputTime = Date.now();
@@ -2046,15 +2062,15 @@ async function uploadGameProgress() {
     }
 }
 
-async function downloadGameProgress() {
+async function downloadGameProgress(silent = false) {
     try {
         // Check if user is authenticated
         if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
-            console.log('Cannot download progress: user not authenticated');
+            if (!silent) console.log('Cannot download progress: user not authenticated');
             return false;
         }
         
-        console.log('Downloading game progress from cloud...');
+        if (!silent) console.log('Downloading game progress from cloud...');
         
         // Import Firestore functions
         const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
@@ -2284,6 +2300,7 @@ async function downloadGameProgress() {
         
         // Always go to level select after restoring progress
         currentGameState = GAME_STATES.LEVEL_SELECT;
+        hasCloudSyncedThisSession = false; // Reset sync flag for new session
         initializeLevelSelect();
         
         console.log('Game progress restored successfully');
