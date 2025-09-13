@@ -187,13 +187,13 @@ function setupCanvasEventListeners() {
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
-                    // Settings
-                    currentGameState = GAME_STATES.SETTINGS;
+                    // Credits
+                    currentGameState = GAME_STATES.CREDITS;
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
-                    // Credits
-                    currentGameState = GAME_STATES.CREDITS;
+                    // Cloud Sync
+                    currentGameState = GAME_STATES.CLOUD_SYNC;
                     isHamburgerMenuOpen = false;
                     return;
                 } else {
@@ -214,8 +214,8 @@ function setupCanvasEventListeners() {
             handleLevelSelectClick(mouseX, mouseY);
             return;
         } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
-                  currentGameState === GAME_STATES.SETTINGS || 
-                  currentGameState === GAME_STATES.CREDITS) {
+                  currentGameState === GAME_STATES.CREDITS ||
+                  currentGameState === GAME_STATES.CLOUD_SYNC) {
             // Check for hamburger menu click
             if (isClickOnHamburgerMenu(mouseX, mouseY)) {
                 isHamburgerMenuOpen = !isHamburgerMenuOpen;
@@ -235,18 +235,33 @@ function setupCanvasEventListeners() {
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
-                    // Settings
-                    currentGameState = GAME_STATES.SETTINGS;
+                    // Credits
+                    currentGameState = GAME_STATES.CREDITS;
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
-                    // Credits
-                    currentGameState = GAME_STATES.CREDITS;
+                    // Cloud Sync
+                    currentGameState = GAME_STATES.CLOUD_SYNC;
                     isHamburgerMenuOpen = false;
                     return;
                 } else {
                     // Click outside menu - close it
                     isHamburgerMenuOpen = false;
+                    return;
+                }
+            }
+            
+            // Check for cloud sync button clicks
+            if (currentGameState === GAME_STATES.CLOUD_SYNC) {
+                // Sign-in button (when not authenticated or in error state)
+                if ((cloudSyncState === 'not_authenticated' || cloudSyncState === 'error') && isClickOnSignInButton(mouseX, mouseY)) {
+                    startGoogleSignIn();
+                    return;
+                }
+                
+                // Sign-out button (when authenticated)
+                if (isClickOnSignOutButton(mouseX, mouseY)) {
+                    signOutFromCloud();
                     return;
                 }
             }
@@ -421,13 +436,13 @@ function setupCanvasEventListeners() {
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
-                            // Settings
-                            currentGameState = GAME_STATES.SETTINGS;
+                            // Credits
+                            currentGameState = GAME_STATES.CREDITS;
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
-                            // Credits
-                            currentGameState = GAME_STATES.CREDITS;
+                            // Cloud Sync
+                            currentGameState = GAME_STATES.CLOUD_SYNC;
                             isHamburgerMenuOpen = false;
                             return;
                         } else {
@@ -447,7 +462,8 @@ function setupCanvasEventListeners() {
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
                 } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
                           currentGameState === GAME_STATES.SETTINGS || 
-                          currentGameState === GAME_STATES.CREDITS) {
+                          currentGameState === GAME_STATES.CREDITS ||
+                          currentGameState === GAME_STATES.CLOUD_SYNC) {
                     // Check for hamburger menu click
                     if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
                         isHamburgerMenuOpen = !isHamburgerMenuOpen;
@@ -467,13 +483,13 @@ function setupCanvasEventListeners() {
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
-                            // Settings
-                            currentGameState = GAME_STATES.SETTINGS;
+                            // Credits
+                            currentGameState = GAME_STATES.CREDITS;
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
-                            // Credits
-                            currentGameState = GAME_STATES.CREDITS;
+                            // Cloud Sync
+                            currentGameState = GAME_STATES.CLOUD_SYNC;
                             isHamburgerMenuOpen = false;
                             return;
                         } else {
@@ -487,6 +503,21 @@ function setupCanvasEventListeners() {
                     if (isClickOnBackButton(canvasPos.x, canvasPos.y)) {
                         currentGameState = GAME_STATES.TITLE;
                         return;
+                    }
+                    
+                    // Check for cloud sync button clicks
+                    if (currentGameState === GAME_STATES.CLOUD_SYNC) {
+                        // Sign-in button (when not authenticated or in error state)
+                        if ((cloudSyncState === 'not_authenticated' || cloudSyncState === 'error') && isClickOnSignInButton(canvasPos.x, canvasPos.y)) {
+                            startGoogleSignIn();
+                            return;
+                        }
+                        
+                        // Sign-out button (when authenticated)
+                        if (isClickOnSignOutButton(canvasPos.x, canvasPos.y)) {
+                            signOutFromCloud();
+                            return;
+                        }
                     }
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
                     advanceToNextLevel();
@@ -525,13 +556,28 @@ const GAME_STATES = {
     PAUSED: 'paused',
     LEVEL_COMPLETE: 'level_complete',
     INSTRUCTIONS: 'instructions',
-    SETTINGS: 'settings',
-    CREDITS: 'credits'
+    CREDITS: 'credits',
+    CLOUD_SYNC: 'cloud_sync'
 };
 let currentGameState = GAME_STATES.TITLE;
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
+
+// Cloud Sync authentication variables
+let cloudSyncState = 'not_authenticated'; // 'not_authenticated', 'signing_in', 'authenticated', 'error'
+
+// Expose cloudSyncState globally so Firebase config can update it
+window.cloudSyncState = cloudSyncState;
+
+// Helper function to update cloudSyncState and keep it in sync
+function updateCloudSyncState(newState) {
+    cloudSyncState = newState;
+    window.cloudSyncState = newState;
+}
+
+// Expose the helper function globally
+window.updateCloudSyncState = updateCloudSyncState;
 
 // Level selection variables
 let levelSelectOption = 'start'; // 'start', 'set', 'level'
@@ -1063,6 +1109,14 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     // Calculate level centering offsets - use Math.floor to ensure integer pixel positions
     levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
     levelOffsetY = Math.floor((canvas.height - STATUS_BAR_HEIGHT - currentLevel.height * tileSize) / 2) + STATUS_BAR_HEIGHT;
+    
+    // Upload progress to cloud if user is authenticated and this is a new level load (not restart)
+    if (!isRestart && window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
+        // Don't await this to avoid blocking level loading
+        uploadGameProgress().catch(error => {
+            console.error('Failed to upload progress after level load:', error);
+        });
+    }
     
     return true;
 }
@@ -1744,6 +1798,556 @@ function isClickOnBackButton(x, y) {
            y >= exitButtonY && y <= exitButtonY + buttonSize;
 }
 
+function isClickOnSignInButton(x, y) {
+    // Check if we're on cloud sync screen and in the right state
+    if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
+    if (window.firebaseAuth && window.firebaseAuth.isAuthenticated) return false;
+    
+    // Only show button in not_authenticated or error states
+    if (cloudSyncState !== 'not_authenticated' && cloudSyncState !== 'error') return false;
+    
+    // Button dimensions (matching the drawing in drawCloudSyncScreen)
+    const buttonWidth = 220; // Updated for Google Sign-In button
+    const buttonHeight = 50;
+    const buttonX = (canvas.width - buttonWidth) / 2;
+    
+    // Calculate button Y position (should match drawCloudSyncScreen logic)
+    const isMobile = canvas.width < 600;
+    const textSize = isMobile ? 16 : 20;
+    const lineHeight = textSize * 1.5;
+    let buttonY;
+    
+    if (cloudSyncState === 'not_authenticated') {
+        buttonY = 140 + lineHeight * 6; // Base position + spacing for normal text content
+    } else if (cloudSyncState === 'error') {
+        buttonY = 140 + lineHeight * 5; // Base position + spacing for error text content
+    }
+    
+    return x >= buttonX && x <= buttonX + buttonWidth &&
+           y >= buttonY && y <= buttonY + buttonHeight;
+}
+
+function isClickOnSignOutButton(x, y) {
+    // Check if we're on cloud sync screen and authenticated
+    if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
+    if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated) return false;
+    
+    // Button dimensions (matching the drawing in drawCloudSyncScreen)
+    const signOutButtonWidth = 150;
+    const signOutButtonHeight = 40;
+    const signOutButtonX = (canvas.width - signOutButtonWidth) / 2;
+    
+    // Calculate button Y position (should match drawCloudSyncScreen logic)
+    const isMobile = canvas.width < 600;
+    const textSize = isMobile ? 16 : 20;
+    const lineHeight = textSize * 1.5;
+    const signOutButtonY = 140 + lineHeight * 5; // Base position + spacing for authenticated user content
+    
+    return x >= signOutButtonX && x <= signOutButtonX + signOutButtonWidth &&
+           y >= signOutButtonY && y <= signOutButtonY + signOutButtonHeight;
+}
+
+// Cloud sync authentication functions
+async function startGoogleSignIn() {
+    try {
+        console.log('Starting Google Sign-In...');
+        
+        // Check if Firebase is available
+        if (!window.firebaseAuth || !window.firebaseAuth.auth) {
+            console.error('Firebase Auth not available');
+            cloudSyncState = 'error';
+            return;
+        }
+        
+        cloudSyncState = 'signing_in';
+        
+        // Import Google Sign-In functions
+        const { signInWithPopup, GoogleAuthProvider } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
+        
+        // Create Google Auth Provider
+        const provider = new GoogleAuthProvider();
+        
+        // Add scopes if needed (optional)
+        provider.addScope('profile');
+        provider.addScope('email');
+        
+        console.log('Opening Google Sign-In popup...');
+        
+        // Sign in with popup
+        const result = await signInWithPopup(window.firebaseAuth.auth, provider);
+        
+        console.log('Google Sign-In successful:', result.user);
+        console.log('User displayName:', result.user.displayName);
+        console.log('User email:', result.user.email);
+        console.log('User photoURL:', result.user.photoURL);
+        updateCloudSyncState('authenticated');
+        
+        // Update global auth state
+        window.firebaseAuth.isAuthenticated = true;
+        window.firebaseAuth.currentUser = result.user;
+        
+        // First, try to download existing progress
+        const hasCloudData = await downloadGameProgress();
+        
+        // If no cloud data was found or download was cancelled, upload current progress
+        if (!hasCloudData) {
+            await uploadGameProgress();
+        }
+        
+    } catch (error) {
+        console.error('Error with Google Sign-In:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        // Handle specific error cases
+        if (error.code === 'auth/popup-closed-by-user') {
+            console.log('User cancelled sign-in');
+            cloudSyncState = 'not_authenticated';
+        } else if (error.code === 'auth/popup-blocked') {
+            console.log('Popup was blocked by browser');
+            cloudSyncState = 'error';
+            // Show user a message about enabling popups
+        } else if (error.code === 'auth/unauthorized-domain') {
+            console.log('Domain not authorized in Firebase Console');
+            cloudSyncState = 'error';
+        } else if (error.code === 'auth/operation-not-allowed') {
+            console.log('Google Sign-In not enabled in Firebase Console');
+            cloudSyncState = 'error';
+        } else {
+            console.log('Other authentication error:', error.code);
+            cloudSyncState = 'error';
+        }
+    }
+}
+
+// Cloud data sync functions
+async function uploadGameProgress() {
+    try {
+        // Check if user is authenticated
+        if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
+            console.log('Cannot upload progress: user not authenticated');
+            return false;
+        }
+        
+        console.log('Uploading game progress to cloud...');
+        
+        // Import Firestore functions
+        const { doc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        
+        // Get all detailed level data from IndexedDB
+        let detailedLevelData = {};
+        let lastPlayedData = null;
+        if (progressDB) {
+            try {
+                // Get level progress data
+                const levelTransaction = progressDB.transaction(['levelProgress'], 'readonly');
+                const levelStore = levelTransaction.objectStore('levelProgress');
+                const allRecords = await new Promise((resolve, reject) => {
+                    const request = levelStore.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Convert array to object for easier cloud storage
+                detailedLevelData = {};
+                allRecords.forEach(record => {
+                    detailedLevelData[record.id] = {
+                        setName: record.setName,
+                        levelNumber: record.levelNumber,
+                        attempted: record.attempted,
+                        completed: record.completed,
+                        bestMoves: record.bestMoves,
+                        bestPushes: record.bestPushes,
+                        completionCount: record.completionCount,
+                        lastPlayed: record.lastPlayed,
+                        lastCompletionDate: record.lastCompletionDate
+                    };
+                });
+                console.log(`Collected ${allRecords.length} level records for cloud sync`);
+                
+                // Get last played data
+                const lastPlayedTransaction = progressDB.transaction(['lastPlayed'], 'readonly');
+                const lastPlayedStore = lastPlayedTransaction.objectStore('lastPlayed');
+                lastPlayedData = await new Promise((resolve, reject) => {
+                    const request = lastPlayedStore.get('lastPlayed');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                if (lastPlayedData) {
+                    console.log(`Collected last played: ${lastPlayedData.setName} level ${lastPlayedData.levelNumber}`);
+                }
+                
+            } catch (error) {
+                console.error('Error reading data from IndexedDB:', error);
+                // Fall back to basic Map data if IndexedDB fails
+                detailedLevelData = Object.fromEntries(levelProgress);
+            }
+        } else {
+            // Fall back to basic Map data if no IndexedDB
+            detailedLevelData = Object.fromEntries(levelProgress);
+        }
+        
+        // Prepare game progress data
+        const progressData = {
+            // Player progress
+            currentLevelSet: currentSet,
+            currentLevelNumber: currentLevelNumber,
+            
+            // Detailed level progress data from IndexedDB
+            detailedLevelProgress: detailedLevelData,
+            
+            // Last played level data from IndexedDB
+            lastPlayedLevel: lastPlayedData,
+            
+            // Current game state (if in a level)
+            currentGameState: currentGameState,
+            
+            // Metadata
+            lastUpdated: serverTimestamp(),
+            gameVersion: "1.0",
+            deviceInfo: navigator.userAgent.substring(0, 100), // Truncated user agent
+            
+            // User identification (for admin purposes)
+            userInfo: {
+                uid: window.firebaseAuth.currentUser.uid,
+                email: window.firebaseAuth.currentUser.email,
+                displayName: window.firebaseAuth.currentUser.displayName || 'Anonymous',
+                photoURL: window.firebaseAuth.currentUser.photoURL || null,
+                lastSync: new Date().toISOString()
+            }
+        };
+        
+        // Create document reference for the user's progress
+        const userId = window.firebaseAuth.currentUser.uid;
+        const progressRef = doc(window.firebaseFirestore, 'gameProgress', userId);
+        
+        // Upload the data
+        await setDoc(progressRef, progressData, { merge: true });
+        
+        console.log('Game progress uploaded successfully');
+        
+        // Show brief success message
+        lastInputType = "Progress Saved";
+        lastInputTime = Date.now();
+        inputFadeTimer = 2000;
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error uploading game progress:', error);
+        
+        // Show brief error message
+        lastInputType = "Save Error";
+        lastInputTime = Date.now();
+        inputFadeTimer = 2000;
+        
+        return false;
+    }
+}
+
+async function downloadGameProgress() {
+    try {
+        // Check if user is authenticated
+        if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
+            console.log('Cannot download progress: user not authenticated');
+            return false;
+        }
+        
+        console.log('Downloading game progress from cloud...');
+        
+        // Import Firestore functions
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        
+        // Create document reference for the user's progress
+        const userId = window.firebaseAuth.currentUser.uid;
+        const progressRef = doc(window.firebaseFirestore, 'gameProgress', userId);
+        
+        // Download the data
+        const docSnap = await getDoc(progressRef);
+        
+        if (!docSnap.exists()) {
+            console.log('No cloud progress found for this user');
+            
+            // Show brief message
+            lastInputType = "No Cloud Data";
+            lastInputTime = Date.now();
+            inputFadeTimer = 2000;
+            
+            return false;
+        }
+        
+        const progressData = docSnap.data();
+        console.log('Downloaded game progress:', progressData);
+        
+        // Automatically merge cloud and local progress data without prompting
+        console.log('Automatically merging cloud progress with local progress...');
+        
+        // Restore game progress
+        currentSet = progressData.currentLevelSet || 'Classic';
+        currentLevelNumber = progressData.currentLevelNumber || 1;
+        
+        // Intelligent merge of cloud and local progress data
+        if (progressData.detailedLevelProgress && progressDB) {
+            try {
+                const transaction = progressDB.transaction(['levelProgress'], 'readwrite');
+                const store = transaction.objectStore('levelProgress');
+                
+                // Get all existing local records first
+                const existingRecords = await new Promise((resolve, reject) => {
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Create a map of existing local data
+                const localData = {};
+                existingRecords.forEach(record => {
+                    localData[record.id] = record;
+                });
+                
+                // Merge cloud data with local data
+                const mergedRecords = {};
+                let mergeStats = { 
+                    cloudOnly: 0, 
+                    localOnly: 0, 
+                    merged: 0, 
+                    scoresImproved: 0,
+                    completionUpgraded: 0
+                };
+                
+                // Process all cloud records
+                Object.entries(progressData.detailedLevelProgress).forEach(([id, cloudRecord]) => {
+                    const localRecord = localData[id];
+                    
+                    if (!localRecord) {
+                        // Cloud-only record - add it directly
+                        mergedRecords[id] = { id, ...cloudRecord };
+                        mergeStats.cloudOnly++;
+                    } else {
+                        // Merge local and cloud records intelligently
+                        const merged = {
+                            id: id,
+                            setName: cloudRecord.setName,
+                            levelNumber: cloudRecord.levelNumber,
+                            // Attempted if either source shows attempted
+                            attempted: localRecord.attempted || cloudRecord.attempted,
+                            // Completed if either source shows completed
+                            completed: localRecord.completed || cloudRecord.completed,
+                            // Best moves - take the lowest non-null value
+                            bestMoves: getBestScore(localRecord.bestMoves, cloudRecord.bestMoves),
+                            // Best pushes - take the lowest non-null value  
+                            bestPushes: getBestScore(localRecord.bestPushes, cloudRecord.bestPushes),
+                            // Completion count - take the higher value
+                            completionCount: Math.max(localRecord.completionCount || 0, cloudRecord.completionCount || 0),
+                            // Last played - take the more recent timestamp
+                            lastPlayed: getMostRecent(localRecord.lastPlayed, cloudRecord.lastPlayed),
+                            // Last completion - take the more recent timestamp
+                            lastCompletionDate: getMostRecent(localRecord.lastCompletionDate, cloudRecord.lastCompletionDate)
+                        };
+                        
+                        mergedRecords[id] = merged;
+                        mergeStats.merged++;
+                        
+                        // Track improvements
+                        if (merged.bestMoves < (localRecord.bestMoves || Infinity) || 
+                            merged.bestPushes < (localRecord.bestPushes || Infinity)) {
+                            mergeStats.scoresImproved++;
+                        }
+                        if (merged.completed && !localRecord.completed) {
+                            mergeStats.completionUpgraded++;
+                        }
+                    }
+                });
+                
+                // Add any local-only records that weren't in the cloud
+                existingRecords.forEach(localRecord => {
+                    if (!progressData.detailedLevelProgress[localRecord.id]) {
+                        mergedRecords[localRecord.id] = localRecord;
+                        mergeStats.localOnly++;
+                    }
+                });
+                
+                // Clear the store and write all merged records
+                await new Promise((resolve, reject) => {
+                    const clearRequest = store.clear();
+                    clearRequest.onsuccess = () => resolve();
+                    clearRequest.onerror = () => reject(clearRequest.error);
+                });
+                
+                // Write all merged records
+                const writePromises = Object.values(mergedRecords).map(record => {
+                    return new Promise((resolve, reject) => {
+                        const putRequest = store.put(record);
+                        putRequest.onsuccess = () => resolve();
+                        putRequest.onerror = () => reject(putRequest.error);
+                    });
+                });
+                
+                await Promise.all(writePromises);
+                
+                // Update the levelProgress Map cache
+                levelProgress.clear();
+                Object.values(mergedRecords).forEach(record => {
+                    levelProgress.set(record.id, {
+                        attempted: record.attempted,
+                        completed: record.completed,
+                        bestMoves: record.bestMoves,
+                        bestPushes: record.bestPushes,
+                        completionCount: record.completionCount
+                    });
+                });
+                
+                console.log(`Merge completed: ${Object.keys(mergedRecords).length} total records`);
+                console.log(`Cloud-only: ${mergeStats.cloudOnly}, Local-only: ${mergeStats.localOnly}, Merged: ${mergeStats.merged}`);
+                console.log(`Scores improved: ${mergeStats.scoresImproved}, Completions upgraded: ${mergeStats.completionUpgraded}`);
+                
+                // After merging, upload the combined data back to cloud
+                // This ensures cloud has the latest merged state
+                setTimeout(() => {
+                    uploadGameProgress().catch(error => {
+                        console.error('Failed to upload merged progress to cloud:', error);
+                    });
+                }, 1000); // Small delay to avoid immediate re-upload
+                
+            } catch (error) {
+                console.error('Error during intelligent merge:', error);
+                // Fall back to basic restoration if merge fails
+                if (progressData.levelProgress) {
+                    levelProgress = new Map(Object.entries(progressData.levelProgress));
+                }
+            }
+        } else if (progressData.levelProgress) {
+            // Fall back to basic Map restoration for older cloud saves
+            levelProgress = new Map(Object.entries(progressData.levelProgress));
+        }
+        
+        // Helper function to get the best (lowest) score
+        function getBestScore(score1, score2) {
+            if (score1 === null || score1 === undefined) return score2;
+            if (score2 === null || score2 === undefined) return score1;
+            return Math.min(score1, score2);
+        }
+        
+        // Helper function to get the most recent timestamp
+        function getMostRecent(date1, date2) {
+            if (!date1) return date2;
+            if (!date2) return date1;
+            return new Date(date1) > new Date(date2) ? date1 : date2;
+        }
+        
+        // Merge last played level data
+        if (progressData.lastPlayedLevel && progressDB) {
+            try {
+                const lastPlayedTransaction = progressDB.transaction(['lastPlayed'], 'readwrite');
+                const lastPlayedStore = lastPlayedTransaction.objectStore('lastPlayed');
+                
+                // Get existing local last played data
+                const existingLastPlayed = await new Promise((resolve, reject) => {
+                    const request = lastPlayedStore.get('lastPlayed');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                // Determine which last played is more recent
+                let mergedLastPlayed = progressData.lastPlayedLevel;
+                if (existingLastPlayed) {
+                    const cloudTimestamp = progressData.lastPlayedLevel.timestamp || 0;
+                    const localTimestamp = existingLastPlayed.timestamp || 0;
+                    
+                    if (localTimestamp > cloudTimestamp) {
+                        mergedLastPlayed = existingLastPlayed;
+                        console.log(`Keeping local last played (newer): ${existingLastPlayed.setName} level ${existingLastPlayed.levelNumber}`);
+                    } else {
+                        console.log(`Using cloud last played (newer): ${mergedLastPlayed.setName} level ${mergedLastPlayed.levelNumber}`);
+                    }
+                } else {
+                    console.log(`Using cloud last played (no local data): ${mergedLastPlayed.setName} level ${mergedLastPlayed.levelNumber}`);
+                }
+                
+                // Save the merged last played data
+                await new Promise((resolve, reject) => {
+                    const putRequest = lastPlayedStore.put({
+                        id: 'lastPlayed',
+                        setName: mergedLastPlayed.setName,
+                        levelNumber: mergedLastPlayed.levelNumber,
+                        timestamp: mergedLastPlayed.timestamp || Date.now()
+                    });
+                    putRequest.onsuccess = () => resolve();
+                    putRequest.onerror = () => reject(putRequest.error);
+                });
+                
+            } catch (error) {
+                console.error('Error merging last played level:', error);
+            }
+        }
+        
+        // Always go to level select after restoring progress
+        currentGameState = GAME_STATES.LEVEL_SELECT;
+        initializeLevelSelect();
+        
+        console.log('Game progress restored successfully');
+        
+        // Show success message
+        lastInputType = "Progress Restored";
+        lastInputTime = Date.now();
+        inputFadeTimer = 2000;
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error downloading game progress:', error);
+        
+        // Show error message
+        lastInputType = "Download Error";
+        lastInputTime = Date.now();
+        inputFadeTimer = 2000;
+        
+        return false;
+    }
+}
+
+async function signOutFromCloud() {
+    try {
+        console.log('Signing out from cloud sync...');
+        
+        // Import signOut function
+        const { signOut } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js');
+        
+        // Sign out from Firebase
+        await signOut(window.firebaseAuth.auth);
+        
+        // Update global auth state
+        window.firebaseAuth.isAuthenticated = false;
+        window.firebaseAuth.currentUser = null;
+        
+        // Reset cloud sync state
+        updateCloudSyncState('not_authenticated');
+        phoneNumber = null;
+        verificationId = null;
+        recaptchaVerifier = null;
+        
+        console.log('Successfully signed out');
+        
+        // Show success message
+        lastInputType = "Signed Out";
+        lastInputTime = Date.now();
+        inputFadeTimer = 2000;
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error signing out:', error);
+        
+        // Show error message
+        lastInputType = "Sign Out Error";
+        lastInputTime = Date.now();
+        inputFadeTimer = 2000;
+        
+        return false;
+    }
+}
+
 function getTouchCanvasPosition(touch) {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -1854,10 +2458,10 @@ function draw() {
         drawLevelCompleteOverlay();
     } else if (currentGameState === GAME_STATES.INSTRUCTIONS) {
         drawInstructionsScreen();
-    } else if (currentGameState === GAME_STATES.SETTINGS) {
-        drawSettingsScreen();
     } else if (currentGameState === GAME_STATES.CREDITS) {
         drawCreditsScreen();
+    } else if (currentGameState === GAME_STATES.CLOUD_SYNC) {
+        drawCloudSyncScreen();
     }
 }
 
@@ -2204,7 +2808,7 @@ function drawHamburgerMenu() {
         const menuY = 70;
         const optionHeight = 40;
         const optionWidth = 150;
-        const totalOptions = 4; // Home, Instructions, Settings, Credits
+        const totalOptions = 4; // Home, Instructions, Credits, Cloud Sync
         
         // More opaque background for menu panel
         context.fillStyle = "rgba(0, 0, 0, 0.9)"; // Darker background for better contrast
@@ -2221,8 +2825,8 @@ function drawHamburgerMenu() {
         context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
         context.textAlign = "left";
         
-        const options = ["Home", "Instructions", "Settings", "Credits"];
-        const gameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.SETTINGS, GAME_STATES.CREDITS];
+        const options = ["Home", "Instructions", "Credits", "Cloud Sync"];
+        const gameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CREDITS, GAME_STATES.CLOUD_SYNC];
         
         for (let i = 0; i < options.length; i++) {
             const textY = menuY + (i * optionHeight) + (optionHeight / 2) + 6;
@@ -2288,34 +2892,6 @@ function drawInstructionsScreen() {
     drawHamburgerMenu();
 }
 
-function drawSettingsScreen() {
-    // Draw background
-    context.fillStyle = "#000000";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw back button
-    drawBackButton();
-    
-    // Title
-    const isMobile = canvas.width < 600;
-    const titleSize = isMobile ? 28 : 36;
-    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#00FFFF";
-    context.textAlign = "center";
-    context.fillText("SETTINGS", canvas.width / 2, 80);
-    
-    // Settings content
-    const textSize = isMobile ? 16 : 20;
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#CCCCCC";
-    
-    context.fillText("Settings coming soon...", canvas.width / 2, 200);
-    
-    // Draw hamburger menu overlay (dims background) then menu on top
-    drawHamburgerMenuOverlay();
-    drawHamburgerMenu();
-}
-
 function drawCreditsScreen() {
     // Draw background
     context.fillStyle = "#000000";
@@ -2352,6 +2928,165 @@ function drawCreditsScreen() {
     }
     
     // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
+}
+
+function drawCloudSyncScreen() {
+    // Draw background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw back button
+    drawBackButton();
+    
+    // Title
+    const isMobile = canvas.width < 600;
+    const titleSize = isMobile ? 28 : 36;
+    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#00FFFF";
+    context.textAlign = "center";
+    context.fillText("CLOUD SYNC", canvas.width / 2, 80);
+    
+    // Cloud sync content
+    const textSize = isMobile ? 16 : 20;
+    const lineHeight = textSize * 1.5;
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    
+    let yPos = 140;
+    
+    // Check authentication status - be more forgiving with initialization
+    if (window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
+        // User is signed in
+        context.fillStyle = "#88CC88"; // Green
+        context.fillText("✓ Signed in and syncing", canvas.width / 2, yPos);
+        yPos += lineHeight;
+        
+        // Display user name if available
+        if (window.firebaseAuth.currentUser && window.firebaseAuth.currentUser.displayName) {
+            context.fillStyle = "#AADDFF"; // Light blue
+            context.fillText(`Welcome, ${window.firebaseAuth.currentUser.displayName}`, canvas.width / 2, yPos);
+            yPos += lineHeight * 1.5;
+        } else if (window.firebaseAuth.currentUser && window.firebaseAuth.currentUser.email) {
+            context.fillStyle = "#AADDFF"; // Light blue  
+            context.fillText(`Welcome, ${window.firebaseAuth.currentUser.email}`, canvas.width / 2, yPos);
+            yPos += lineHeight * 1.5;
+        } else {
+            yPos += lineHeight;
+        }
+        
+        context.fillStyle = "#CCCCCC";
+        context.fillText("Your progress is automatically", canvas.width / 2, yPos);
+        yPos += lineHeight;
+        context.fillText("backed up to the cloud", canvas.width / 2, yPos);
+        yPos += lineHeight * 2;
+        
+        // Sign out button
+        const signOutButtonWidth = 150;
+        const signOutButtonHeight = 40;
+        const signOutButtonX = (canvas.width - signOutButtonWidth) / 2;
+        const signOutButtonY = yPos;
+        
+        // Button background
+        context.fillStyle = "#CC4444";
+        context.fillRect(signOutButtonX, signOutButtonY, signOutButtonWidth, signOutButtonHeight);
+        
+        // Button text
+        context.fillStyle = "#FFFFFF";
+        context.font = `600 ${textSize - 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+        context.fillText("SIGN OUT", canvas.width / 2, signOutButtonY + signOutButtonHeight/2 + 5);
+    } else if (window.firebaseAuth === undefined) {
+        // Firebase not loaded yet
+        context.fillStyle = "#FF6666"; // Red
+        context.fillText("🔄 Loading cloud services...", canvas.width / 2, yPos);
+    } else {
+        // User is not signed in - show different states based on authentication process
+        switch (cloudSyncState) {
+            case 'not_authenticated':
+            default:
+                context.fillStyle = "#FFCC00"; // Yellow
+                context.fillText("� Sign in to sync your progress", canvas.width / 2, yPos);
+                yPos += lineHeight * 2;
+                
+                context.fillStyle = "#CCCCCC";
+                context.fillText("• Never lose your progress", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("• Play on multiple devices", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("• Automatic cloud backup", canvas.width / 2, yPos);
+                yPos += lineHeight * 2;
+                
+                // Sign in button
+                const buttonWidth = 220;
+                const buttonHeight = 50;
+                const buttonX = (canvas.width - buttonWidth) / 2;
+                const buttonY = yPos;
+                
+                // Button background
+                context.fillStyle = "#4285F4"; // Google Blue
+                context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                
+                // Button text
+                context.fillStyle = "#FFFFFF";
+                context.font = `600 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+                context.fillText("SIGN IN WITH GOOGLE", canvas.width / 2, buttonY + buttonHeight/2 + 6);
+                break;
+                
+            case 'signing_in':
+                context.fillStyle = "#4285F4"; // Google Blue
+                context.fillText("🔄 Signing in with Google...", canvas.width / 2, yPos);
+                yPos += lineHeight * 2;
+                
+                context.fillStyle = "#CCCCCC";
+                context.fillText("Please complete the sign-in process", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("in the popup window", canvas.width / 2, yPos);
+                break;
+                
+            case 'authenticated':
+                context.fillStyle = "#00FF00"; // Green
+                context.fillText("✅ Sign-in successful!", canvas.width / 2, yPos);
+                yPos += lineHeight * 2;
+                
+                context.fillStyle = "#CCCCCC";
+                context.fillText("You are now signed in and", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("your progress will be synced", canvas.width / 2, yPos);
+                break;
+                
+            case 'error':
+                context.fillStyle = "#FF4444"; // Red
+                context.fillText("❌ Sign-in failed", canvas.width / 2, yPos);
+                yPos += lineHeight * 2;
+                
+                context.fillStyle = "#CCCCCC";
+                context.fillText("This may be due to:", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("• Popup blocked by browser", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("• Domain not authorized in Firebase", canvas.width / 2, yPos);
+                yPos += lineHeight;
+                context.fillText("• Google Sign-In not enabled", canvas.width / 2, yPos);
+                yPos += lineHeight * 2;
+                
+                // Retry button
+                const retryButtonWidth = 220;
+                const retryButtonHeight = 50;
+                const retryButtonX = (canvas.width - retryButtonWidth) / 2;
+                const retryButtonY = yPos;
+                
+                // Button background
+                context.fillStyle = "#4285F4"; // Google Blue
+                context.fillRect(retryButtonX, retryButtonY, retryButtonWidth, retryButtonHeight);
+                
+                // Button text
+                context.fillStyle = "#FFFFFF";
+                context.font = `600 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+                context.fillText("TRY AGAIN", canvas.width / 2, retryButtonY + retryButtonHeight/2 + 6);
+                break;
+        }
+    }    // Draw hamburger menu overlay (dims background) then menu on top
     drawHamburgerMenuOverlay();
     drawHamburgerMenu();
 }
@@ -3964,6 +4699,14 @@ async function markLevelAttempted(setName, levelNumber) {
 
 async function markLevelCompleted(setName, levelNumber) {
     await saveLevelProgress(setName, levelNumber, true, true, moveCount, pushCount);
+    
+    // Upload progress to cloud if user is authenticated
+    if (window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
+        // Don't await this to avoid blocking level completion
+        uploadGameProgress().catch(error => {
+            console.error('Failed to upload progress after level completion:', error);
+        });
+    }
 }
 
 // Save the last played level to IndexedDB
