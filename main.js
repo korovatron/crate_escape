@@ -169,6 +169,41 @@ function setupCanvasEventListeners() {
         
         // Handle game state transitions (same logic as space key)
         if (currentGameState === GAME_STATES.TITLE) {
+            // Check for hamburger menu click
+            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
+                isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                return;
+            }
+            
+            // Check for menu option clicks when menu is open
+            if (isHamburgerMenuOpen) {
+                if (isClickOnMenuOption(mouseX, mouseY, 0)) {
+                    // Home (already on title screen - just close menu)
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else if (isClickOnMenuOption(mouseX, mouseY, 1)) {
+                    // Instructions
+                    currentGameState = GAME_STATES.INSTRUCTIONS;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
+                    // Settings
+                    currentGameState = GAME_STATES.SETTINGS;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
+                    // Credits
+                    currentGameState = GAME_STATES.CREDITS;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else {
+                    // Click outside menu - close it
+                    isHamburgerMenuOpen = false;
+                    return;
+                }
+            }
+            
+            // Go to level select on click from title screen (if menu not open)
             currentGameState = GAME_STATES.LEVEL_SELECT;
             initializeLevelSelect();
             lastInputType = "Level Select";
@@ -178,6 +213,49 @@ function setupCanvasEventListeners() {
         } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
             handleLevelSelectClick(mouseX, mouseY);
             return;
+        } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
+                  currentGameState === GAME_STATES.SETTINGS || 
+                  currentGameState === GAME_STATES.CREDITS) {
+            // Check for hamburger menu click
+            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
+                isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                return;
+            }
+            
+            // Check for menu option clicks when menu is open
+            if (isHamburgerMenuOpen) {
+                if (isClickOnMenuOption(mouseX, mouseY, 0)) {
+                    // Home
+                    currentGameState = GAME_STATES.TITLE;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else if (isClickOnMenuOption(mouseX, mouseY, 1)) {
+                    // Instructions
+                    currentGameState = GAME_STATES.INSTRUCTIONS;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
+                    // Settings
+                    currentGameState = GAME_STATES.SETTINGS;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
+                    // Credits
+                    currentGameState = GAME_STATES.CREDITS;
+                    isHamburgerMenuOpen = false;
+                    return;
+                } else {
+                    // Click outside menu - close it
+                    isHamburgerMenuOpen = false;
+                    return;
+                }
+            }
+            
+            // Check for back button click
+            if (isClickOnBackButton(mouseX, mouseY)) {
+                currentGameState = GAME_STATES.TITLE;
+                return;
+            }
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
             advanceToNextLevel();
             return;
@@ -325,7 +403,41 @@ function setupCanvasEventListeners() {
                 
                 // Tap detected
                 if (currentGameState === GAME_STATES.TITLE) {
-                    // Go to level select on tap from title screen
+                    // Check for hamburger menu click
+                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
+                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                        return;
+                    }
+                    
+                    // Check for menu option clicks when menu is open
+                    if (isHamburgerMenuOpen) {
+                        if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 0)) {
+                            // Home (already on title screen - just close menu)
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 1)) {
+                            // Instructions
+                            currentGameState = GAME_STATES.INSTRUCTIONS;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
+                            // Settings
+                            currentGameState = GAME_STATES.SETTINGS;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
+                            // Credits
+                            currentGameState = GAME_STATES.CREDITS;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else {
+                            // Click outside menu - close it
+                            isHamburgerMenuOpen = false;
+                            return;
+                        }
+                    }
+                    
+                    // Go to level select on tap from title screen (if menu not open)
                     currentGameState = GAME_STATES.LEVEL_SELECT;
                     initializeLevelSelect();
                     lastInputType = "Level Select";
@@ -333,6 +445,49 @@ function setupCanvasEventListeners() {
                     inputFadeTimer = 2000;
                 } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
+                } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
+                          currentGameState === GAME_STATES.SETTINGS || 
+                          currentGameState === GAME_STATES.CREDITS) {
+                    // Check for hamburger menu click
+                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
+                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                        return;
+                    }
+                    
+                    // Check for menu option clicks when menu is open
+                    if (isHamburgerMenuOpen) {
+                        if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 0)) {
+                            // Home
+                            currentGameState = GAME_STATES.TITLE;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 1)) {
+                            // Instructions
+                            currentGameState = GAME_STATES.INSTRUCTIONS;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
+                            // Settings
+                            currentGameState = GAME_STATES.SETTINGS;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
+                            // Credits
+                            currentGameState = GAME_STATES.CREDITS;
+                            isHamburgerMenuOpen = false;
+                            return;
+                        } else {
+                            // Click outside menu - close it
+                            isHamburgerMenuOpen = false;
+                            return;
+                        }
+                    }
+                    
+                    // Check for back button click
+                    if (isClickOnBackButton(canvasPos.x, canvasPos.y)) {
+                        currentGameState = GAME_STATES.TITLE;
+                        return;
+                    }
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
                     advanceToNextLevel();
                 }
@@ -368,9 +523,15 @@ const GAME_STATES = {
     LEVEL_SELECT: 'level_select',
     PLAYING: 'playing',
     PAUSED: 'paused',
-    LEVEL_COMPLETE: 'level_complete'
+    LEVEL_COMPLETE: 'level_complete',
+    INSTRUCTIONS: 'instructions',
+    SETTINGS: 'settings',
+    CREDITS: 'credits'
 };
 let currentGameState = GAME_STATES.TITLE;
+
+// Hamburger menu variables
+let isHamburgerMenuOpen = false;
 
 // Level selection variables
 let levelSelectOption = 'start'; // 'start', 'set', 'level'
@@ -1548,6 +1709,41 @@ function isClickOnUndoButton(x, y) {
            y >= undoButtonY && y <= undoButtonY + buttonSize;
 }
 
+function isClickOnHamburgerMenu(x, y) {
+    // Hamburger menu is in top-left corner of title screen
+    const menuSize = 40;
+    const margin = 15;
+    
+    return x >= margin && x <= margin + menuSize &&
+           y >= margin && y <= margin + menuSize;
+}
+
+function isClickOnMenuOption(x, y, optionIndex) {
+    // Menu options appear below hamburger menu when open
+    const menuX = 15;
+    const menuY = 70; // Below hamburger menu
+    const optionHeight = 40;
+    const optionWidth = 150;
+    
+    const optionY = menuY + (optionIndex * optionHeight);
+    
+    return x >= menuX && x <= menuX + optionWidth &&
+           y >= optionY && y <= optionY + optionHeight;
+}
+
+function isClickOnBackButton(x, y) {
+    // Same positioning as game/level select back button
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45;
+    const rightMargin = 10;
+    
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
+    
+    return x >= exitButtonX && x <= exitButtonX + buttonSize &&
+           y >= exitButtonY && y <= exitButtonY + buttonSize;
+}
+
 function getTouchCanvasPosition(touch) {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -1656,6 +1852,12 @@ function draw() {
     } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
         drawGameplay(); // Draw the completed level in background
         drawLevelCompleteOverlay();
+    } else if (currentGameState === GAME_STATES.INSTRUCTIONS) {
+        drawInstructionsScreen();
+    } else if (currentGameState === GAME_STATES.SETTINGS) {
+        drawSettingsScreen();
+    } else if (currentGameState === GAME_STATES.CREDITS) {
+        drawCreditsScreen();
     }
 }
 
@@ -1965,6 +2167,191 @@ function drawTitleScreen() {
     context.fillStyle = "#FFCC00"; // Yellow color
     context.fillText("Created by Neil Kendall 2025", canvas.width / 2, yPos);
     
+    // Draw hamburger menu
+    drawHamburgerMenu();
+    
+    context.restore();
+}
+
+function drawHamburgerMenu() {
+    const menuSize = 40;
+    const margin = 15;
+    const lineHeight = 4;
+    const lineSpacing = 8;
+    
+    // Draw hamburger icon (three horizontal lines)
+    context.fillStyle = "#FFFFFF";
+    
+    // Top line
+    context.fillRect(margin + 8, margin + 8, menuSize - 16, lineHeight);
+    // Middle line
+    context.fillRect(margin + 8, margin + 8 + lineSpacing, menuSize - 16, lineHeight);
+    // Bottom line
+    context.fillRect(margin + 8, margin + 8 + lineSpacing * 2, menuSize - 16, lineHeight);
+    
+    // Draw menu options if menu is open
+    if (isHamburgerMenuOpen) {
+        const menuX = 15;
+        const menuY = 70;
+        const optionHeight = 40;
+        const optionWidth = 150;
+        const totalOptions = 4; // Home, Instructions, Settings, Credits
+        
+        // Semi-transparent background for menu
+        context.fillStyle = "rgba(0, 0, 0, 0.8)";
+        context.fillRect(menuX, menuY, optionWidth, optionHeight * totalOptions);
+        
+        // Menu options
+        const isMobile = canvas.width < 600;
+        const fontSize = isMobile ? 16 : 18;
+        context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+        context.textAlign = "left";
+        
+        const options = ["Home", "Instructions", "Settings", "Credits"];
+        const gameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.SETTINGS, GAME_STATES.CREDITS];
+        
+        for (let i = 0; i < options.length; i++) {
+            const textY = menuY + (i * optionHeight) + (optionHeight / 2) + 6;
+            
+            // Highlight current screen
+            if (gameStates[i] === currentGameState) {
+                // Highlight background for current screen
+                context.fillStyle = "rgba(0, 255, 255, 0.2)"; // Cyan highlight
+                context.fillRect(menuX, menuY + (i * optionHeight), optionWidth, optionHeight);
+                
+                // Current screen text color
+                context.fillStyle = "#00FFFF"; // Bright cyan
+            } else {
+                // Normal text color
+                context.fillStyle = "#FFFFFF"; // White
+            }
+            
+            context.fillText(options[i], menuX + 10, textY);
+        }
+        
+        context.textAlign = "center"; // Reset text alignment
+    }
+}
+
+function drawInstructionsScreen() {
+    // Draw background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw back button (same style as level select screen)
+    drawBackButton();
+    
+    // Draw hamburger menu
+    drawHamburgerMenu();
+    
+    // Title
+    const isMobile = canvas.width < 600;
+    const titleSize = isMobile ? 28 : 36;
+    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#00FFFF";
+    context.textAlign = "center";
+    context.fillText("INSTRUCTIONS", canvas.width / 2, 80);
+    
+    // Instructions content
+    const textSize = isMobile ? 16 : 20;
+    const lineHeight = textSize * 1.5;
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    
+    let yPos = 140;
+    const instructions = [
+        "• Push all crates onto goal positions (dark squares)",
+        "• Use arrow keys or swipe to move",
+        "• You can only push crates, not pull them",
+        "• Use the undo button to reverse moves",
+        "• Complete all levels to win!"
+    ];
+    
+    for (const instruction of instructions) {
+        context.fillText(instruction, canvas.width / 2, yPos);
+        yPos += lineHeight;
+    }
+}
+
+function drawSettingsScreen() {
+    // Draw background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw back button
+    drawBackButton();
+    
+    // Draw hamburger menu
+    drawHamburgerMenu();
+    
+    // Title
+    const isMobile = canvas.width < 600;
+    const titleSize = isMobile ? 28 : 36;
+    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#00FFFF";
+    context.textAlign = "center";
+    context.fillText("SETTINGS", canvas.width / 2, 80);
+    
+    // Settings content
+    const textSize = isMobile ? 16 : 20;
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    
+    context.fillText("Settings coming soon...", canvas.width / 2, 200);
+}
+
+function drawCreditsScreen() {
+    // Draw background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw back button
+    drawBackButton();
+    
+    // Draw hamburger menu
+    drawHamburgerMenu();
+    
+    // Title
+    const isMobile = canvas.width < 600;
+    const titleSize = isMobile ? 28 : 36;
+    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#00FFFF";
+    context.textAlign = "center";
+    context.fillText("CREDITS", canvas.width / 2, 80);
+    
+    // Credits content
+    const textSize = isMobile ? 16 : 20;
+    const lineHeight = textSize * 1.5;
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    
+    let yPos = 140;
+    const credits = [
+        "Game Design & Programming: Neil Kendall",
+        "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
+        "Built with HTML5 Canvas & JavaScript",
+        "Created in 2025"
+    ];
+    
+    for (const credit of credits) {
+        context.fillText(credit, canvas.width / 2, yPos);
+        yPos += lineHeight;
+    }
+}
+
+function drawBackButton() {
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45;
+    const rightMargin = 10;
+    
+    const exitButtonX = canvas.width - buttonSize - rightMargin;
+    const exitButtonY = isMobile ? 15 : 10;
+    
+    // Draw back icon with high-quality rendering (same as other PNG icons)
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(backIcon, exitButtonX, exitButtonY, buttonSize, buttonSize);
     context.restore();
 }
 
