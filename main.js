@@ -2167,10 +2167,19 @@ function drawTitleScreen() {
     context.fillStyle = "#FFCC00"; // Yellow color
     context.fillText("Created by Neil Kendall 2025", canvas.width / 2, yPos);
     
-    // Draw hamburger menu
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
     drawHamburgerMenu();
     
     context.restore();
+}
+
+function drawHamburgerMenuOverlay() {
+    // Draw full-screen dim overlay if hamburger menu is open
+    if (isHamburgerMenuOpen) {
+        context.fillStyle = "rgba(0, 0, 0, 0.6)"; // Semi-transparent black overlay
+        context.fillRect(0, 0, canvas.width, canvas.height);
+    }
 }
 
 function drawHamburgerMenu() {
@@ -2197,9 +2206,14 @@ function drawHamburgerMenu() {
         const optionWidth = 150;
         const totalOptions = 4; // Home, Instructions, Settings, Credits
         
-        // Semi-transparent background for menu
-        context.fillStyle = "rgba(0, 0, 0, 0.8)";
+        // More opaque background for menu panel
+        context.fillStyle = "rgba(0, 0, 0, 0.9)"; // Darker background for better contrast
         context.fillRect(menuX, menuY, optionWidth, optionHeight * totalOptions);
+        
+        // Add subtle border around menu for better definition
+        context.strokeStyle = "rgba(255, 255, 255, 0.3)";
+        context.lineWidth = 1;
+        context.strokeRect(menuX, menuY, optionWidth, optionHeight * totalOptions);
         
         // Menu options
         const isMobile = canvas.width < 600;
@@ -2216,7 +2230,7 @@ function drawHamburgerMenu() {
             // Highlight current screen
             if (gameStates[i] === currentGameState) {
                 // Highlight background for current screen
-                context.fillStyle = "rgba(0, 255, 255, 0.2)"; // Cyan highlight
+                context.fillStyle = "rgba(0, 255, 255, 0.3)"; // Brighter cyan highlight
                 context.fillRect(menuX, menuY + (i * optionHeight), optionWidth, optionHeight);
                 
                 // Current screen text color
@@ -2240,9 +2254,6 @@ function drawInstructionsScreen() {
     
     // Draw back button (same style as level select screen)
     drawBackButton();
-    
-    // Draw hamburger menu
-    drawHamburgerMenu();
     
     // Title
     const isMobile = canvas.width < 600;
@@ -2271,6 +2282,10 @@ function drawInstructionsScreen() {
         context.fillText(instruction, canvas.width / 2, yPos);
         yPos += lineHeight;
     }
+    
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
 }
 
 function drawSettingsScreen() {
@@ -2280,9 +2295,6 @@ function drawSettingsScreen() {
     
     // Draw back button
     drawBackButton();
-    
-    // Draw hamburger menu
-    drawHamburgerMenu();
     
     // Title
     const isMobile = canvas.width < 600;
@@ -2298,6 +2310,10 @@ function drawSettingsScreen() {
     context.fillStyle = "#CCCCCC";
     
     context.fillText("Settings coming soon...", canvas.width / 2, 200);
+    
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
 }
 
 function drawCreditsScreen() {
@@ -2307,9 +2323,6 @@ function drawCreditsScreen() {
     
     // Draw back button
     drawBackButton();
-    
-    // Draw hamburger menu
-    drawHamburgerMenu();
     
     // Title
     const isMobile = canvas.width < 600;
@@ -2337,6 +2350,10 @@ function drawCreditsScreen() {
         context.fillText(credit, canvas.width / 2, yPos);
         yPos += lineHeight;
     }
+    
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
 }
 
 function drawBackButton() {
