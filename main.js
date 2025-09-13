@@ -1880,9 +1880,8 @@ function handleMenuOptionClick(mouseX, mouseY) {
                 isHamburgerMenuOpen = false;
                 return true;
             } else if (targetState === GAME_STATES.IOS_INSTALL) {
-                // iOS Install - go to install screen and dismiss notification
+                // iOS Install - go to install screen (don't auto-dismiss notification)
                 currentGameState = GAME_STATES.IOS_INSTALL;
-                acknowledgeIOSInstallNotification(); // Dismiss notification when visiting screen
                 isHamburgerMenuOpen = false;
                 return true;
             } else {
@@ -2994,22 +2993,11 @@ function drawHamburgerMenu() {
         const menuY = 70;
         const optionHeight = 40;
         const optionWidth = 150;
-        // Build menu options dynamically based on what should be shown
-        const baseOptions = ["Home", "Instructions", "Cloud Sync"];
-        const baseGameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC];
         
-        // Add iOS Install option if user should see it
-        if (shouldShowIOSInstallNotification()) {
-            baseOptions.splice(2, 0, "📱 Install App"); // Insert before Cloud Sync
-            baseGameStates.splice(2, 0, GAME_STATES.IOS_INSTALL);
-        }
-        
-        // Add Credits at the end
-        baseOptions.push("Credits");
-        baseGameStates.push(GAME_STATES.CREDITS);
-        
-        const options = baseOptions;
-        const gameStates = baseGameStates;
+        // Use the same menu configuration as the click handler to ensure consistency
+        const menuConfig = getCurrentMenuConfig();
+        const options = menuConfig.options;
+        const gameStates = menuConfig.gameStates;
         const totalOptions = options.length;
         
         // More opaque background for menu panel
