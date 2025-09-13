@@ -411,29 +411,7 @@ function setupCanvasEventListeners() {
                     
                     // Check for menu option clicks when menu is open
                     if (isHamburgerMenuOpen) {
-                        if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 0)) {
-                            // Home (already on title screen - just close menu)
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 1)) {
-                            // Instructions
-                            currentGameState = GAME_STATES.INSTRUCTIONS;
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
-                            // Cloud Sync
-                            currentGameState = GAME_STATES.CLOUD_SYNC;
-                            acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
-                            // Credits
-                            currentGameState = GAME_STATES.CREDITS;
-                            isHamburgerMenuOpen = false;
-                            return;
-                        } else {
-                            // Click outside menu - close it
-                            isHamburgerMenuOpen = false;
+                        if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
                             return;
                         }
                     }
@@ -543,8 +521,9 @@ let hasAcknowledgedIOSInstall = true; // Start as true to prevent flash, will be
 
 // iOS PWA detection and notification management
 function isIOSSafariNotInstalled() {
-    // Check if it's iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // Check if it's iOS (including modern iPad detection)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // Modern iPad detection
     
     // Check if it's Safari (not Chrome, Firefox, etc. on iOS)
     const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
