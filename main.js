@@ -534,9 +534,14 @@ function isIOSSafariNotInstalled() {
     return isIOS && isSafari && isNotInstalled;
 }
 
-// Check if iOS install notification should be shown
+// Check if iOS install notification should be shown (for badge count only)
 function shouldShowIOSInstallNotification() {
     return isIOSSafariNotInstalled() && !hasAcknowledgedIOSInstall;
+}
+
+// Check if iOS install menu item should be shown (always on iOS Safari, even after dismissal)
+function shouldShowIOSInstallMenuItem() {
+    return isIOSSafariNotInstalled(); // Show menu item on iOS Safari regardless of dismissal
 }
 
 // Check if cloud sync notification should be shown
@@ -1826,8 +1831,8 @@ function getCurrentMenuConfig() {
     const baseOptions = ["Home", "Instructions", "Cloud Sync"];
     const baseGameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC];
     
-    // Add iOS Install option if user should see it
-    if (shouldShowIOSInstallNotification()) {
+    // Add iOS Install option if user is on iOS Safari (regardless of dismissal)
+    if (shouldShowIOSInstallMenuItem()) {
         baseOptions.splice(2, 0, "📱 Install App"); // Insert before Cloud Sync
         baseGameStates.splice(2, 0, GAME_STATES.IOS_INSTALL);
     }
