@@ -1854,7 +1854,8 @@ function handleMenuOptionClick(mouseX, mouseY) {
             
             // Handle special cases
             if (targetState === GAME_STATES.TITLE) {
-                // Home - just close menu (already on title screen)
+                // Home - always go to title screen
+                currentGameState = GAME_STATES.TITLE;
                 isHamburgerMenuOpen = false;
                 return true;
             } else if (targetState === GAME_STATES.CLOUD_SYNC) {
