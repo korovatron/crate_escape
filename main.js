@@ -1880,8 +1880,9 @@ function handleMenuOptionClick(mouseX, mouseY) {
                 isHamburgerMenuOpen = false;
                 return true;
             } else if (targetState === GAME_STATES.IOS_INSTALL) {
-                // iOS Install - go to install screen
+                // iOS Install - go to install screen and dismiss notification
                 currentGameState = GAME_STATES.IOS_INSTALL;
+                acknowledgeIOSInstallNotification(); // Dismiss notification when visiting screen
                 isHamburgerMenuOpen = false;
                 return true;
             } else {
@@ -2970,8 +2971,8 @@ function drawHamburgerMenu() {
         context.fill();
         context.restore();
         
-        // Draw count number if more than 1 notification
-        if (notificationCount > 1) {
+        // Draw count number for all notifications (including 1)
+        if (notificationCount >= 1) {
             const countFontSize = 12; // Increased from 8 to 12 for better mobile readability
             context.font = `700 ${countFontSize}px 'Roboto Condensed', 'Arial', sans-serif`; // Slightly bolder
             context.fillStyle = "#FFFFFF";
@@ -3356,8 +3357,8 @@ function drawIOSInstallScreen() {
     context.fillText("📱 INSTALL APP", canvas.width / 2, 80);
     
     // Content
-    const textSize = isMobile ? 22 : 24; // Same as instructions page
-    const lineHeight = textSize * 1.8; // Same as instructions page
+    const textSize = isMobile ? 18 : 22; // Reduced from 22/24 to fit better on mobile
+    const lineHeight = textSize * 1.5; // Reduced from 1.8 to 1.5 for tighter spacing
     context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#CCCCCC";
     
@@ -3390,10 +3391,10 @@ function drawIOSInstallScreen() {
     
     for (const benefit of benefits) {
         yPos = drawWrappedText(context, benefit, canvas.width / 2, yPos, maxContentWidth, lineHeight);
-        yPos += lineHeight * 0.4; // Same spacing as instructions
+        yPos += lineHeight * 0.2; // Reduced from 0.4 for tighter spacing
     }
     
-    yPos += lineHeight * 0.6; // Extra space before instructions
+    yPos += lineHeight * 0.4; // Reduced from 0.6
     
     // Installation instructions
     context.fillStyle = "#FFFFFF"; // Brighter for emphasis
@@ -3414,10 +3415,10 @@ function drawIOSInstallScreen() {
     
     for (const instruction of instructions) {
         yPos = drawWrappedText(context, instruction, canvas.width / 2, yPos, maxContentWidth, lineHeight);
-        yPos += lineHeight * 0.4;
+        yPos += lineHeight * 0.2; // Reduced from 0.4 for tighter spacing
     }
     
-    yPos += lineHeight * 1.2; // Extra space before button
+    yPos += lineHeight * 0.8; // Reduced from 1.2
     
     // "Not Interested" button
     const buttonWidth = isMobile ? 180 : 200;
