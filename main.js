@@ -2587,7 +2587,7 @@ function drawTitleScreen() {
     context.fillStyle = "#DDDDDD";
     const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
-    yPos = drawWrappedText(context, "Complete your shift by pushing all the crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
+    yPos = drawWrappedText(context, "Complet your shift by pushing all the crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
 
     // Demo level preview - positioned after main instruction with responsive spacing
     const remainingHeight = canvas.height - yPos;
