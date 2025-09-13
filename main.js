@@ -200,13 +200,14 @@ function setupCanvasEventListeners() {
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
-                    // Credits
-                    currentGameState = GAME_STATES.CREDITS;
+                    // Cloud Sync
+                    currentGameState = GAME_STATES.CLOUD_SYNC;
+                    acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
-                    // Cloud Sync
-                    currentGameState = GAME_STATES.CLOUD_SYNC;
+                    // Credits
+                    currentGameState = GAME_STATES.CREDITS;
                     isHamburgerMenuOpen = false;
                     return;
                 } else {
@@ -216,13 +217,16 @@ function setupCanvasEventListeners() {
                 }
             }
             
-            // Go to level select on click from title screen (if menu not open)
-            currentGameState = GAME_STATES.LEVEL_SELECT;
-            downloadGameProgress(true); // Silent cloud sync on navigation
-            initializeLevelSelect();
-            lastInputType = "Level Select";
-            lastInputTime = Date.now();
-            inputFadeTimer = 2000;
+            // Check for start button click from title screen (if menu not open)
+            if (isClickOnStartButton(mouseX, mouseY)) {
+                currentGameState = GAME_STATES.LEVEL_SELECT;
+                downloadGameProgress(true); // Silent cloud sync on navigation
+                initializeLevelSelect();
+                lastInputType = "Level Select";
+                lastInputTime = Date.now();
+                inputFadeTimer = 2000;
+                return;
+            }
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
             handleLevelSelectClick(mouseX, mouseY);
@@ -249,13 +253,14 @@ function setupCanvasEventListeners() {
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 2)) {
-                    // Credits
-                    currentGameState = GAME_STATES.CREDITS;
+                    // Cloud Sync
+                    currentGameState = GAME_STATES.CLOUD_SYNC;
+                    acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
                     isHamburgerMenuOpen = false;
                     return;
                 } else if (isClickOnMenuOption(mouseX, mouseY, 3)) {
-                    // Cloud Sync
-                    currentGameState = GAME_STATES.CLOUD_SYNC;
+                    // Credits
+                    currentGameState = GAME_STATES.CREDITS;
                     isHamburgerMenuOpen = false;
                     return;
                 } else {
@@ -451,13 +456,14 @@ function setupCanvasEventListeners() {
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
-                            // Credits
-                            currentGameState = GAME_STATES.CREDITS;
+                            // Cloud Sync
+                            currentGameState = GAME_STATES.CLOUD_SYNC;
+                            acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
-                            // Cloud Sync
-                            currentGameState = GAME_STATES.CLOUD_SYNC;
+                            // Credits
+                            currentGameState = GAME_STATES.CREDITS;
                             isHamburgerMenuOpen = false;
                             return;
                         } else {
@@ -467,13 +473,15 @@ function setupCanvasEventListeners() {
                         }
                     }
                     
-                    // Go to level select on tap from title screen (if menu not open)
-                    currentGameState = GAME_STATES.LEVEL_SELECT;
-                    downloadGameProgress(true); // Silent cloud sync on navigation
-                    initializeLevelSelect();
-                    lastInputType = "Level Select";
-                    lastInputTime = Date.now();
-                    inputFadeTimer = 2000;
+                    // Check for start button tap from title screen (if menu not open)
+                    if (isClickOnStartButton(canvasPos.x, canvasPos.y)) {
+                        currentGameState = GAME_STATES.LEVEL_SELECT;
+                        downloadGameProgress(true); // Silent cloud sync on navigation
+                        initializeLevelSelect();
+                        lastInputType = "Level Select";
+                        lastInputTime = Date.now();
+                        inputFadeTimer = 2000;
+                    }
                 } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
                 } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
@@ -499,13 +507,14 @@ function setupCanvasEventListeners() {
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 2)) {
-                            // Credits
-                            currentGameState = GAME_STATES.CREDITS;
+                            // Cloud Sync
+                            currentGameState = GAME_STATES.CLOUD_SYNC;
+                            acknowledgeCloudSyncNotification(); // Dismiss notification when visiting cloud sync
                             isHamburgerMenuOpen = false;
                             return;
                         } else if (isClickOnMenuOption(canvasPos.x, canvasPos.y, 3)) {
-                            // Cloud Sync
-                            currentGameState = GAME_STATES.CLOUD_SYNC;
+                            // Credits
+                            currentGameState = GAME_STATES.CREDITS;
                             isHamburgerMenuOpen = false;
                             return;
                         } else {
@@ -579,6 +588,17 @@ let currentGameState = GAME_STATES.TITLE;
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
+let hasAcknowledgedCloudSync = true; // Start as true to prevent flash, will be updated from IndexedDB
+
+// Helper function to acknowledge cloud sync notification and persist it
+function acknowledgeCloudSyncNotification() {
+    hasAcknowledgedCloudSync = true; // Update UI state immediately
+    
+    // Save to IndexedDB in background (don't block UI)
+    saveSetting('hasAcknowledgedCloudSync', true).catch(error => {
+        console.error('Failed to save cloud sync notification state:', error);
+    });
+}
 
 // Cloud Sync authentication variables
 let cloudSyncState = 'not_authenticated'; // 'not_authenticated', 'signing_in', 'authenticated', 'error'
@@ -946,6 +966,18 @@ function createCanvas() {
         if (progressDB) {
             await loadLevelProgress();
             console.log('Level progress loaded');
+            
+            // Load cloud sync notification state
+            const savedNotificationState = await loadSetting('hasAcknowledgedCloudSync', null);
+            if (savedNotificationState !== null) {
+                // User has a saved preference
+                hasAcknowledgedCloudSync = savedNotificationState;
+            } else {
+                // New user - show notification if not signed in
+                const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
+                hasAcknowledgedCloudSync = isSignedIn; // If signed in, don't show notification
+            }
+            console.log('Cloud sync notification state loaded:', hasAcknowledgedCloudSync);
             
             // Load last played level to set initial level selector position
             const lastPlayed = await loadLastPlayedLevel();
@@ -1788,6 +1820,15 @@ function isClickOnHamburgerMenu(x, y) {
            y >= margin && y <= margin + menuSize;
 }
 
+function isClickOnStartButton(x, y) {
+    // Check if start button bounds are defined and click is within bounds
+    if (!window.startButtonBounds) return false;
+    
+    const bounds = window.startButtonBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
 function isClickOnMenuOption(x, y, optionIndex) {
     // Menu options appear below hamburger menu when open
     const menuX = 15;
@@ -1901,6 +1942,7 @@ async function startGoogleSignIn() {
         // Update global auth state
         window.firebaseAuth.isAuthenticated = true;
         window.firebaseAuth.currentUser = result.user;
+        acknowledgeCloudSyncNotification(); // Dismiss notification when user signs in
         
         // First, try to download existing progress
         const hasCloudData = await downloadGameProgress();
@@ -2587,7 +2629,7 @@ function drawTitleScreen() {
     context.fillStyle = "#DDDDDD";
     const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
-    yPos = drawWrappedText(context, "Complet your shift by pushing all the crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
+    yPos = drawWrappedText(context, "Complete your shift by pushing all the crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
 
     // Demo level preview - positioned after main instruction with responsive spacing
     const remainingHeight = canvas.height - yPos;
@@ -2745,44 +2787,69 @@ function drawTitleScreen() {
     context.fillStyle = "#CCCCCC";
     const controlInstructionLineHeight = controlInstructionSize * 1.3;
     
-    // Start instruction - positioned after controls with pulsating effect like level complete
+    // Start button - positioned after controls with pulsating effect like level complete
     yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Moderate spacing for landscape
     
-    // Instructions with pulsing effect (same as level complete overlay)
+    // Button styling with pulsing effect (same as level complete overlay)
     const time = Date.now() / 1000;
     const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
-    const instructColor = `rgba(136, 204, 136, ${pulse})`; // Green with pulsing alpha
     
-    let startInstructionSize;
+    let buttonTextSize;
     if (isMobilePortrait) {
-        startInstructionSize = textSize * 1.1;
+        buttonTextSize = textSize * 1.2;
     } else if (isMobileLandscape) {
-        startInstructionSize = textSize * 1.05; // Moderate increase for landscape
+        buttonTextSize = textSize * 1.1; // Moderate increase for landscape
     } else {
-        startInstructionSize = textSize; // Original size for desktop
+        buttonTextSize = textSize * 1.1; // Original size for desktop
     }
     
-    // Apply pulsating effect with shadow
-    context.font = `700 ${startInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    // Button dimensions
+    const buttonText = "START GAME";
+    context.font = `700 ${buttonTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    const textMetrics = context.measureText(buttonText);
+    const buttonPadding = buttonTextSize * 0.8;
+    const buttonWidth = textMetrics.width + buttonPadding * 2;
+    const buttonHeight = buttonTextSize * 1.8;
+    const buttonX = (canvas.width - buttonWidth) / 2;
+    const buttonY = yPos - buttonHeight / 2;
+    
+    // Store button bounds for click detection
+    window.startButtonBounds = {
+        x: buttonX,
+        y: buttonY,
+        width: buttonWidth,
+        height: buttonHeight
+    };
+    
+    // Draw button background with glow effect
+    context.save();
     context.shadowColor = "#88CC88"; // Green shadow
-    context.shadowBlur = 10 * pulse;
-    context.fillStyle = instructColor;
+    context.shadowBlur = 15 * pulse;
+    context.fillStyle = `rgba(34, 139, 34, ${0.8 + pulse * 0.2})`; // Forest green with pulsing alpha
+    context.beginPath();
+    context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10);
+    context.fill();
     
-    // Check if instruction text fits
-    let instructText = "SPACE OR TAP TO START";
-    let instructWidth = context.measureText(instructText).width;
-    if (instructWidth > canvas.width * 0.9) {
-        instructText = "TAP TO START";
-    }
+    // Draw button border
+    context.strokeStyle = `rgba(136, 204, 136, ${pulse})`;
+    context.lineWidth = 2;
+    context.stroke();
     
-    context.fillText(instructText, canvas.width / 2, yPos);
-    context.shadowBlur = 0;
+    // Draw button text
+    context.shadowBlur = 8 * pulse;
+    context.fillStyle = "#FFFFFF";
+    context.textAlign = "center";
+    context.textBaseline = "middle"; // Center text vertically
+    const textCenterY = buttonY + buttonHeight / 2 + buttonTextSize * 0.1; // Slight adjustment for visual centering
+    context.fillText(buttonText, canvas.width / 2, textCenterY);
+    context.textBaseline = "alphabetic"; // Reset to default
+    context.restore();
     
-    // Author credit - positioned after start instruction with moderate spacing
+    // Author credit - positioned after start button with moderate spacing
     yPos += lineHeight * (isMobileLandscape ? 1.8 : 3); // Moderate spacing for landscape
-    let authorSize = startInstructionSize; // Same size as start instruction
+    let authorSize = buttonTextSize; // Same size as button text
     if (isMobileLandscape) {
-        authorSize = startInstructionSize * 0.95; // Slightly smaller for landscape to ensure it fits
+        authorSize = buttonTextSize * 0.95; // Slightly smaller for landscape to ensure it fits
     }
     context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
@@ -2819,6 +2886,24 @@ function drawHamburgerMenu() {
     // Bottom line
     context.fillRect(margin + 8, margin + 8 + lineSpacing * 2, menuSize - 16, lineHeight);
     
+    // Draw cloud sync notification badge if user hasn't acknowledged it and isn't signed in
+    const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
+    if (!hasAcknowledgedCloudSync && !isSignedIn) {
+        const badgeSize = 8;
+        const badgeX = margin + menuSize - badgeSize + 2; // Top-right corner of hamburger menu
+        const badgeY = margin - 2;
+        
+        // Draw red notification dot with glow
+        context.save();
+        context.shadowColor = "#FF0000";
+        context.shadowBlur = 6;
+        context.fillStyle = "#FF3333";
+        context.beginPath();
+        context.arc(badgeX, badgeY, badgeSize / 2, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+    }
+    
     // Draw menu options if menu is open
     if (isHamburgerMenuOpen) {
         const menuX = 15;
@@ -2842,8 +2927,8 @@ function drawHamburgerMenu() {
         context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
         context.textAlign = "left";
         
-        const options = ["Home", "Instructions", "Credits", "Cloud Sync"];
-        const gameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CREDITS, GAME_STATES.CLOUD_SYNC];
+        const options = ["Home", "Instructions", "Cloud Sync", "Credits"];
+        const gameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC, GAME_STATES.CREDITS];
         
         for (let i = 0; i < options.length; i++) {
             const textY = menuY + (i * optionHeight) + (optionHeight / 2) + 6;
@@ -2862,6 +2947,28 @@ function drawHamburgerMenu() {
             }
             
             context.fillText(options[i], menuX + 10, textY);
+            
+            // Add authentication status indicator for Cloud Sync option
+            if (i === 2) { // Cloud Sync is now at index 2
+                const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
+                const indicator = isSignedIn ? "✓" : "✗";
+                const indicatorColor = isSignedIn ? "#00FF00" : "#FF0000"; // Green tick or red cross
+                
+                // Calculate position for indicator (right side of menu)
+                const indicatorX = menuX + optionWidth - 25;
+                
+                // Save current fill style
+                const savedFillStyle = context.fillStyle;
+                
+                // Draw the indicator
+                context.fillStyle = indicatorColor;
+                context.font = `400 ${fontSize + 2}px 'Roboto Condensed', 'Arial', sans-serif`; // Slightly larger
+                context.fillText(indicator, indicatorX, textY);
+                
+                // Restore previous styles
+                context.fillStyle = savedFillStyle;
+                context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+            }
         }
         
         context.textAlign = "center"; // Reset text alignment
@@ -2885,7 +2992,7 @@ function drawInstructionsScreen() {
     context.fillText("INSTRUCTIONS", canvas.width / 2, 80);
     
     // Instructions content
-    const textSize = isMobile ? 16 : 20;
+    const textSize = isMobile ? 18 : 20;
     const lineHeight = textSize * 1.5;
     context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#CCCCCC";
@@ -2926,22 +3033,35 @@ function drawCreditsScreen() {
     context.fillText("CREDITS", canvas.width / 2, 80);
     
     // Credits content
-    const textSize = isMobile ? 16 : 20;
+    const textSize = isMobile ? 18 : 20;
+    const largeTextSize = isMobile ? 22 : 24; // Larger size for first line
     const lineHeight = textSize * 1.5;
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#CCCCCC";
+    const largeLineHeight = largeTextSize * 1.5;
     
     let yPos = 140;
     const credits = [
         "Game Design & Programming: Neil Kendall",
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
+        "Spritesheet: Kenney",
+        "Level Designs: David W Skinner",
         "Built with HTML5 Canvas & JavaScript",
         "Created in 2025"
     ];
     
-    for (const credit of credits) {
-        context.fillText(credit, canvas.width / 2, yPos);
-        yPos += lineHeight;
+    for (let i = 0; i < credits.length; i++) {
+        if (i === 0) {
+            // First line - larger and bolder
+            context.font = `600 ${largeTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+            context.fillStyle = "#FFFFFF"; // Brighter white for emphasis
+            context.fillText(credits[i], canvas.width / 2, yPos);
+            yPos += largeLineHeight;
+        } else {
+            // Rest of the credits - normal size
+            context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+            context.fillStyle = "#CCCCCC";
+            context.fillText(credits[i], canvas.width / 2, yPos);
+            yPos += lineHeight;
+        }
     }
     
     // Draw hamburger menu overlay (dims background) then menu on top
@@ -4592,6 +4712,11 @@ async function initProgressDatabase() {
             if (!db.objectStoreNames.contains('lastPlayed')) {
                 const lastPlayedStore = db.createObjectStore('lastPlayed', { keyPath: 'id' });
             }
+            
+            // Create object store for UI settings/preferences
+            if (!db.objectStoreNames.contains('settings')) {
+                const settingsStore = db.createObjectStore('settings', { keyPath: 'key' });
+            }
         };
     });
 }
@@ -4779,6 +4904,48 @@ async function loadLastPlayedLevel() {
     } catch (error) {
         console.error('Failed to load last played level:', error);
         return null;
+    }
+}
+
+// Save UI settings to IndexedDB
+async function saveSetting(key, value) {
+    if (!progressDB) return;
+    
+    try {
+        const transaction = progressDB.transaction(['settings'], 'readwrite');
+        const store = transaction.objectStore('settings');
+        await store.put({ key: key, value: value });
+    } catch (error) {
+        console.error('Failed to save setting:', error);
+    }
+}
+
+// Load UI setting from IndexedDB
+async function loadSetting(key, defaultValue = null) {
+    if (!progressDB) return defaultValue;
+    
+    try {
+        return new Promise((resolve, reject) => {
+            const transaction = progressDB.transaction(['settings'], 'readonly');
+            const store = transaction.objectStore('settings');
+            const request = store.get(key);
+            
+            request.onsuccess = () => {
+                if (request.result) {
+                    resolve(request.result.value);
+                } else {
+                    resolve(defaultValue);
+                }
+            };
+            
+            request.onerror = () => {
+                console.error('Failed to load setting:', request.error);
+                resolve(defaultValue);
+            };
+        });
+    } catch (error) {
+        console.error('Failed to load setting:', error);
+        return defaultValue;
     }
 }
 
