@@ -518,6 +518,11 @@ let currentGameState = GAME_STATES.TITLE;
 let isHamburgerMenuOpen = false;
 let hasAcknowledgedIOSInstall = true; // Start as true to prevent flash, will be updated from IndexedDB
 
+// F11 fullscreen hint variables (Windows only, session-based)
+let hasShownF11Hint = false; // Session flag - shows once per app session
+let f11HintStartTime = null; // When hint first appeared
+const F11_HINT_DURATION = 8000; // 8 seconds fade duration
+
 // iOS PWA detection and notification management
 function isIOSSafariNotInstalled() {
     // Check if it's iOS (including modern iPad detection)
@@ -531,6 +536,11 @@ function isIOSSafariNotInstalled() {
     const isNotInstalled = !window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches;
     
     return isIOS && isSafari && isNotInstalled;
+}
+
+// Windows platform detection for F11 fullscreen hint
+function isWindowsPlatform() {
+    return navigator.platform.includes('Win') || navigator.userAgent.includes('Windows');
 }
 
 // Check if iOS install notification should be shown (for badge count only)
@@ -2888,9 +2898,58 @@ function drawTitleScreen() {
     context.fillStyle = "#FFCC00"; // Yellow color
     context.fillText("Created by Neil Kendall 2025", canvas.width / 2, yPos);
     
+    // Draw F11 fullscreen hint for Windows (session-only, with fade)
+    drawF11FullscreenHint();
+    
     // Draw hamburger menu overlay (dims background) then menu on top
     drawHamburgerMenuOverlay();
     drawHamburgerMenu();
+    
+    context.restore();
+}
+
+function drawF11FullscreenHint() {
+    // Only show on Windows platforms and only once per session
+    if (!isWindowsPlatform() || hasShownF11Hint) {
+        return;
+    }
+    
+    // Initialize start time on first display
+    if (f11HintStartTime === null) {
+        f11HintStartTime = Date.now();
+    }
+    
+    // Calculate elapsed time and opacity (fade over 5 seconds)
+    const elapsed = Date.now() - f11HintStartTime;
+    
+    if (elapsed >= F11_HINT_DURATION) {
+        // Fade complete, mark as shown and don't display again this session
+        hasShownF11Hint = true;
+        return;
+    }
+    
+    // Calculate fade opacity (1.0 to 0.0 over 5 seconds)
+    const fadeProgress = elapsed / F11_HINT_DURATION;
+    const opacity = 1.0 - fadeProgress;
+    
+    // Position in top-right corner with responsive sizing
+    const margin = 15;
+    const fontSize = Math.min(canvas.width / 32, 16); // Slightly larger: 32 instead of 40, max 16 instead of 14
+    
+    context.save();
+    context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = `rgba(180, 180, 180, ${opacity})`; // Light gray with fade
+    context.textAlign = "right";
+    context.textBaseline = "top";
+    
+    // Add subtle shadow for better readability
+    context.shadowColor = `rgba(0, 0, 0, ${opacity * 0.8})`;
+    context.shadowBlur = 2;
+    context.shadowOffsetX = 1;
+    context.shadowOffsetY = 1;
+    
+    // Draw the hint text
+    context.fillText("Press F11 to toggle fullscreen mode", canvas.width - margin, margin);
     
     context.restore();
 }
