@@ -2744,30 +2744,59 @@ function drawTitleScreen() {
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
     yPos = drawWrappedText(context, "Complete your shift by pushing all the crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
 
-    // Demo level preview - positioned after main instruction with responsive spacing
-    const remainingHeight = canvas.height - yPos;
-    const demoSpacingRatio = Math.min(2, remainingHeight / (canvas.height * 2)); // Adaptive spacing
-    yPos += lineHeight * (isMobileLandscape ? Math.max(1.2, demoSpacingRatio * 0.8) : Math.max(1.5, demoSpacingRatio));
+    // MIDDLE CONTENT POSITIONING: Use available space between top content and bottom-anchored elements
     
-    // Calculate demo tile size with pixel-perfect scaling to avoid artifacts
+    // Calculate the available space for middle content
+    // Bottom boundary: where the start button begins (calculated ahead of time)
+    let tempButtonTextSize;
+    if (isMobilePortrait) {
+        tempButtonTextSize = textSize * 1.2;
+    } else if (isMobileLandscape) {
+        tempButtonTextSize = textSize * 1.1;
+    } else {
+        tempButtonTextSize = textSize * 1.1;
+    }
+    
+    let tempAuthorSize;
+    if (isMobilePortrait) {
+        tempAuthorSize = textSize * 1.2;
+    } else if (isMobileLandscape) {
+        tempAuthorSize = textSize * 0.95;
+    } else {
+        tempAuthorSize = textSize * 1.1;
+    }
+    
+    const bottomCreditsY = canvas.height * 0.95;
+    const tempButtonHeight = tempButtonTextSize * 1.8;
+    const tempButtonSpacing = isMobileLandscape ? tempButtonHeight * 0.8 : tempButtonHeight * 1.2;
+    const bottomBoundary = bottomCreditsY - tempAuthorSize - tempButtonSpacing - tempButtonHeight;
+    
+    // Calculate available space for demo level and determine optimal positioning
+    const availableMiddleSpace = bottomBoundary - yPos;
+    const demoHeight = 3; // tiles
+    
+    // Calculate demo tile size that fits well in available space
     let baseDemoTileSize;
     if (isMobilePortrait) {
-        baseDemoTileSize = Math.min(canvas.width / 15, 40);
+        baseDemoTileSize = Math.min(canvas.width / 15, availableMiddleSpace / 8, 40);
     } else if (isMobileLandscape) {
-        baseDemoTileSize = Math.min(canvas.width / 20, 28); // Moderate size for landscape
+        baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 6, 28);
     } else {
-        baseDemoTileSize = Math.min(canvas.width / 20, 32); // Original size for desktop
+        baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 8, 32);
     }
     
     // Ensure tile size is an integer for pixel-perfect rendering
     const demoTileSize = Math.floor(baseDemoTileSize);
     
     const demoWidth = 7; // 7 tiles wide
-    const demoHeight = 3; // 3 tiles high
+    const totalDemoHeight = demoHeight * demoTileSize;
+    
+    // Center the demo level in the available middle space
+    const middleSpaceCenter = yPos + (availableMiddleSpace / 2);
+    const demoStartY = Math.floor(middleSpaceCenter - (totalDemoHeight / 2));
     
     // Pixel-align the demo level position
     const demoStartX = Math.floor((canvas.width - (demoWidth * demoTileSize)) / 2);
-    const demoStartY = Math.floor(yPos);
     
     // Draw demo level tiles with pixel-perfect positioning
     for (let y = 0; y < demoHeight; y++) {
@@ -2886,27 +2915,24 @@ function drawTitleScreen() {
         }
     }
     
-    // Control instructions - larger and responsive with wrapping
-    yPos = demoStartY + (demoHeight * demoTileSize) + lineHeight * (isMobileLandscape ? 1.5 : 2); // Moderate spacing for landscape
-    let controlInstructionSize;
+    // BOTTOM-ANCHORED POSITIONING: Position credits and start button from bottom edge
+    
+    // Author credit - anchored to bottom at 5% from bottom edge
+    let authorSize;
     if (isMobilePortrait) {
-        controlInstructionSize = textSize * 1.2;
+        authorSize = textSize * 1.2;
     } else if (isMobileLandscape) {
-        controlInstructionSize = textSize * 1.1; // Moderate increase for landscape
+        authorSize = textSize * 0.95; // Slightly smaller for landscape to ensure it fits
     } else {
-        controlInstructionSize = textSize * 1.1; // Original size for desktop
+        authorSize = textSize * 1.1; // Original size for desktop
     }
-    context.font = `400 ${controlInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#CCCCCC";
-    const controlInstructionLineHeight = controlInstructionSize * 1.3;
     
-    // Start button - positioned after controls with pulsating effect like level complete
-    yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Moderate spacing for landscape
+    const creditsY = canvas.height * 0.95; // Always 5% from bottom
+    context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#FFCC00"; // Yellow color
+    context.fillText("Created by Neil Kendall 2025", canvas.width / 2, creditsY);
     
-    // Button styling with pulsing effect (same as level complete overlay)
-    const time = Date.now() / 1000;
-    const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
-    
+    // Start button - positioned above credits with fixed spacing
     let buttonTextSize;
     if (isMobilePortrait) {
         buttonTextSize = textSize * 1.2;
@@ -2916,6 +2942,10 @@ function drawTitleScreen() {
         buttonTextSize = textSize * 1.1; // Original size for desktop
     }
     
+    // Button styling with pulsing effect (same as level complete overlay)
+    const time = Date.now() / 1000;
+    const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
+    
     // Button dimensions
     const buttonText = "START GAME";
     context.font = `700 ${buttonTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
@@ -2924,7 +2954,10 @@ function drawTitleScreen() {
     const buttonWidth = textMetrics.width + buttonPadding * 2;
     const buttonHeight = buttonTextSize * 1.8;
     const buttonX = (canvas.width - buttonWidth) / 2;
-    const buttonY = yPos - buttonHeight / 2;
+    
+    // Position button above credits with responsive spacing
+    const buttonSpacing = isMobileLandscape ? buttonHeight * 0.8 : buttonHeight * 1.2;
+    const buttonY = creditsY - authorSize - buttonSpacing - buttonHeight / 2;
     
     // Store button bounds for click detection
     window.startButtonBounds = {
@@ -2957,16 +2990,6 @@ function drawTitleScreen() {
     context.fillText(buttonText, canvas.width / 2, textCenterY);
     context.textBaseline = "alphabetic"; // Reset to default
     context.restore();
-    
-    // Author credit - positioned after start button with moderate spacing
-    yPos += lineHeight * (isMobileLandscape ? 1.8 : 3); // Moderate spacing for landscape
-    let authorSize = buttonTextSize; // Same size as button text
-    if (isMobileLandscape) {
-        authorSize = buttonTextSize * 0.95; // Slightly smaller for landscape to ensure it fits
-    }
-    context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#FFCC00"; // Yellow color
-    context.fillText("Created by Neil Kendall 2025", canvas.width / 2, yPos);
     
     // Draw F11 fullscreen hint for Windows (session-only, with fade)
     drawF11FullscreenHint();
