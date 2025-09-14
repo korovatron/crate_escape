@@ -569,7 +569,7 @@ function acknowledgeIOSInstallNotification() {
 }
 
 // Cloud Sync authentication variables
-let cloudSyncState = 'not_authenticated'; // 'not_authenticated', 'signing_in', 'authenticated', 'error'
+let cloudSyncState = 'checking'; // 'checking', 'not_authenticated', 'signing_in', 'authenticated', 'error'
 
 // Expose cloudSyncState globally so Firebase config can update it
 window.cloudSyncState = cloudSyncState;
