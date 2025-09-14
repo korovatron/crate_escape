@@ -516,7 +516,6 @@ let currentGameState = GAME_STATES.TITLE;
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
-let hasAcknowledgedCloudSync = true; // Start as true to prevent flash, will be updated from IndexedDB
 let hasAcknowledgedIOSInstall = true; // Start as true to prevent flash, will be updated from IndexedDB
 
 // iOS PWA detection and notification management
@@ -546,7 +545,7 @@ function shouldShowIOSInstallMenuItem() {
 
 // Check if cloud sync notification should be shown
 function shouldShowCloudSyncNotification() {
-    return cloudSyncState === 'not_authenticated' && !hasAcknowledgedCloudSync;
+    return cloudSyncState === 'not_authenticated';
 }
 
 // Get total notification count for hamburger menu badge
@@ -557,16 +556,6 @@ function getNotificationCount() {
     if (shouldShowIOSInstallNotification()) count++;
     
     return count;
-}
-
-// Helper function to acknowledge cloud sync notification and persist it
-function acknowledgeCloudSyncNotification() {
-    hasAcknowledgedCloudSync = true; // Update UI state immediately
-    
-    // Save to IndexedDB in background (don't block UI)
-    saveSetting('hasAcknowledgedCloudSync', true).catch(error => {
-        console.error('Failed to save cloud sync notification state:', error);
-    });
 }
 
 // Helper function to acknowledge iOS install notification and persist it
@@ -946,17 +935,8 @@ function createCanvas() {
             await loadLevelProgress();
             console.log('Level progress loaded');
             
-            // Load cloud sync notification state
-            const savedNotificationState = await loadSetting('hasAcknowledgedCloudSync', null);
-            if (savedNotificationState !== null) {
-                // User has a saved preference
-                hasAcknowledgedCloudSync = savedNotificationState;
-            } else {
-                // New user - show notification if not signed in
-                const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
-                hasAcknowledgedCloudSync = isSignedIn; // If signed in, don't show notification
-            }
-            console.log('Cloud sync notification state loaded:', hasAcknowledgedCloudSync);
+            // Load cloud sync notification state - no longer needed as notification shows when not authenticated
+            // (Removed persistent dismissal to always show notification when cloud sync is off)
             
             // Load iOS install notification state
             const savedIOSInstallState = await loadSetting('hasAcknowledgedIOSInstall', false);
@@ -1859,9 +1839,8 @@ function handleMenuOptionClick(mouseX, mouseY) {
                 isHamburgerMenuOpen = false;
                 return true;
             } else if (targetState === GAME_STATES.CLOUD_SYNC) {
-                // Cloud Sync - dismiss notification when visiting
+                // Cloud Sync
                 currentGameState = GAME_STATES.CLOUD_SYNC;
-                acknowledgeCloudSyncNotification();
                 isHamburgerMenuOpen = false;
                 return true;
             } else if (targetState === GAME_STATES.IOS_INSTALL) {
@@ -1992,10 +1971,10 @@ async function startGoogleSignIn() {
         // Update global auth state
         window.firebaseAuth.isAuthenticated = true;
         window.firebaseAuth.currentUser = result.user;
-        acknowledgeCloudSyncNotification(); // Dismiss notification when user signs in
+        // No need to acknowledge notification - it will automatically disappear when authenticated
         
-        // First, try to download existing progress
-        const hasCloudData = await downloadGameProgress();
+        // First, try to download existing progress (stay on cloud sync page)
+        const hasCloudData = await downloadGameProgress(false, false);
         
         // If no cloud data was found or download was cancelled, upload current progress
         if (!hasCloudData) {
@@ -2154,7 +2133,7 @@ async function uploadGameProgress() {
     }
 }
 
-async function downloadGameProgress(silent = false) {
+async function downloadGameProgress(silent = false, redirectToLevelSelect = true) {
     try {
         // Check if user is authenticated
         if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
@@ -2390,10 +2369,12 @@ async function downloadGameProgress(silent = false) {
             }
         }
         
-        // Always go to level select after restoring progress
-        currentGameState = GAME_STATES.LEVEL_SELECT;
+        // Conditionally redirect to level select after restoring progress
+        if (redirectToLevelSelect) {
+            currentGameState = GAME_STATES.LEVEL_SELECT;
+            initializeLevelSelect();
+        }
         hasCloudSyncedThisSession = false; // Reset sync flag for new session
-        initializeLevelSelect();
         
         console.log('Game progress restored successfully');
         
