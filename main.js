@@ -3043,31 +3043,49 @@ function drawInstructionsScreen() {
     context.fillText("INSTRUCTIONS", canvas.width / 2, 80);
     
     // Instructions content
-    const textSize = isMobile ? 22 : 24; // Increased from 18/20 to 22/24
-    const lineHeight = textSize * 1.8; // Increased from 1.5 to 1.8 for better spacing
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#CCCCCC";
-    
-    let yPos = 150; // Slightly increased starting position to accommodate larger text
     const instructions = [
         "• Push all crates onto their goal positions",
         "• Use arrow keys or swipe to move",
         "• You can only push crates, not pull them",
         "• Use the undo button to reverse moves (maximum three times per level attempt)",
-     ];
+    ];
     
-    // Calculate maximum text width with responsive constraints
+    // Calculate available space and adjust text size to fit
+    const startY = 150;
+    const endY = canvas.height - 100; // Leave space at bottom
+    const availableHeight = endY - startY;
+    
+    // Calculate text sizing that fits within available height
+    let textSize = isMobile ? 22 : 24;
+    let lineHeight = textSize * 1.8;
+    
+    // Estimate total content height
     const textMargin = isMobile ? 40 : 80;
     const baseMaxWidth = canvas.width - (textMargin * 2);
-    
-    // Set a maximum width before text wrapping occurs (similar to title screen approach)
     const maxContentWidth = isMobile ? 
-        Math.min(baseMaxWidth, canvas.width * 0.85) :  // Mobile: 85% of screen width or margin-constrained
-        Math.min(baseMaxWidth, 600); // Desktop: 600px max width or margin-constrained
+        Math.min(baseMaxWidth, canvas.width * 0.85) : 
+        Math.min(baseMaxWidth, 600);
     
+    // Calculate approximate total height needed
+    const estimatedLinesPerInstruction = 1.5; // Average lines per instruction
+    const totalInstructions = instructions.length;
+    const estimatedTotalHeight = (totalInstructions * estimatedLinesPerInstruction * lineHeight) + 
+                                (totalInstructions * lineHeight * 0.8); // gaps between instructions
+    
+    // Scale down if content doesn't fit
+    if (estimatedTotalHeight > availableHeight) {
+        const scaleFactor = availableHeight / estimatedTotalHeight;
+        textSize = Math.max(textSize * scaleFactor, isMobile ? 16 : 18); // Minimum readable size
+        lineHeight = textSize * 1.6; // Slightly tighter spacing when scaled
+    }
+    
+    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#CCCCCC";
+    
+    let yPos = startY;
     for (const instruction of instructions) {
         yPos = drawWrappedText(context, instruction, canvas.width / 2, yPos, maxContentWidth, lineHeight);
-        yPos += lineHeight * 0.8; // Larger gap between different bullet points
+        yPos += lineHeight * 0.8; // Gap between different bullet points
     }
     
     // Draw hamburger menu overlay (dims background) then menu on top
@@ -3092,12 +3110,6 @@ function drawCreditsScreen() {
     context.fillText("CREDITS", canvas.width / 2, 80);
     
     // Credits content
-    const textSize = isMobile ? 22 : 24; // Increased from 18/20 to 22/24 (same as instructions)
-    const largeTextSize = isMobile ? 26 : 28; // Increased from 22/24 to 26/28 for first line
-    const lineHeight = textSize * 1.8; // Increased from 1.5 to 1.8 for better spacing (same as instructions)
-    const largeLineHeight = largeTextSize * 1.8;
-    
-    let yPos = 150; // Slightly increased starting position to accommodate larger text
     const credits = [
         "Game Design & Programming: Neil Kendall",
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
@@ -3107,26 +3119,54 @@ function drawCreditsScreen() {
         "Created in 2025"
     ];
     
-    // Calculate maximum text width with responsive constraints (same as instructions)
+    // Calculate available space and adjust text size to fit
+    const startY = 150;
+    const endY = canvas.height - 100; // Leave space at bottom
+    const availableHeight = endY - startY;
+    
+    // Calculate text sizing that fits within available height
+    let textSize = isMobile ? 22 : 24;
+    let largeTextSize = isMobile ? 26 : 28;
+    let lineHeight = textSize * 1.8;
+    let largeLineHeight = largeTextSize * 1.8;
+    
+    // Calculate text width constraints
     const textMargin = isMobile ? 40 : 80;
     const baseMaxWidth = canvas.width - (textMargin * 2);
     const maxContentWidth = isMobile ? 
-        Math.min(baseMaxWidth, canvas.width * 0.85) :  // Mobile: 85% of screen width or margin-constrained
-        Math.min(baseMaxWidth, 600); // Desktop: 600px max width or margin-constrained
+        Math.min(baseMaxWidth, canvas.width * 0.85) : 
+        Math.min(baseMaxWidth, 600);
     
+    // Estimate total content height (first line larger, rest normal)
+    const estimatedLinesPerCredit = 1.3; // Average lines per credit
+    const totalCredits = credits.length;
+    const estimatedTotalHeight = largeLineHeight + (largeLineHeight * 0.8) + // First line + gap
+                                ((totalCredits - 1) * estimatedLinesPerCredit * lineHeight) + 
+                                ((totalCredits - 1) * lineHeight * 0.6); // gaps between credits
+    
+    // Scale down if content doesn't fit
+    if (estimatedTotalHeight > availableHeight) {
+        const scaleFactor = availableHeight / estimatedTotalHeight;
+        textSize = Math.max(textSize * scaleFactor, isMobile ? 16 : 18); // Minimum readable size
+        largeTextSize = Math.max(largeTextSize * scaleFactor, isMobile ? 18 : 20);
+        lineHeight = textSize * 1.6; // Slightly tighter spacing when scaled
+        largeLineHeight = largeTextSize * 1.6;
+    }
+    
+    let yPos = startY;
     for (let i = 0; i < credits.length; i++) {
         if (i === 0) {
             // First line - larger and bolder
             context.font = `600 ${largeTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
             context.fillStyle = "#FFFFFF"; // Brighter white for emphasis
             yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, largeLineHeight);
-            yPos += largeLineHeight * 0.8; // Larger gap after first line
+            yPos += largeLineHeight * 0.8; // Gap after first line
         } else {
             // Rest of the credits - normal size
             context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
             context.fillStyle = "#CCCCCC";
             yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, lineHeight);
-            yPos += lineHeight * 0.8; // Consistent gap between credits items (same as instructions)
+            yPos += lineHeight * 0.6; // Smaller gap between regular credits
         }
     }
     
