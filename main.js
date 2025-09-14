@@ -523,6 +523,14 @@ let hasShownF11Hint = false; // Session flag - shows once per app session
 let f11HintStartTime = null; // When hint first appeared
 const F11_HINT_DURATION = 8000; // 8 seconds fade duration
 
+// Font loading overlay variables
+let showFontLoadingOverlay = true; // Start with overlay visible
+let fontLoadingOverlayOpacity = 1.0; // Full opacity initially
+let fontLoadingStartTime = Date.now(); // Track when loading started
+const FONT_LOADING_MIN_DURATION = 200; // Minimum 200ms to feel intentional
+const FONT_LOADING_MAX_DURATION = 3000; // Maximum 3 seconds timeout
+const FONT_LOADING_FADE_DURATION = 300; // 300ms fade out
+
 // iOS PWA detection and notification management
 function isIOSSafariNotInstalled() {
     // Check if it's iOS (including modern iPad detection)
@@ -541,6 +549,52 @@ function isIOSSafariNotInstalled() {
 // Windows platform detection for F11 fullscreen hint
 function isWindowsPlatform() {
     return navigator.platform.includes('Win') || navigator.userAgent.includes('Windows');
+}
+
+// Font loading management
+function initializeFontLoadingOverlay() {
+    // Wait for fonts to be ready with timeout and minimum duration
+    const fontReadyPromise = document.fonts.ready.catch(() => {
+        console.log('Font loading failed, continuing anyway');
+        return Promise.resolve();
+    });
+    
+    const minDurationPromise = new Promise(resolve => {
+        setTimeout(resolve, FONT_LOADING_MIN_DURATION);
+    });
+    
+    const maxTimeoutPromise = new Promise(resolve => {
+        setTimeout(resolve, FONT_LOADING_MAX_DURATION);
+    });
+    
+    // Wait for fonts AND minimum duration, but respect maximum timeout
+    Promise.race([
+        Promise.all([fontReadyPromise, minDurationPromise]),
+        maxTimeoutPromise
+    ]).then(() => {
+        // Start fade out
+        fadeOutFontLoadingOverlay();
+    });
+}
+
+function fadeOutFontLoadingOverlay() {
+    const fadeStartTime = Date.now();
+    
+    function updateFade() {
+        const elapsed = Date.now() - fadeStartTime;
+        const fadeProgress = Math.min(elapsed / FONT_LOADING_FADE_DURATION, 1);
+        
+        fontLoadingOverlayOpacity = 1.0 - fadeProgress;
+        
+        if (fadeProgress < 1) {
+            requestAnimationFrame(updateFade);
+        } else {
+            // Fade complete
+            showFontLoadingOverlay = false;
+        }
+    }
+    
+    requestAnimationFrame(updateFade);
 }
 
 // Check if iOS install notification should be shown (for badge count only)
@@ -936,6 +990,9 @@ function createCanvas() {
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
+    
+    // Initialize font loading overlay to prevent font flicker
+    initializeFontLoadingOverlay();
     
     // Initialize progress tracking database
     initProgressDatabase().then(async () => {
@@ -2565,6 +2622,19 @@ function draw() {
     } else if (currentGameState === GAME_STATES.IOS_INSTALL) {
         drawIOSInstallScreen();
     }
+    
+    // Draw font loading overlay on top of everything if needed
+    if (showFontLoadingOverlay) {
+        drawFontLoadingOverlay();
+    }
+}
+
+function drawFontLoadingOverlay() {
+    // Draw black overlay covering entire canvas
+    context.save();
+    context.fillStyle = `rgba(0, 0, 0, ${fontLoadingOverlayOpacity})`;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.restore();
 }
 
 function drawTitleScreen() {
