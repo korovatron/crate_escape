@@ -244,6 +244,12 @@ function setupCanvasEventListeners() {
                     window.open('https://www.warpfactor.co.uk/crateescapeprivacypolicy/', '_blank');
                     return;
                 }
+                
+                // Terms of service link
+                if (isClickOnTermsOfServiceLink(mouseX, mouseY)) {
+                    window.open('https://www.warpfactor.co.uk/crate-escape-terms-of-service/', '_blank');
+                    return;
+                }
             }
             
             // Check for back button click
@@ -480,6 +486,12 @@ function setupCanvasEventListeners() {
                         // Privacy policy link
                         if (isClickOnPrivacyPolicyLink(canvasPos.x, canvasPos.y)) {
                             window.open('https://www.warpfactor.co.uk/crateescapeprivacypolicy/', '_blank');
+                            return;
+                        }
+                        
+                        // Terms of service link
+                        if (isClickOnTermsOfServiceLink(canvasPos.x, canvasPos.y)) {
+                            window.open('https://www.warpfactor.co.uk/crate-escape-terms-of-service/', '_blank');
                             return;
                         }
                     }
@@ -2002,6 +2014,16 @@ function isClickOnPrivacyPolicyLink(x, y) {
            y >= bounds.y && y <= bounds.y + bounds.height;
 }
 
+function isClickOnTermsOfServiceLink(x, y) {
+    // Check if we're on cloud sync screen
+    if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
+    if (!window.termsOfServiceBounds) return false;
+    
+    const bounds = window.termsOfServiceBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
 function isClickOnSignOutButton(x, y) {
     // Check if we're on cloud sync screen and authenticated
     if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
@@ -3505,20 +3527,40 @@ function drawCloudSyncScreen() {
         }
     }
     
-    // Privacy Policy link at bottom of screen
-    const privacyLinkSize = isMobile ? 14 : 16;
-    context.font = `400 ${privacyLinkSize}px 'Roboto Condensed', 'Arial', sans-serif`;
-    context.fillStyle = "#4285F4"; // Google Blue to indicate it's a link
-    const privacyY = canvas.height - (isMobile ? 100 : 80); // Position above bottom margin
-    context.fillText("Privacy Policy", canvas.width / 2, privacyY);
+    // Privacy Policy and Terms of Service links at bottom of screen
+    const linkSize = isMobile ? 14 : 16;
+    context.font = `400 ${linkSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#4285F4"; // Google Blue to indicate they're links
+    const linksY = canvas.height - (isMobile ? 100 : 80); // Position above bottom margin
     
-    // Store privacy policy link bounds for click detection
-    const privacyTextWidth = context.measureText("Privacy Policy").width;
+    // Display both links with separator
+    const linkText = "Terms of Service | Privacy Policy";
+    context.fillText(linkText, canvas.width / 2, linksY);
+    
+    // Store link bounds for click detection
+    const linkTextWidth = context.measureText(linkText).width;
+    const linkStartX = (canvas.width - linkTextWidth) / 2;
+    
+    // Terms of Service bounds (left part)
+    const tosText = "Terms of Service";
+    const tosWidth = context.measureText(tosText).width;
+    window.termsOfServiceBounds = {
+        x: linkStartX,
+        y: linksY - linkSize,
+        width: tosWidth,
+        height: linkSize * 1.2
+    };
+    
+    // Privacy Policy bounds (right part, after " | ")
+    const separatorText = "Terms of Service | ";
+    const separatorWidth = context.measureText(separatorText).width;
+    const privacyText = "Privacy Policy";
+    const privacyWidth = context.measureText(privacyText).width;
     window.privacyPolicyBounds = {
-        x: (canvas.width - privacyTextWidth) / 2,
-        y: privacyY - privacyLinkSize,
-        width: privacyTextWidth,
-        height: privacyLinkSize * 1.2
+        x: linkStartX + separatorWidth,
+        y: linksY - linkSize,
+        width: privacyWidth,
+        height: linkSize * 1.2
     };
     
     // Draw hamburger menu overlay (dims background) then menu on top
