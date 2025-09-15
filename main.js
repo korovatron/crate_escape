@@ -238,6 +238,12 @@ function setupCanvasEventListeners() {
                     signOutFromCloud();
                     return;
                 }
+                
+                // Privacy policy link
+                if (isClickOnPrivacyPolicyLink(mouseX, mouseY)) {
+                    window.open('https://www.warpfactor.co.uk/crateescapeprivacypolicy/', '_blank');
+                    return;
+                }
             }
             
             // Check for back button click
@@ -468,6 +474,12 @@ function setupCanvasEventListeners() {
                         // Sign-out button (when authenticated)
                         if (isClickOnSignOutButton(canvasPos.x, canvasPos.y)) {
                             signOutFromCloud();
+                            return;
+                        }
+                        
+                        // Privacy policy link
+                        if (isClickOnPrivacyPolicyLink(canvasPos.x, canvasPos.y)) {
+                            window.open('https://www.warpfactor.co.uk/crateescapeprivacypolicy/', '_blank');
                             return;
                         }
                     }
@@ -1980,6 +1992,16 @@ function isClickOnSignInButton(x, y) {
            y >= buttonY && y <= buttonY + buttonHeight;
 }
 
+function isClickOnPrivacyPolicyLink(x, y) {
+    // Check if we're on cloud sync screen
+    if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
+    if (!window.privacyPolicyBounds) return false;
+    
+    const bounds = window.privacyPolicyBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
 function isClickOnSignOutButton(x, y) {
     // Check if we're on cloud sync screen and authenticated
     if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
@@ -3481,7 +3503,25 @@ function drawCloudSyncScreen() {
                 context.fillText("TRY AGAIN", canvas.width / 2, retryButtonY + retryButtonHeight/2 + 6);
                 break;
         }
-    }    // Draw hamburger menu overlay (dims background) then menu on top
+    }
+    
+    // Privacy Policy link at bottom of screen
+    const privacyLinkSize = isMobile ? 14 : 16;
+    context.font = `400 ${privacyLinkSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#4285F4"; // Google Blue to indicate it's a link
+    const privacyY = canvas.height - (isMobile ? 100 : 80); // Position above bottom margin
+    context.fillText("Privacy Policy", canvas.width / 2, privacyY);
+    
+    // Store privacy policy link bounds for click detection
+    const privacyTextWidth = context.measureText("Privacy Policy").width;
+    window.privacyPolicyBounds = {
+        x: (canvas.width - privacyTextWidth) / 2,
+        y: privacyY - privacyLinkSize,
+        width: privacyTextWidth,
+        height: privacyLinkSize * 1.2
+    };
+    
+    // Draw hamburger menu overlay (dims background) then menu on top
     drawHamburgerMenuOverlay();
     drawHamburgerMenu();
 }
