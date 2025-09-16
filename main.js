@@ -241,13 +241,13 @@ function setupCanvasEventListeners() {
                 
                 // Privacy policy link
                 if (isClickOnPrivacyPolicyLink(mouseX, mouseY)) {
-                    window.open('https://warpfactor.co.uk/crate_escape_policies/privacy_policy.html', '_blank');
+                    window.open('./policies/privacy_policy.html', '_blank');
                     return;
                 }
                 
                 // Terms of service link
                 if (isClickOnTermsOfServiceLink(mouseX, mouseY)) {
-                    window.open('https://warpfactor.co.uk/crate_escape_policies/terms_of_service.html', '_blank');
+                    window.open('./policies/terms_of_service.html', '_blank');
                     return;
                 }
             }
@@ -485,13 +485,13 @@ function setupCanvasEventListeners() {
                         
                         // Privacy policy link
                         if (isClickOnPrivacyPolicyLink(canvasPos.x, canvasPos.y)) {
-                            window.open('https://warpfactor.co.uk/crate_escape_policies/privacy_policy.html', '_blank');
+                            window.open('./policies/privacy_policy.html', '_blank');
                             return;
                         }
                         
                         // Terms of service link
                         if (isClickOnTermsOfServiceLink(canvasPos.x, canvasPos.y)) {
-                            window.open('https://warpfactor.co.uk/crate_escape_policies/terms_of_service.html', '_blank');
+                            window.open('./policies/terms_of_service.html', '_blank');
                             return;
                         }
                     }
