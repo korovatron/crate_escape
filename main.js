@@ -241,13 +241,13 @@ function setupCanvasEventListeners() {
                 
                 // Privacy policy link
                 if (isClickOnPrivacyPolicyLink(mouseX, mouseY)) {
-                    window.open('./policies/privacy_policy.html', '_blank');
+                    openPolicyLink('./policies/privacy_policy.html');
                     return;
                 }
                 
                 // Terms of service link
                 if (isClickOnTermsOfServiceLink(mouseX, mouseY)) {
-                    window.open('./policies/terms_of_service.html', '_blank');
+                    openPolicyLink('./policies/terms_of_service.html');
                     return;
                 }
             }
@@ -485,13 +485,13 @@ function setupCanvasEventListeners() {
                         
                         // Privacy policy link
                         if (isClickOnPrivacyPolicyLink(canvasPos.x, canvasPos.y)) {
-                            window.open('./policies/privacy_policy.html', '_blank');
+                            openPolicyLink('./policies/privacy_policy.html');
                             return;
                         }
                         
                         // Terms of service link
                         if (isClickOnTermsOfServiceLink(canvasPos.x, canvasPos.y)) {
-                            window.open('./policies/terms_of_service.html', '_blank');
+                            openPolicyLink('./policies/terms_of_service.html');
                             return;
                         }
                     }
@@ -2002,6 +2002,21 @@ function isClickOnSignInButton(x, y) {
     
     return x >= buttonX && x <= buttonX + buttonWidth &&
            y >= buttonY && y <= buttonY + buttonHeight;
+}
+
+// Helper function to open links appropriately based on PWA status
+function openPolicyLink(url) {
+    // Use absolute URLs to force external browser opening even from PWA
+    // Convert relative URLs to absolute URLs
+    let absoluteUrl = url;
+    if (url.startsWith('./')) {
+        // Convert relative path to absolute URL
+        const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+        absoluteUrl = baseUrl + url.substring(2); // Remove './' and append to base
+    }
+    
+    // Always use window.open with _blank for absolute URLs - this should work from PWA
+    window.open(absoluteUrl, '_blank');
 }
 
 function isClickOnPrivacyPolicyLink(x, y) {
