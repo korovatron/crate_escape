@@ -238,6 +238,18 @@ function setupCanvasEventListeners() {
                     signOutFromCloud();
                     return;
                 }
+                
+                // Privacy policy link
+                if (isClickOnPrivacyPolicyLink(mouseX, mouseY)) {
+                    openPolicyLink('./policies/privacy_policy.html');
+                    return;
+                }
+                
+                // Terms of service link
+                if (isClickOnTermsOfServiceLink(mouseX, mouseY)) {
+                    openPolicyLink('./policies/terms_of_service.html');
+                    return;
+                }
             }
             
             // Check for back button click
@@ -468,6 +480,18 @@ function setupCanvasEventListeners() {
                         // Sign-out button (when authenticated)
                         if (isClickOnSignOutButton(canvasPos.x, canvasPos.y)) {
                             signOutFromCloud();
+                            return;
+                        }
+                        
+                        // Privacy policy link
+                        if (isClickOnPrivacyPolicyLink(canvasPos.x, canvasPos.y)) {
+                            openPolicyLink('./policies/privacy_policy.html');
+                            return;
+                        }
+                        
+                        // Terms of service link
+                        if (isClickOnTermsOfServiceLink(canvasPos.x, canvasPos.y)) {
+                            openPolicyLink('./policies/terms_of_service.html');
                             return;
                         }
                     }
@@ -1980,6 +2004,41 @@ function isClickOnSignInButton(x, y) {
            y >= buttonY && y <= buttonY + buttonHeight;
 }
 
+// Helper function to open links appropriately based on PWA status
+function openPolicyLink(url) {
+    // Use absolute URLs to force external browser opening even from PWA
+    // Convert relative URLs to absolute URLs
+    let absoluteUrl = url;
+    if (url.startsWith('./')) {
+        // Convert relative path to absolute URL
+        const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+        absoluteUrl = baseUrl + url.substring(2); // Remove './' and append to base
+    }
+    
+    // Always use window.open with _blank for absolute URLs - this should work from PWA
+    window.open(absoluteUrl, '_blank');
+}
+
+function isClickOnPrivacyPolicyLink(x, y) {
+    // Check if we're on cloud sync screen
+    if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
+    if (!window.privacyPolicyBounds) return false;
+    
+    const bounds = window.privacyPolicyBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
+function isClickOnTermsOfServiceLink(x, y) {
+    // Check if we're on cloud sync screen
+    if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
+    if (!window.termsOfServiceBounds) return false;
+    
+    const bounds = window.termsOfServiceBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
 function isClickOnSignOutButton(x, y) {
     // Check if we're on cloud sync screen and authenticated
     if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
@@ -3481,7 +3540,45 @@ function drawCloudSyncScreen() {
                 context.fillText("TRY AGAIN", canvas.width / 2, retryButtonY + retryButtonHeight/2 + 6);
                 break;
         }
-    }    // Draw hamburger menu overlay (dims background) then menu on top
+    }
+    
+    // Privacy Policy and Terms of Service links at bottom of screen
+    const linkSize = isMobile ? 14 : 16;
+    context.font = `400 ${linkSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.fillStyle = "#4285F4"; // Google Blue to indicate they're links
+    const linksY = canvas.height - (isMobile ? 100 : 80); // Position above bottom margin
+    
+    // Display both links with separator
+    const linkText = "Terms of Service | Privacy Policy";
+    context.fillText(linkText, canvas.width / 2, linksY);
+    
+    // Store link bounds for click detection
+    const linkTextWidth = context.measureText(linkText).width;
+    const linkStartX = (canvas.width - linkTextWidth) / 2;
+    
+    // Terms of Service bounds (left part)
+    const tosText = "Terms of Service";
+    const tosWidth = context.measureText(tosText).width;
+    window.termsOfServiceBounds = {
+        x: linkStartX,
+        y: linksY - linkSize,
+        width: tosWidth,
+        height: linkSize * 1.2
+    };
+    
+    // Privacy Policy bounds (right part, after " | ")
+    const separatorText = "Terms of Service | ";
+    const separatorWidth = context.measureText(separatorText).width;
+    const privacyText = "Privacy Policy";
+    const privacyWidth = context.measureText(privacyText).width;
+    window.privacyPolicyBounds = {
+        x: linkStartX + separatorWidth,
+        y: linksY - linkSize,
+        width: privacyWidth,
+        height: linkSize * 1.2
+    };
+    
+    // Draw hamburger menu overlay (dims background) then menu on top
     drawHamburgerMenuOverlay();
     drawHamburgerMenu();
 }
