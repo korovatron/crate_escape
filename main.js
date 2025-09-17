@@ -3267,7 +3267,7 @@ function drawCreditsScreen() {
         "Game Design & Programming: Neil Kendall",
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
         "Spritesheet: Kenney",
-        "Level Designs: David W Skinner",
+        "Level Designs: David W Skinner & Ward De Langhe",
         "Built with HTML5 Canvas & JavaScript",
         "Created in 2025"
     ];
