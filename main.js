@@ -1217,11 +1217,8 @@ function saveGameState() {
         pushCount: pushCount
     };
     
-    // Add to history and limit to reasonable size
+    // Add to history (unlimited undo)
     moveHistory.push(gameState);
-    if (moveHistory.length > 10) {
-        moveHistory.shift(); // Remove oldest state
-    }
 }
 
 function undoLastMove() {
