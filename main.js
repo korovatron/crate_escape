@@ -263,6 +263,34 @@ function setupCanvasEventListeners() {
                 }
             }
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
+            // Check if click is on the copy solution button
+            if (window.copySolutionButtonBounds && 
+                mouseX >= window.copySolutionButtonBounds.x && 
+                mouseX <= window.copySolutionButtonBounds.x + window.copySolutionButtonBounds.width &&
+                mouseY >= window.copySolutionButtonBounds.y && 
+                mouseY <= window.copySolutionButtonBounds.y + window.copySolutionButtonBounds.height) {
+                
+                // Copy solution to clipboard
+                copySolutionToClipboard().then(success => {
+                    if (success) {
+                        // Set copy state and show success feedback
+                        solutionCopied = true;
+                        lastInputType = "Solution Copied!";
+                        clickCoordinates = "";
+                        lastInputTime = Date.now();
+                        inputFadeTimer = 3000;
+                    } else {
+                        // Show error feedback
+                        lastInputType = "Copy Failed";
+                        clickCoordinates = "";
+                        lastInputTime = Date.now();
+                        inputFadeTimer = 3000;
+                    }
+                });
+                return; // Only return after copy, don't advance level
+            }
+            
+            // Otherwise advance to next level
             advanceToNextLevel();
             return;
         }
@@ -479,6 +507,34 @@ function setupCanvasEventListeners() {
                         }
                     }
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
+                    // Check if tap is on the copy solution button
+                    if (window.copySolutionButtonBounds && 
+                        canvasPos.x >= window.copySolutionButtonBounds.x && 
+                        canvasPos.x <= window.copySolutionButtonBounds.x + window.copySolutionButtonBounds.width &&
+                        canvasPos.y >= window.copySolutionButtonBounds.y && 
+                        canvasPos.y <= window.copySolutionButtonBounds.y + window.copySolutionButtonBounds.height) {
+                        
+                        // Copy solution to clipboard
+                        copySolutionToClipboard().then(success => {
+                            if (success) {
+                                // Set copy state and show success feedback
+                                solutionCopied = true;
+                                lastInputType = "Solution Copied!";
+                                clickCoordinates = "";
+                                lastInputTime = Date.now();
+                                inputFadeTimer = 3000;
+                            } else {
+                                // Show error feedback
+                                lastInputType = "Copy Failed";
+                                clickCoordinates = "";
+                                lastInputTime = Date.now();
+                                inputFadeTimer = 3000;
+                            }
+                        });
+                        return; // Only return after copy, don't advance level
+                    }
+                    
+                    // Otherwise advance to next level
                     advanceToNextLevel();
                 }
                 
@@ -675,6 +731,7 @@ let levelProgress = new Map(); // Cache for level progress: key = "setName_level
 let currentSetName = Object.keys(SOKOBAN_LEVELS)[0];
 let isGameComplete = false;
 let levelCompletionStartTime = 0;
+let solutionCopied = false; // Track if solution has been copied for current level
 
 // Level progression order: automatically generated from levels.js order
 // Level counts are automatically calculated from SOKOBAN_LEVELS
@@ -1308,6 +1365,77 @@ function undoLastMove() {
     inputFadeTimer = 2000;
 }
 
+// Solution generation function
+function generateSolutionString() {
+    if (moveHistory.length === 0) return "";
+    
+    // Create current game state to complete the move sequence
+    const currentState = {
+        playerPos: { x: playerPos.x, y: playerPos.y },
+        boxes: currentLevel.boxes.map(box => ({ x: box.x, y: box.y })),
+        moveCount: moveCount,
+        pushCount: pushCount
+    };
+    
+    // Create the full move sequence by adding current state to history
+    const fullHistory = [...moveHistory, currentState];
+    let solutionMoves = "";
+    
+    for (let i = 1; i < fullHistory.length; i++) {
+        const prevPos = fullHistory[i-1].playerPos;
+        const currPos = fullHistory[i].playerPos;
+        const dx = currPos.x - prevPos.x;
+        const dy = currPos.y - prevPos.y;
+        
+        if (dx === -1) solutionMoves += 'l';
+        else if (dx === 1) solutionMoves += 'r';
+        else if (dy === -1) solutionMoves += 'u';
+        else if (dy === 1) solutionMoves += 'd';
+    }
+    
+    return solutionMoves;
+}
+
+// Clipboard copy function for solutions
+async function copySolutionToClipboard() {
+    try {
+        const solutionMoves = generateSolutionString();
+        if (!solutionMoves) {
+            console.warn("No solution moves to copy");
+            return false;
+        }
+        
+        // Format the solution output
+        const solutionText = `Crate Escape Solution
+Set: ${currentSet}
+Level: ${currentLevelNumber}
+Moves: ${moveCount} | Pushes: ${pushCount}
+Solution: ${solutionMoves}`;
+        
+        // Copy to clipboard using modern API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(solutionText);
+            return true;
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = solutionText;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const result = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return result;
+        }
+    } catch (error) {
+        console.error("Failed to copy solution to clipboard:", error);
+        return false;
+    }
+}
+
 // Player movement functions
 function attemptPlayerMove(direction) {
     // Block player movement when in overview mode
@@ -1682,6 +1810,7 @@ function checkLevelCompletion() {
     if (currentGameState === GAME_STATES.PLAYING && isLevelComplete()) {
         currentGameState = GAME_STATES.LEVEL_COMPLETE;
         levelCompletionStartTime = Date.now();
+        solutionCopied = false; // Reset copy state for new completion
         
         // Mark level as completed for progress tracking
         markLevelCompleted(currentSet, currentLevelNumber);
@@ -4240,7 +4369,7 @@ function drawLevelCompleteOverlay() {
     
     // Calculate overlay height based on content
     const lineHeight = 60; // Space between text lines
-    const overlayHeight = 200; // Fixed height for 4 lines of text + padding
+    const overlayHeight = 260; // Increased height for copy button + 5 lines of text + padding
     const overlayY = centerY - overlayHeight / 2;
     
     // Draw semi-transparent overlay with dark gradient (more transparent)
@@ -4295,7 +4424,7 @@ function drawLevelCompleteOverlay() {
     
     // Main completion message with green neon glow
     context.textAlign = "center";
-    drawResponsiveText("LEVEL COMPLETE!", centerX, centerY - 40, "#00ff00", 48);
+    drawResponsiveText("LEVEL COMPLETE!", centerX, centerY - 60, "#00ff00", 48);
     
     // Get next level info for subtitle
     const nextLevel = getNextLevel();
@@ -4315,13 +4444,68 @@ function drawLevelCompleteOverlay() {
         subtitleColor = "#00ffff"; // Cyan for next level
     }
     
-    drawResponsiveText(subtitle, centerX, centerY + 10, subtitleColor, 24);
+    drawResponsiveText(subtitle, centerX, centerY - 20, subtitleColor, 24);
     
     // Show completion stats with gold neon
     const statsText = `COMPLETED IN ${moveCount} MOVES, ${pushCount} PUSHES (ATTEMPT ${attemptCount})`;
-    drawResponsiveText(statsText, centerX, centerY + 40, "#ffdd00", 20);
+    drawResponsiveText(statsText, centerX, centerY + 20, "#ffdd00", 20);
     
-    // Instructions with pulsing effect
+    // Copy Solution button or confirmation message
+    if (!solutionCopied) {
+        // Show copy button
+        const buttonWidth = isMobile ? 140 : 160;
+        const buttonHeight = isMobile ? 30 : 35;
+        const buttonX = centerX - buttonWidth / 2;
+        const buttonY = centerY + 45;
+        
+        // Store button bounds for click detection (global variables)
+        window.copySolutionButtonBounds = {
+            x: buttonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        // Save canvas context state before modifying it
+        context.save();
+        
+        // Draw button background with glow
+        context.shadowColor = "#00ff88";
+        context.shadowBlur = 15;
+        context.fillStyle = "rgba(0, 255, 136, 0.2)";
+        context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        // Draw button border
+        context.strokeStyle = "#00ff88";
+        context.lineWidth = 2;
+        context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        context.shadowBlur = 0;
+        
+        // Draw button text
+        const buttonFontSize = isMobile ? 12 : 14;
+        context.font = `bold ${buttonFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#00ff88";
+        context.textAlign = "center";
+        context.fillText("COPY SOLUTION", centerX, buttonY + buttonHeight / 2 + 5);
+        
+        // Restore canvas context state
+        context.restore();
+    } else {
+        // Show confirmation message
+        context.save();
+        const confirmFontSize = isMobile ? 14 : 16;
+        context.font = `bold ${confirmFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#00ff88";
+        context.textAlign = "center";
+        context.fillText("SOLUTION COPIED TO CLIPBOARD", centerX, centerY + 65);
+        context.restore();
+        
+        // Clear button bounds since there's no button to click
+        window.copySolutionButtonBounds = null;
+    }
+    
+    // Instructions with pulsing effect (save context again for this section)
+    context.save();
     const time = Date.now() / 1000;
     const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
     const instructColor = `rgba(255, 255, 255, ${pulse})`;
@@ -4340,8 +4524,10 @@ function drawLevelCompleteOverlay() {
         instructText = "TAP TO CONTINUE";
     }
     
-    context.fillText(instructText, centerX, centerY + 70);
-    context.shadowBlur = 0;
+    context.fillText(instructText, centerX, centerY + 105);
+    
+    // Restore context state after instructions
+    context.restore();
     
     // Reset text alignment
     context.textAlign = "left";
