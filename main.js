@@ -44,6 +44,12 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
+    // Handle undo with U key
+    if ((e.key === 'u' || e.key === 'U') && currentGameState === GAME_STATES.PLAYING) {
+        undoLastMove();
+        return;
+    }
+    
     // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
         // Check for cloud sync updates when navigating back to level select
@@ -88,11 +94,12 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R'].includes(e.key)) {
+    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R', 'u', 'U'].includes(e.key)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
         if (e.key === 'Escape') keyName = 'Escape (Exit)';
         if (e.key === 'r' || e.key === 'R') keyName = 'R (Try Again)';
+        if (e.key === 'u' || e.key === 'U') keyName = 'U (Undo)';
         
         lastInputType = `Keyboard: ${keyName}`;
         lastInputTime = Date.now();
@@ -711,7 +718,6 @@ let pushCount = 0; // Track successful box pushes
 let attemptCount = 1; // Start at 1 since first play is attempt 1
 
 // Undo system variables
-let undoCount = 3; // Player can undo up to 3 moves per level
 let moveHistory = []; // Array to store game state snapshots
 let pendingUndoState = null; // State to apply after undo animation completes
 let isReverseAnimation = false; // Flag to indicate reverse animation for undo
@@ -1101,7 +1107,6 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     pushCount = 0;
     
     // Reset undo system for level load/restart
-    undoCount = 3;
     moveHistory = [];
     pendingUndoState = null;
     isReverseAnimation = false;
@@ -1221,8 +1226,8 @@ function saveGameState() {
 
 function undoLastMove() {
     // Check if undo is available
-    if (undoCount <= 0 || moveHistory.length === 0 || isPlayerMoving) {
-        return; // No undos left, no history, or player is currently moving
+    if (moveHistory.length === 0 || isPlayerMoving) {
+        return; // No history or player is currently moving
     }
     
     // Get the most recent saved state
@@ -1299,9 +1304,6 @@ function undoLastMove() {
     
     // Store the previous state to apply after animation
     pendingUndoState = previousState;
-    
-    // Decrement undo count
-    undoCount--;
     
     // Visual feedback
     lastInputType = "Undo";
@@ -1834,11 +1836,8 @@ function isClickOnUndoButton(x, y) {
     const undoButtonX = restartButtonX - buttonSize - buttonSpacing;
     const undoButtonY = exitButtonY;
     
-    // Extend click area to the left to include the undo counter (20px padding for counter area)
-    const undoClickAreaLeft = undoButtonX - 25; // Extra space to include counter and some padding
-    const undoClickAreaRight = undoButtonX + buttonSize;
-    
-    return x >= undoClickAreaLeft && x <= undoClickAreaRight &&
+    // Standard button click area (no extra space needed since no counter)
+    return x >= undoButtonX && x <= undoButtonX + buttonSize &&
            y >= undoButtonY && y <= undoButtonY + buttonSize;
 }
 
@@ -3200,7 +3199,8 @@ function drawInstructionsScreen() {
         "• Push all crates onto their goal positions",
         "• Use arrow keys or swipe to move",
         "• You can only push crates, not pull them",
-        "• Use the undo button to reverse moves (maximum three times per level attempt)",
+        "• Use the undo button to reverse moves",
+        "• Keyboard controls: Arrow keys (move), R (restart), U (undo), ESC (back)",
     ];
     
     // Calculate available space and adjust text size to fit
@@ -4189,30 +4189,11 @@ function drawStatusBar() {
     context.fillText(attemptCount.toString(), restartCenterX, restartCenterY);
     context.restore();
     
-    // Draw UNDO button (left of restart button) - PNG icon with smooth scaling and transparency when disabled
+    // Draw UNDO button (left of restart button) - PNG icon with smooth scaling
     context.save();
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
-    // Apply transparency when no undo uses are left
-    if (undoCount <= 0) {
-        context.globalAlpha = 0.3; // Make button appear disabled but still visible
-    }
     context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
-    context.restore();
-    
-    // Draw undo count to the left of undo button
-    context.save();
-    context.font = isMobile ? "bold 20px 'Courier New', monospace" : "bold 24px 'Courier New', monospace";
-    context.fillStyle = "#FF16AA"; // Pink/magenta color
-    context.textAlign = "right";
-    context.textBaseline = "middle";
-    // Apply same transparency as undo button when disabled
-    if (undoCount <= 0) {
-        context.globalAlpha = 0.3; // Make text appear disabled but still visible
-    }
-    const undoCountX = undoButtonX - 5; // 5px to the left of undo button
-    const undoCountY = undoButtonY + buttonSize / 2; // Vertically centered with button
-    context.fillText(undoCount.toString(), undoCountX, undoCountY);
     context.restore();
     
     // Draw OVERVIEW button (leftmost when shown)
