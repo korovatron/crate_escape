@@ -41,7 +41,7 @@
       "src": "assets/images/screenshots/1.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide",
+      "platform": "wide",
       "label": "Splash screen",
       "description": "Shows the main splash screen and game logo."
     },
@@ -49,7 +49,7 @@
       "src": "assets/images/screenshots/2.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide",
+      "platform": "wide",
       "label": "Gameplay (landscape)",
       "description": "Gameplay screenshot showing a level in landscape mode."
     },
@@ -57,7 +57,7 @@
       "src": "assets/images/screenshots/3.png",
       "sizes": "720x1280",
       "type": "image/png",
-      "form_factor": "narrow",
+      "platform": "narrow",
       "label": "Gameplay (portrait)",
       "description": "Gameplay screenshot showing a level in portrait mode."
     },
@@ -65,7 +65,7 @@
       "src": "assets/images/screenshots/4.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide",
+      "platform": "wide",
       "label": "Gameplay (landscape)",
       "description": "Gameplay screenshot showing another level in landscape mode."
     },
@@ -73,7 +73,7 @@
       "src": "assets/images/screenshots/5.png",
       "sizes": "720x1280",
       "type": "image/png",
-      "form_factor": "narrow",
+      "platform": "narrow",
       "label": "Gameplay (portrait)",
       "description": "Gameplay screenshot showing another level in portrait mode."
     }
