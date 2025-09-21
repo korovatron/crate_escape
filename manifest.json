@@ -38,40 +38,44 @@
   ],
   "screenshots": [
     {
-      "src": "assets/images/screenshots/1_title.png",
-      "sizes": "800x600",
-      "type": "image/png"
+      "src": "assets/images/screenshots/1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Splash screen",
+      "description": "Shows the main splash screen and game logo."
     },
     {
-      "src": "assets/images/screenshots/2_level.png",
-      "sizes": "800x600",
-      "type": "image/png"
+      "src": "assets/images/screenshots/2.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Gameplay (landscape)",
+      "description": "Gameplay screenshot showing a level in landscape mode."
     },
     {
-      "src": "assets/images/screenshots/3_level.png",
-      "sizes": "800x600",
-      "type": "image/png"
+      "src": "assets/images/screenshots/3.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Gameplay (portrait)",
+      "description": "Gameplay screenshot showing a level in portrait mode."
     },
     {
-      "src": "assets/images/screenshots/4_level_select.png",
-      "sizes": "800x600",
-      "type": "image/png"
+      "src": "assets/images/screenshots/4.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Gameplay (landscape)",
+      "description": "Gameplay screenshot showing another level in landscape mode."
     },
     {
-      "src": "assets/images/screenshots/5_cloud_sync.png",
-      "sizes": "800x600",
-      "type": "image/png"
-    }
-    ,
-    {
-      "src": "assets/images/screenshots/6_narrow.png",
-      "sizes": "800x1200",
-      "type": "image/png"
-    },
-    {
-      "src": "assets/images/screenshots/7_wide.png",
-      "sizes": "1200x800",
-      "type": "image/png"
+      "src": "assets/images/screenshots/5.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Gameplay (portrait)",
+      "description": "Gameplay screenshot showing another level in portrait mode."
     }
   ],
   "id": "/crate_escape"
