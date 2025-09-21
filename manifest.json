@@ -62,6 +62,17 @@
       "sizes": "800x600",
       "type": "image/png"
     }
+    ,
+    {
+      "src": "assets/images/screenshots/6_narrow (1).png",
+      "sizes": "800x1280",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/screenshots/7_wide.png",
+      "sizes": "1280x800",
+      "type": "image/png"
+    }
   ],
   "id": "/crate_escape"
 }
