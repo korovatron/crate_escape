@@ -1,7 +1,7 @@
 {
-  "name": "Crate Escape",
+  "name": "The Crate Escape",
   "short_name": "Crate Escape",
-  "description": "A classic Sokoban style puzzle game",
+  "description": "The Crate Escape is a modern Sokoban-style puzzle game with over 1000 levels. Move crates, solve logic challenges, and enjoy cloud sync to keep your progress up to date across all your devices. Perfect for fans of puzzle and casual games!",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1a1a1a",
@@ -9,25 +9,59 @@
   "orientation": "any",
   "scope": "./",
   "lang": "en",
-  "categories": ["games", "entertainment"],
+  "categories": [
+    "games",
+    "puzzle",
+    "logic",
+    "casual",
+    "entertainment"
+  ],
   "icons": [
     {
-  "src": "apple-touch-icon-v2.png",
+      "src": "apple-touch-icon-v2.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-  "src": "apple-touch-icon-v2.png",
+      "src": "apple-touch-icon-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-  "src": "apple-touch-icon-v2.png",
+      "src": "apple-touch-icon-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "assets/images/screenshots/1_title.png",
+      "sizes": "800x600",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/screenshots/2_level.png",
+      "sizes": "800x600",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/screenshots/3_level.png",
+      "sizes": "800x600",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/screenshots/4_level_select.png",
+      "sizes": "800x600",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/screenshots/5_cloud_sync.png",
+      "sizes": "800x600",
+      "type": "image/png"
+    }
+  ],
+  "id": "/crate_escape"
 }

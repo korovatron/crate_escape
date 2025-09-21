@@ -3056,7 +3056,7 @@ function drawTitleScreen() {
     const creditsY = canvas.height * 0.95; // Always 5% from bottom
     context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
-    context.fillText("Created by Neil Kendall 2025", canvas.width / 2, creditsY);
+    context.fillText("Copyright © 2025 Neil Kendall", canvas.width / 2, creditsY);
     
     // Start button - positioned above credits with fixed spacing
     let buttonTextSize;

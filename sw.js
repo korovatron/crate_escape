@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-1.2.0';
+const CACHE_NAME = 'crate-escape-version-1.3.0';
 const urlsToCache = [
   './',
   './index.html',
@@ -8,8 +8,12 @@ const urlsToCache = [
   './assets/images/footprintLogo.png',
   './assets/images/pushLogo.png',
   './assets/images/cartoonLogo.png',
+  './assets/images/backIcon.png',
+  './assets/images/restartIcon.png',
+  './assets/images/undoIcon.png',
   './apple-touch-icon-v2.png',
   './manifest.json',
+  './firebase-config.js',
   // Google Fonts - these will be cached when first loaded
   'https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Roboto+Condensed:wght@300;400;700&display=swap'
 ];
