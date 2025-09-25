@@ -1,6 +1,6 @@
 {
-  "name": "The Crate Escape by Korovatron",
-  "short_name": "The Crate Escape",
+  "name": "The Crate Escape",
+  "short_name": "Crate Escape",
   "description": "The Crate Escape is a modern Sokoban-style puzzle game with over 1000 levels. Move crates, solve logic challenges, and enjoy cloud sync to keep your progress up to date across all your devices. Perfect for fans of puzzle and casual games!",
   "start_url": "./index.html",
   "display": "standalone",
