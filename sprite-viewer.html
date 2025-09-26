@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Sheet Viewer - Temporary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            color: black;
+            margin: 20px;
+        }
+        .sprite-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .sprite-item {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            text-align: center;
+            position: relative;
+        }
+        .sprite-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #000080;
+        }
+        .sprite-canvas {
+            background-color: white;
+            border: 1px solid #999;
+            margin: 0 auto;
+            display: block;
+        }
+        .sprite-info {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .category-header {
+            grid-column: 1 / -1;
+            font-size: 18px;
+            font-weight: bold;
+            color: #cc0000;
+            border-bottom: 2px solid #cc0000;
+            padding-bottom: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Sprite Sheet Viewer (Temporary)</h1>
+    <p>This temporary viewer shows all sprites from your sprite sheet with their names overlaid.</p>
+    <div id="sprite-container" class="sprite-container"></div>
+
+    <script>
+        // Texture atlas data extracted from main.js
+        const textureAtlas = {
+            frames: {
+                "block_01.png": { x: 640, y: 640, width: 128, height: 128 },
+                "block_02.png": { x: 640, y: 512, width: 128, height: 128 },
+                "block_03.png": { x: 640, y: 384, width: 128, height: 128 },
+                "block_04.png": { x: 640, y: 256, width: 128, height: 128 },
+                "block_05.png": { x: 640, y: 128, width: 128, height: 128 },
+                "block_06.png": { x: 640, y: 0, width: 128, height: 128 },
+                "block_07.png": { x: 512, y: 1024, width: 128, height: 128 },
+                "block_08.png": { x: 512, y: 896, width: 128, height: 128 },
+                "crate_01.png": { x: 512, y: 768, width: 128, height: 128 },
+                "crate_02.png": { x: 512, y: 640, width: 128, height: 128 },
+                "crate_03.png": { x: 512, y: 512, width: 128, height: 128 },
+                "crate_04.png": { x: 512, y: 384, width: 128, height: 128 },
+                "crate_05.png": { x: 512, y: 256, width: 128, height: 128 },
+                "crate_06.png": { x: 512, y: 128, width: 128, height: 128 },
+                "crate_07.png": { x: 512, y: 0, width: 128, height: 128 },
+                "crate_08.png": { x: 384, y: 1024, width: 128, height: 128 },
+                "crate_09.png": { x: 384, y: 896, width: 128, height: 128 },
+                "crate_10.png": { x: 384, y: 768, width: 128, height: 128 },
+                "crate_11.png": { x: 384, y: 640, width: 128, height: 128 },
+                "crate_12.png": { x: 384, y: 512, width: 128, height: 128 },
+                "crate_13.png": { x: 384, y: 384, width: 128, height: 128 },
+                "crate_14.png": { x: 384, y: 256, width: 128, height: 128 },
+                "crate_15.png": { x: 384, y: 128, width: 128, height: 128 },
+                "crate_16.png": { x: 384, y: 0, width: 128, height: 128 },
+                "crate_17.png": { x: 256, y: 1024, width: 128, height: 128 },
+                "crate_18.png": { x: 256, y: 896, width: 128, height: 128 },
+                "crate_19.png": { x: 256, y: 768, width: 128, height: 128 },
+                "crate_20.png": { x: 256, y: 640, width: 128, height: 128 },
+                "crate_21.png": { x: 256, y: 512, width: 128, height: 128 },
+                "crate_22.png": { x: 256, y: 384, width: 128, height: 128 },
+                "crate_23.png": { x: 256, y: 256, width: 128, height: 128 },
+                "crate_24.png": { x: 256, y: 128, width: 128, height: 128 },
+                "crate_25.png": { x: 256, y: 0, width: 128, height: 128 },
+                "crate_26.png": { x: 128, y: 1040, width: 128, height: 128 },
+                "crate_27.png": { x: 128, y: 912, width: 128, height: 128 },
+                "crate_28.png": { x: 128, y: 784, width: 128, height: 128 },
+                "crate_29.png": { x: 128, y: 656, width: 128, height: 128 },
+                "crate_30.png": { x: 128, y: 528, width: 128, height: 128 },
+                "crate_31.png": { x: 128, y: 400, width: 128, height: 128 },
+                "crate_32.png": { x: 128, y: 320, width: 128, height: 80 },
+                "crate_33.png": { x: 128, y: 240, width: 128, height: 80 },
+                "crate_34.png": { x: 128, y: 160, width: 128, height: 80 },
+                "crate_35.png": { x: 128, y: 80, width: 128, height: 80 },
+                "crate_36.png": { x: 128, y: 0, width: 128, height: 80 },
+                "crate_37.png": { x: 0, y: 1024, width: 128, height: 128 },
+                "crate_38.png": { x: 0, y: 896, width: 128, height: 128 },
+                "crate_39.png": { x: 0, y: 768, width: 128, height: 128 },
+                "crate_40.png": { x: 0, y: 640, width: 128, height: 128 },
+                "crate_41.png": { x: 0, y: 512, width: 128, height: 128 },
+                "crate_42.png": { x: 0, y: 384, width: 128, height: 128 },
+                "crate_43.png": { x: 0, y: 256, width: 128, height: 128 },
+                "crate_44.png": { x: 0, y: 128, width: 128, height: 128 },
+                "crate_45.png": { x: 0, y: 0, width: 128, height: 128 },
+                "environment_01.png": { x: 768, y: 896, width: 128, height: 128 },
+                "environment_02.png": { x: 80, y: 1152, width: 40, height: 40 },
+                "environment_03.png": { x: 768, y: 0, width: 128, height: 128 },
+                "environment_04.png": { x: 640, y: 896, width: 128, height: 128 },
+                "environment_05.png": { x: 296, y: 1152, width: 40, height: 40 },
+                "environment_06.png": { x: 768, y: 768, width: 128, height: 128 },
+                "environment_07.png": { x: 640, y: 768, width: 128, height: 128 },
+                "environment_08.png": { x: 40, y: 1152, width: 40, height: 40 },
+                "environment_09.png": { x: 640, y: 1024, width: 128, height: 128 },
+                "environment_10.png": { x: 0, y: 1152, width: 40, height: 40 },
+                "environment_11.png": { x: 1008, y: 600, width: 56, height: 56 },
+                "environment_12.png": { x: 1024, y: 316, width: 56, height: 56 },
+                "environment_13.png": { x: 896, y: 0, width: 128, height: 128 },
+                "environment_14.png": { x: 256, y: 1152, width: 40, height: 40 },
+                "environment_15.png": { x: 896, y: 256, width: 128, height: 128 },
+                "environment_16.png": { x: 768, y: 384, width: 128, height: 128 },
+                "ground_01.png": { x: 768, y: 640, width: 128, height: 128 },
+                "ground_02.png": { x: 896, y: 128, width: 128, height: 128 },
+                "ground_03.png": { x: 768, y: 128, width: 128, height: 128 },
+                "ground_04.png": { x: 768, y: 256, width: 128, height: 128 },
+                "ground_05.png": { x: 768, y: 1024, width: 128, height: 128 },
+                "ground_06.png": { x: 768, y: 512, width: 128, height: 128 },
+                "playerFace.png": { x: 896, y: 576, width: 112, height: 88 },
+                "playerFace_dark.png": { x: 896, y: 480, width: 120, height: 96 },
+                "player_01.png": { x: 1116, y: 0, width: 84, height: 100 },
+                "player_02.png": { x: 1114, y: 216, width: 84, height: 100 },
+                "player_03.png": { x: 994, y: 988, width: 92, height: 108 },
+                "player_04.png": { x: 994, y: 880, width: 92, height: 108 },
+                "player_05.png": { x: 1024, y: 108, width: 92, height: 108 },
+                "player_06.png": { x: 1016, y: 492, width: 92, height: 108 },
+                "player_07.png": { x: 1024, y: 0, width: 92, height: 108 },
+                "player_08.png": { x: 1016, y: 384, width: 92, height: 108 },
+                "player_09.png": { x: 1086, y: 880, width: 89, height: 100 },
+                "player_10.png": { x: 986, y: 1096, width: 90, height: 100 },
+                "player_11.png": { x: 1076, y: 1096, width: 90, height: 100 },
+                "player_12.png": { x: 1086, y: 980, width: 89, height: 100 },
+                "player_13.png": { x: 1024, y: 216, width: 90, height: 100 },
+                "player_14.png": { x: 896, y: 1096, width: 90, height: 100 },
+                "player_15.png": { x: 994, y: 664, width: 97, height: 108 },
+                "player_16.png": { x: 896, y: 664, width: 98, height: 108 },
+                "player_17.png": { x: 896, y: 880, width: 98, height: 108 },
+                "player_18.png": { x: 994, y: 772, width: 97, height: 108 },
+                "player_19.png": { x: 896, y: 772, width: 98, height: 108 },
+                "player_20.png": { x: 896, y: 988, width: 98, height: 108 },
+                "player_21.png": { x: 1091, y: 600, width: 84, height: 100 },
+                "player_22.png": { x: 1091, y: 700, width: 84, height: 100 },
+                "player_23.png": { x: 1108, y: 316, width: 84, height: 100 },
+                "player_24.png": { x: 1108, y: 416, width: 84, height: 100 },
+                "ret_74.png": { x: 896, y: 384, width: 120, height: 96 }
+            }
+        };
+
+        let spriteSheet = null;
+        const container = document.getElementById('sprite-container');
+
+        // Load the sprite sheet
+        const img = new Image();
+        img.onload = function() {
+            spriteSheet = img;
+            displaySprites();
+        };
+        img.src = 'assets/images/spriteSheet.png';
+
+        function groupSpritesByCategory(frames) {
+            const groups = {};
+            
+            Object.keys(frames).forEach(spriteName => {
+                const prefix = spriteName.split('_')[0].split('.')[0];
+                if (!groups[prefix]) {
+                    groups[prefix] = [];
+                }
+                groups[prefix].push(spriteName);
+            });
+            
+            // Sort sprites within each group numerically
+            Object.keys(groups).forEach(group => {
+                groups[group].sort((a, b) => {
+                    const numA = parseInt(a.match(/(\d+)/)?.[0] || '0');
+                    const numB = parseInt(b.match(/(\d+)/)?.[0] || '0');
+                    return numA - numB;
+                });
+            });
+            
+            return groups;
+        }
+
+        function displaySprites() {
+            const groups = groupSpritesByCategory(textureAtlas.frames);
+            
+            // Display sprites by category
+            Object.keys(groups).sort().forEach(category => {
+                // Add category header
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.textContent = `${category.toUpperCase()} (${groups[category].length} sprites)`;
+                container.appendChild(header);
+                
+                // Add sprites in this category
+                groups[category].forEach(spriteName => {
+                    createSpriteDisplay(spriteName, textureAtlas.frames[spriteName]);
+                });
+            });
+        }
+
+        function createSpriteDisplay(spriteName, frameData) {
+            const item = document.createElement('div');
+            item.className = 'sprite-item';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'sprite-name';
+            nameDiv.textContent = spriteName;
+            
+            const canvas = document.createElement('canvas');
+            canvas.className = 'sprite-canvas';
+            canvas.width = Math.min(frameData.width, 150);
+            canvas.height = Math.min(frameData.height, 150);
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Draw the sprite from the sheet
+            const scale = Math.min(150 / frameData.width, 150 / frameData.height, 1);
+            const scaledWidth = frameData.width * scale;
+            const scaledHeight = frameData.height * scale;
+            
+            canvas.width = scaledWidth;
+            canvas.height = scaledHeight;
+            
+            ctx.drawImage(
+                spriteSheet,
+                frameData.x, frameData.y, frameData.width, frameData.height,
+                0, 0, scaledWidth, scaledHeight
+            );
+            
+            // Add text overlay with sprite name
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, scaledHeight - 20, scaledWidth, 20);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(spriteName.replace('.png', ''), scaledWidth / 2, scaledHeight - 6);
+            
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'sprite-info';
+            infoDiv.textContent = `${frameData.width}×${frameData.height} at (${frameData.x}, ${frameData.y})`;
+            
+            item.appendChild(nameDiv);
+            item.appendChild(canvas);
+            item.appendChild(infoDiv);
+            
+            container.appendChild(item);
+        }
+    </script>
+</body>
+</html>
