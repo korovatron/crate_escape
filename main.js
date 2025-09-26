@@ -983,6 +983,83 @@ const textureAtlas = {
   }
 };
 const playerSprite = textureAtlas.frames["player_03.png"];
+
+// #region Theme System
+// Theme configuration - 12 themes that cycle based on level number
+const themes = [
+    { ground: 4, wall: 5, crate: 7, crateOnGoal: 42 },   // Theme 1
+    { ground: 4, wall: 5, crate: 9, crateOnGoal: 44 },   // Theme 2
+    { ground: 4, wall: 5, crate: 10, crateOnGoal: 45 },  // Theme 3
+    { ground: 4, wall: 6, crate: 7, crateOnGoal: 42 },   // Theme 4
+    { ground: 4, wall: 6, crate: 9, crateOnGoal: 44 },   // Theme 5
+    { ground: 4, wall: 6, crate: 10, crateOnGoal: 45 },  // Theme 6
+    { ground: 5, wall: 5, crate: 11, crateOnGoal: 1 },   // Theme 7
+    { ground: 5, wall: 5, crate: 9, crateOnGoal: 44 },   // Theme 8
+    { ground: 5, wall: 5, crate: 10, crateOnGoal: 45 },  // Theme 9
+    { ground: 5, wall: 6, crate: 11, crateOnGoal: 1 },   // Theme 10
+    { ground: 5, wall: 6, crate: 9, crateOnGoal: 44 },   // Theme 11
+    { ground: 5, wall: 6, crate: 10, crateOnGoal: 45 }   // Theme 12
+];
+
+// Get theme for current level
+function getCurrentTheme() {
+    // Safety check for themes array
+    if (!themes || themes.length === 0) {
+        console.warn('Themes array not available in getCurrentTheme');
+        return null;
+    }
+    
+    // Fallback to level 1 if currentLevel is not defined yet
+    const level = currentLevel || 1;
+    const themeIndex = (level - 1) % 12; // 0-based index, cycles through 12 themes
+    const theme = themes[themeIndex];
+    
+    // Debug logging
+    if (!theme) {
+        console.error('Theme is undefined!', { level, themeIndex, themesLength: themes.length });
+    }
+    
+    return theme;
+}
+
+// Get sprite names for current theme
+function getThemeSprites() {
+    // Define themes directly in function to avoid scoping issues
+    const themeData = [
+        { ground: 4, wall: 5, crate: 7, crateOnGoal: 42 },   // Theme 1
+        { ground: 4, wall: 5, crate: 10, crateOnGoal: 45 },  // Theme 2 (was Theme 3)
+        { ground: 4, wall: 6, crate: 7, crateOnGoal: 42 },   // Theme 3 (was Theme 4)
+        { ground: 4, wall: 6, crate: 10, crateOnGoal: 45 },  // Theme 4 (was Theme 6)
+        { ground: 5, wall: 5, crate: 11, crateOnGoal: 1 },   // Theme 5 (was Theme 7)
+        { ground: 5, wall: 5, crate: 9, crateOnGoal: 44 },   // Theme 6 (was Theme 8)
+        { ground: 5, wall: 6, crate: 11, crateOnGoal: 1 },   // Theme 7 (was Theme 10)
+        { ground: 5, wall: 6, crate: 9, crateOnGoal: 44 }    // Theme 8 (was Theme 11)
+    ];
+    
+    // Get current level number - use currentLevelNumber, not currentLevel!
+    const level = (typeof currentLevelNumber === 'number' && currentLevelNumber > 0) ? currentLevelNumber : 1;
+    
+    const themeIndex = (level - 1) % 8;
+    const theme = themeData[themeIndex];
+    
+    // Absolute fallback if anything is wrong
+    if (!theme || typeof theme.ground === 'undefined') {
+        return {
+            ground: 'ground_04.png',
+            wall: 'block_05.png',
+            crate: 'crate_07.png',
+            crateOnGoal: 'crate_42.png'
+        };
+    }
+    
+    return {
+        ground: `ground_${theme.ground.toString().padStart(2, '0')}.png`,
+        wall: `block_${theme.wall.toString().padStart(2, '0')}.png`,
+        crate: `crate_${theme.crate.toString().padStart(2, '0')}.png`,
+        crateOnGoal: `crate_${theme.crateOnGoal.toString().padStart(2, '0')}.png`
+    };
+}
+// #endregion
 // #endregion
 
 // #region Initialization & Asset Loading
@@ -2932,16 +3009,18 @@ function drawTitleScreen() {
             const tileY = Math.floor(demoStartY + y * demoTileSize);
             
             if (y === 0 || y === 2 || x === 0 || x === 6) {
-                // Wall tiles - same as main game
-                const sprite = textureAtlas.frames["block_05.png"];
+                // Wall tiles - use current theme
+                const sprites = getThemeSprites();
+                const sprite = textureAtlas.frames[sprites.wall];
                 context.drawImage(
                     spriteSheet,
                     sprite.x, sprite.y, sprite.width, sprite.height,
                     tileX, tileY, demoTileSize, demoTileSize
                 );
             } else if (y === 1) {
-                // Floor corridor - same as main game
-                const sprite = textureAtlas.frames["ground_05.png"];
+                // Floor corridor - use current theme
+                const sprites = getThemeSprites();
+                const sprite = textureAtlas.frames[sprites.ground];
                 context.drawImage(
                     spriteSheet,
                     sprite.x, sprite.y, sprite.width, sprite.height,
@@ -2958,8 +3037,9 @@ function drawTitleScreen() {
                         tileX, tileY, demoTileSize, demoTileSize
                     );
                 } else if (x === 3) {
-                    // Crate - use normal crate sprite (same as main game)
-                    const crateSprite = textureAtlas.frames["crate_11.png"];
+                    // Crate - use current theme crate sprite
+                    const sprites = getThemeSprites();
+                    const crateSprite = textureAtlas.frames[sprites.crate];
                     context.drawImage(
                         spriteSheet,
                         crateSprite.x, crateSprite.y, crateSprite.width, crateSprite.height,
@@ -4029,8 +4109,9 @@ function drawNormalGameplay() {
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
 function drawFloorTile(x, y) {
-    // Using ground_01.png sprite from spriteSheet
-    const sprite = textureAtlas.frames["ground_05.png"];
+    // Use current theme ground sprite
+    const sprites = getThemeSprites();
+    const sprite = textureAtlas.frames[sprites.ground];
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
@@ -4039,8 +4120,9 @@ function drawFloorTile(x, y) {
 }
 
 function drawWallTile(x, y) {
-    // Using block_01.png sprite from spriteSheet
-    const sprite = textureAtlas.frames["block_05.png"];
+    // Use current theme wall sprite
+    const sprites = getThemeSprites();
+    const sprite = textureAtlas.frames[sprites.wall];
     context.drawImage(
         spriteSheet,
         sprite.x, sprite.y, sprite.width, sprite.height,
@@ -4068,22 +4150,23 @@ function drawGoalTile(x, y) {
 }
 
 function drawBoxTile(x, y, isOnGoal = false) {
-    // Use different sprites based on whether box is on goal or not
+    // Use current theme crate sprites
+    const sprites = getThemeSprites();
     let spriteName;
     
     if (isOnGoal) {
-        spriteName = "crate_01.png"; // Brighter sprite for boxes on goals
+        spriteName = sprites.crateOnGoal; // Theme-based sprite for boxes on goals
     } else {
-        spriteName = "crate_11.png"; // Darker sprite for boxes not on goals
+        spriteName = sprites.crate; // Theme-based sprite for boxes not on goals
     }
     
     const sprite = textureAtlas.frames[spriteName];
     
-    // Fallback to crate_01.png if the specified sprite doesn't exist
+    // Fallback to theme's crateOnGoal sprite if the specified sprite doesn't exist
     if (!sprite) {
-        spriteName = "crate_01.png";
+        spriteName = sprites.crateOnGoal;
         const fallbackSprite = textureAtlas.frames[spriteName];
-        console.log(`Sprite "${spriteName}" not found, using fallback crate_01.png`);
+        console.log(`Sprite "${spriteName}" not found, using fallback theme crate`);
     }
     
     if (isOnGoal) {
