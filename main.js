@@ -5852,14 +5852,21 @@ async function saveLevelProgress(setName, levelNumber, attempted, completed, mov
         if (completed && moves !== null && pushes !== null) {
             let shouldUpdateSolution = false;
             
-            // Update best moves if this is better (or first completion)
-            if (bestMoves === null || moves < bestMoves) {
+            // Special case: Legacy data without solution string
+            // Store current performance and solution together to ensure they match
+            if (solution === null && (bestMoves !== null || bestPushes !== null)) {
+                bestMoves = moves;
+                bestPushes = pushes;
+                shouldUpdateSolution = true;
+            }
+            // Normal case: Update best moves if this is better (or first completion)
+            else if (bestMoves === null || moves < bestMoves) {
                 bestMoves = moves;
                 shouldUpdateSolution = true;
             }
             
-            // Update best pushes if this is better (or first completion)
-            if (bestPushes === null || pushes < bestPushes) {
+            // Normal case: Update best pushes if this is better (or first completion)  
+            if (solution !== null && (bestPushes === null || pushes < bestPushes)) {
                 bestPushes = pushes;
                 shouldUpdateSolution = true;
             }
@@ -5874,7 +5881,7 @@ async function saveLevelProgress(setName, levelNumber, attempted, completed, mov
                 solution = generateSolutionString();
             }
             
-            // Increment completion count
+            // Increment completion count on every completion
             completionCount++;
         }
         
