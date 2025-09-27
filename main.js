@@ -63,6 +63,18 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
+    // Handle previously solved overlay
+    if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
+        if (e.key === 'Escape') {
+            currentGameState = GAME_STATES.LEVEL_SELECT;
+            initializeLevelSelect();
+        } else if (e.key === ' ') {
+            // Space key = Play Again
+            currentGameState = GAME_STATES.PLAYING;
+        }
+        return;
+    }
+    
     // Handle level selection navigation
     if (currentGameState === GAME_STATES.LEVEL_SELECT) {
         handleLevelSelectInput(e.key);
@@ -293,6 +305,56 @@ function setupCanvasEventListeners() {
             // Otherwise advance to next level
             advanceToNextLevel();
             return;
+        } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
+            // Check if click is on the play again button
+            if (window.playAgainButtonBounds && 
+                mouseX >= window.playAgainButtonBounds.x && 
+                mouseX <= window.playAgainButtonBounds.x + window.playAgainButtonBounds.width &&
+                mouseY >= window.playAgainButtonBounds.y && 
+                mouseY <= window.playAgainButtonBounds.y + window.playAgainButtonBounds.height) {
+                
+                // Play again - start the level
+                currentGameState = GAME_STATES.PLAYING;
+                return;
+            }
+            
+            // Check if click is on the copy saved solution button (only if it exists)
+            if (window.copySavedSolutionButtonBounds && 
+                mouseX >= window.copySavedSolutionButtonBounds.x && 
+                mouseX <= window.copySavedSolutionButtonBounds.x + window.copySavedSolutionButtonBounds.width &&
+                mouseY >= window.copySavedSolutionButtonBounds.y && 
+                mouseY <= window.copySavedSolutionButtonBounds.y + window.copySavedSolutionButtonBounds.height) {
+                
+                // Copy saved solution to clipboard
+                const levelKey = `${currentSet}_${currentLevelNumber}`;
+                const levelProgressData = levelProgress.get(levelKey);
+                if (levelProgressData && levelProgressData.solution) {
+                    copySavedSolutionToClipboard(levelProgressData).then(success => {
+                        if (success) {
+                            lastInputType = "Solution Copied!";
+                        } else {
+                            lastInputType = "Copy Failed";
+                        }
+                        clickCoordinates = "";
+                        lastInputTime = Date.now();
+                        inputFadeTimer = 3000;
+                    });
+                }
+                return;
+            }
+            
+            // Check if click is on the back button
+            if (window.backButtonBounds && 
+                mouseX >= window.backButtonBounds.x && 
+                mouseX <= window.backButtonBounds.x + window.backButtonBounds.width &&
+                mouseY >= window.backButtonBounds.y && 
+                mouseY <= window.backButtonBounds.y + window.backButtonBounds.height) {
+                
+                // Go back to level select
+                solutionCopiedState = false; // Reset copied state
+                currentGameState = GAME_STATES.LEVEL_SELECT;
+                return;
+            }
         }
         
         // Visual feedback for mouse click during gameplay
@@ -536,6 +598,56 @@ function setupCanvasEventListeners() {
                     
                     // Otherwise advance to next level
                     advanceToNextLevel();
+                } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
+                    // Check if tap is on the play again button
+                    if (window.playAgainButtonBounds && 
+                        canvasPos.x >= window.playAgainButtonBounds.x && 
+                        canvasPos.x <= window.playAgainButtonBounds.x + window.playAgainButtonBounds.width &&
+                        canvasPos.y >= window.playAgainButtonBounds.y && 
+                        canvasPos.y <= window.playAgainButtonBounds.y + window.playAgainButtonBounds.height) {
+                        
+                        // Play again - start the level
+                        currentGameState = GAME_STATES.PLAYING;
+                        return;
+                    }
+                    
+                    // Check if tap is on the copy saved solution button (only if it exists)
+                    if (window.copySavedSolutionButtonBounds && 
+                        canvasPos.x >= window.copySavedSolutionButtonBounds.x && 
+                        canvasPos.x <= window.copySavedSolutionButtonBounds.x + window.copySavedSolutionButtonBounds.width &&
+                        canvasPos.y >= window.copySavedSolutionButtonBounds.y && 
+                        canvasPos.y <= window.copySavedSolutionButtonBounds.y + window.copySavedSolutionButtonBounds.height) {
+                        
+                        // Copy saved solution to clipboard
+                        const levelKey = `${currentSet}_${currentLevelNumber}`;
+                        const levelProgressData = levelProgress.get(levelKey);
+                        if (levelProgressData && levelProgressData.solution) {
+                            copySavedSolutionToClipboard(levelProgressData).then(success => {
+                                if (success) {
+                                    lastInputType = "Solution Copied!";
+                                } else {
+                                    lastInputType = "Copy Failed";
+                                }
+                                clickCoordinates = "";
+                                lastInputTime = Date.now();
+                                inputFadeTimer = 3000;
+                            });
+                        }
+                        return;
+                    }
+                    
+                    // Check if tap is on the back button
+                    if (window.backButtonBounds && 
+                        canvasPos.x >= window.backButtonBounds.x && 
+                        canvasPos.x <= window.backButtonBounds.x + window.backButtonBounds.width &&
+                        canvasPos.y >= window.backButtonBounds.y && 
+                        canvasPos.y <= window.backButtonBounds.y + window.backButtonBounds.height) {
+                        
+                        // Go back to level select
+                        solutionCopiedState = false; // Reset copied state
+                        currentGameState = GAME_STATES.LEVEL_SELECT;
+                        return;
+                    }
                 }
                 
                 // Show tap feedback
@@ -570,12 +682,14 @@ const GAME_STATES = {
     PLAYING: 'playing',
     PAUSED: 'paused',
     LEVEL_COMPLETE: 'level_complete',
+    PREVIOUSLY_SOLVED: 'previously_solved',
     INSTRUCTIONS: 'instructions',
     CREDITS: 'credits',
     CLOUD_SYNC: 'cloud_sync',
     IOS_INSTALL: 'ios_install'
 };
 let currentGameState = GAME_STATES.TITLE;
+let solutionCopiedState = false; // Track if solution was just copied
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
@@ -1513,6 +1627,51 @@ Solution: ${solutionMoves}`;
     }
 }
 
+async function copySavedSolutionToClipboard(levelProgressData) {
+    try {
+        if (!levelProgressData || !levelProgressData.solution) {
+            console.warn("No saved solution to copy");
+            return false;
+        }
+        
+        // Format the saved solution output
+        const solutionText = `Crate Escape Solution
+Set: ${currentSet}
+Level: ${currentLevelNumber}
+Best: ${levelProgressData.bestMoves || '?'} Moves | ${levelProgressData.bestPushes || '?'} Pushes
+Solution: ${levelProgressData.solution}`;
+        
+        // Copy to clipboard using modern API
+        let success = false;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(solutionText);
+            success = true;
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = solutionText;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            success = document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
+        
+        // Set copied state (remains until user leaves overlay)
+        if (success) {
+            solutionCopiedState = true;
+        }
+        
+        return success;
+    } catch (error) {
+        console.error("Failed to copy saved solution to clipboard:", error);
+        return false;
+    }
+}
+
 // Player movement functions
 function attemptPlayerMove(direction) {
     // Block player movement when in overview mode
@@ -1940,7 +2099,18 @@ function advanceToNextLevel() {
     
     // Load the new level
     if (loadLevel(currentSet, currentLevelNumber)) {
-        currentGameState = GAME_STATES.PLAYING;
+        // Check if this level has been previously solved
+        const levelKey = `${currentSet}_${currentLevelNumber}`;
+        const levelProgressData = levelProgress.get(levelKey);
+        
+        if (levelProgressData && levelProgressData.completed) {
+            // Level was previously completed - show previously solved overlay
+            solutionCopiedState = false; // Reset copied state
+            currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+        } else {
+            // New or unsolved level - go straight to playing
+            currentGameState = GAME_STATES.PLAYING;
+        }
     } else {
         console.error(`Failed to load level ${currentLevelNumber} from ${currentSet}`);
     }
@@ -2308,7 +2478,7 @@ async function uploadGameProgress() {
                 // Convert array to object for easier cloud storage
                 detailedLevelData = {};
                 allRecords.forEach(record => {
-                    detailedLevelData[record.id] = {
+                    const levelData = {
                         setName: record.setName,
                         levelNumber: record.levelNumber,
                         attempted: record.attempted,
@@ -2319,6 +2489,13 @@ async function uploadGameProgress() {
                         lastPlayed: record.lastPlayed,
                         lastCompletionDate: record.lastCompletionDate
                     };
+                    
+                    // Only include solution if it exists (not undefined)
+                    if (record.solution !== undefined) {
+                        levelData.solution = record.solution;
+                    }
+                    
+                    detailedLevelData[record.id] = levelData;
                 });
                 console.log(`Collected ${allRecords.length} level records for cloud sync`);
                 
@@ -2500,7 +2677,9 @@ async function downloadGameProgress(silent = false, redirectToLevelSelect = true
                             // Last played - take the more recent timestamp
                             lastPlayed: getMostRecent(localRecord.lastPlayed, cloudRecord.lastPlayed),
                             // Last completion - take the more recent timestamp
-                            lastCompletionDate: getMostRecent(localRecord.lastCompletionDate, cloudRecord.lastCompletionDate)
+                            lastCompletionDate: getMostRecent(localRecord.lastCompletionDate, cloudRecord.lastCompletionDate),
+                            // Solution - prefer cloud solution if it exists, otherwise keep local
+                            solution: cloudRecord.solution || localRecord.solution
                         };
                         
                         mergedRecords[id] = merged;
@@ -2551,7 +2730,8 @@ async function downloadGameProgress(silent = false, redirectToLevelSelect = true
                         completed: record.completed,
                         bestMoves: record.bestMoves,
                         bestPushes: record.bestPushes,
-                        completionCount: record.completionCount
+                        completionCount: record.completionCount,
+                        solution: record.solution
                     });
                 });
                 
@@ -2813,6 +2993,9 @@ function draw() {
         drawLevelSelectScreen();
     } else if (currentGameState === GAME_STATES.PLAYING) {
         drawGameplay();
+    } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
+        drawGameplay(); // Draw the level in background
+        drawPreviouslySolvedOverlay();
     } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
         drawGameplay(); // Draw the completed level in background
         drawLevelCompleteOverlay();
@@ -4616,6 +4799,240 @@ function drawLevelCompleteOverlay() {
     context.textAlign = "left";
 }
 
+function drawPreviouslySolvedOverlay() {
+    // Calculate text positioning
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    // Mobile detection and responsive sizing
+    const isMobile = canvas.width < 600;
+    const padding = isMobile ? 20 : 40;
+    
+    // Get level progress data
+    const levelKey = `${currentSet}_${currentLevelNumber}`;
+    const levelProgressData = levelProgress.get(levelKey);
+    const hasSolution = levelProgressData && levelProgressData.solution;
+    
+    // Calculate overlay height based on content
+    const overlayHeight = hasSolution ? 320 : 280; // Taller if has solution for extra button
+    const overlayY = centerY - overlayHeight / 2;
+    
+    // Draw semi-transparent overlay with dark gradient
+    const gradient = context.createLinearGradient(0, overlayY, 0, overlayY + overlayHeight);
+    gradient.addColorStop(0, "rgba(0, 10, 20, 0.7)");
+    gradient.addColorStop(0.5, "rgba(0, 0, 0, 0.7)");
+    gradient.addColorStop(1, "rgba(20, 0, 20, 0.7)");
+    context.fillStyle = gradient;
+    context.fillRect(0, overlayY, canvas.width, overlayHeight);
+    
+    // Draw neon borders at top and bottom
+    context.shadowColor = "#ffaa00";
+    context.shadowBlur = 10;
+    context.fillStyle = "#ffaa00";
+    context.fillRect(0, overlayY, canvas.width, 3); // Top border
+    context.fillRect(0, overlayY + overlayHeight - 3, canvas.width, 3); // Bottom border
+    context.shadowBlur = 0;
+    
+    // Helper function to draw responsive text
+    function drawResponsiveText(text, x, y, color = "#ffaa00", baseFontSize = 24) {
+        const fontSize = isMobile ? Math.max(baseFontSize * 0.7, 16) : baseFontSize;
+        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        
+        let adjustedText = text;
+        let textWidth = context.measureText(adjustedText).width;
+        const maxWidth = canvas.width - (padding * 2);
+        
+        if (textWidth > maxWidth) {
+            const smallerSize = fontSize * 0.8;
+            context.font = `bold ${smallerSize}px 'Courier New', monospace`;
+            textWidth = context.measureText(adjustedText).width;
+            
+            if (textWidth > maxWidth) {
+                while (textWidth > maxWidth && adjustedText.length > 10) {
+                    adjustedText = adjustedText.slice(0, -4) + "...";
+                    textWidth = context.measureText(adjustedText).width;
+                }
+            }
+        }
+        
+        context.shadowBlur = 0;
+        context.fillStyle = color;
+        context.fillText(adjustedText, x, y);
+        
+        return adjustedText;
+    }
+    
+    // Main message
+    context.textAlign = "center";
+    drawResponsiveText("PREVIOUSLY SOLVED", centerX, centerY - 80, "#ffaa00", 40);
+    
+    // Show best stats
+    if (levelProgressData) {
+        const statsText = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
+        drawResponsiveText(statsText, centerX, centerY - 40, "#ffdd00", 20);
+        
+        if (levelProgressData.completionCount > 1) {
+            const countText = `COMPLETED ${levelProgressData.completionCount} TIMES`;
+            drawResponsiveText(countText, centerX, centerY - 10, "#88ddff", 16);
+        }
+    }
+    
+    // Different content based on whether solution exists
+    if (hasSolution) {
+        // Has solution - show buttons
+        
+        // Play Again button
+        const buttonWidth = isMobile ? 120 : 140;
+        const buttonHeight = isMobile ? 30 : 35;
+        const playButtonX = centerX - buttonWidth - 10;
+        const playButtonY = centerY + 50;
+        
+        // Store button bounds for click detection
+        window.playAgainButtonBounds = {
+            x: playButtonX,
+            y: playButtonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        // Draw Play Again button
+        context.save();
+        context.shadowColor = "#00ff88";
+        context.shadowBlur = 15;
+        context.fillStyle = "rgba(0, 255, 136, 0.2)";
+        context.fillRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
+        
+        context.strokeStyle = "#00ff88";
+        context.lineWidth = 2;
+        context.strokeRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
+        context.shadowBlur = 0;
+        
+        const playButtonFontSize = isMobile ? 12 : 14;
+        context.font = `bold ${playButtonFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#00ff88";
+        context.textAlign = "center";
+        context.fillText("PLAY AGAIN", playButtonX + buttonWidth / 2, playButtonY + buttonHeight / 2 + 5);
+        context.restore();
+        
+        // Copy Solution button (or copied state)
+        const copyButtonX = centerX + 10;
+        const copyButtonY = centerY + 50;
+        
+        window.copySavedSolutionButtonBounds = solutionCopiedState ? null : {
+            x: copyButtonX,
+            y: copyButtonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        // Draw Copy Solution button or copied state
+        context.save();
+        const buttonColor = solutionCopiedState ? "#00ff88" : "#ffaa00";
+        const buttonText = solutionCopiedState ? "COPIED!" : "COPY SOLUTION";
+        
+        context.shadowColor = buttonColor;
+        context.shadowBlur = 15;
+        context.fillStyle = solutionCopiedState ? "rgba(0, 255, 136, 0.2)" : "rgba(255, 170, 0, 0.2)";
+        context.fillRect(copyButtonX, copyButtonY, buttonWidth, buttonHeight);
+        
+        context.strokeStyle = buttonColor;
+        context.lineWidth = 2;
+        context.strokeRect(copyButtonX, copyButtonY, buttonWidth, buttonHeight);
+        context.shadowBlur = 0;
+        
+        const copyButtonFontSize = isMobile ? 12 : 14;
+        context.font = `bold ${copyButtonFontSize}px 'Courier New', monospace`;
+        context.fillStyle = buttonColor;
+        context.textAlign = "center";
+        context.fillText(buttonText, copyButtonX + buttonWidth / 2, copyButtonY + buttonHeight / 2 + 5);
+        context.restore();
+        
+    } else {
+        // No solution stored - show message and side-by-side buttons
+        drawResponsiveText("No solution stored", centerX, centerY + 20, "#ff8888", 20);
+        drawResponsiveText("Solve again to save solution", centerX, centerY + 45, "#ffffff", 16);
+        
+        // Side-by-side buttons
+        const buttonWidth = isMobile ? 120 : 140;
+        const buttonHeight = isMobile ? 30 : 35;
+        const playButtonX = centerX - buttonWidth - 10;
+        const playButtonY = centerY + 75;
+        
+        window.playAgainButtonBounds = {
+            x: playButtonX,
+            y: playButtonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        // Clear the copy button bounds since there's no copy button
+        window.copySavedSolutionButtonBounds = null;
+        
+        // Draw Play Again button
+        context.save();
+        context.shadowColor = "#00ff88";
+        context.shadowBlur = 15;
+        context.fillStyle = "rgba(0, 255, 136, 0.2)";
+        context.fillRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
+        
+        context.strokeStyle = "#00ff88";
+        context.lineWidth = 2;
+        context.strokeRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
+        context.shadowBlur = 0;
+        
+        const playButtonFontSize = isMobile ? 12 : 14;
+        context.font = `bold ${playButtonFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#00ff88";
+        context.textAlign = "center";
+        context.fillText("PLAY AGAIN", playButtonX + buttonWidth / 2, playButtonY + buttonHeight / 2 + 5);
+        context.restore();
+    }
+    
+    // Back button for touch-friendly navigation
+    const backButtonWidth = isMobile ? 100 : 120;
+    let backButtonHeight = isMobile ? 25 : 30; // Changed to let for reassignment
+    let backButtonX, backButtonY;
+    
+    if (hasSolution) {
+        // When solution exists, center the back button below other buttons
+        backButtonX = centerX - backButtonWidth / 2;
+        backButtonY = centerY + 100;
+    } else {
+        // When no solution, place back button next to play again button
+        backButtonX = centerX + 10;
+        backButtonY = centerY + 75;
+        // Use same height as play button for alignment
+        backButtonHeight = isMobile ? 30 : 35;
+    }
+    
+    window.backButtonBounds = {
+        x: backButtonX,
+        y: backButtonY,
+        width: backButtonWidth,
+        height: backButtonHeight
+    };
+    
+    // Draw Back button
+    context.save();
+    context.shadowColor = "#ffffff";
+    context.shadowBlur = 10;
+    context.fillStyle = "rgba(255, 255, 255, 0.1)";
+    context.fillRect(backButtonX, backButtonY, backButtonWidth, backButtonHeight);
+    
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = 1;
+    context.strokeRect(backButtonX, backButtonY, backButtonWidth, backButtonHeight);
+    context.shadowBlur = 0;
+    
+    const backButtonFontSize = isMobile ? 11 : 13;
+    context.font = `bold ${backButtonFontSize}px 'Courier New', monospace`;
+    context.fillStyle = "#ffffff";
+    context.textAlign = "center";
+    context.fillText("BACK", backButtonX + backButtonWidth / 2, backButtonY + backButtonHeight / 2 + 4);
+    context.restore();
+    context.textAlign = "left";
+}
+
 async function exitToLevelSelect() {
     await loadLevelProgress(); // Refresh progress data first
     currentGameState = GAME_STATES.LEVEL_SELECT; // Then change state
@@ -4983,7 +5400,19 @@ function handleLevelSelectInput(key) {
             currentSet = selectedSet;
             currentLevelNumber = levelToStart;
             loadLevel(currentSet, currentLevelNumber);
-            currentGameState = GAME_STATES.PLAYING;
+            
+            // Check if this level has been previously solved
+            const levelKey = `${currentSet}_${currentLevelNumber}`;
+            const levelProgressData = levelProgress.get(levelKey);
+            
+            if (levelProgressData && levelProgressData.completed) {
+                // Level was previously completed - show previously solved overlay
+                currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+            } else {
+                // New or unsolved level - go straight to playing
+                currentGameState = GAME_STATES.PLAYING;
+            }
+            
             lastInputType = "Game Started!";
             lastInputTime = Date.now();
             inputFadeTimer = 2000;
@@ -5140,7 +5569,19 @@ function isClickOnLevelGrid(x, y) {
                 currentSet = selectedSet;
                 currentLevelNumber = selectedLevel;
                 loadLevel(currentSet, currentLevelNumber);
-                currentGameState = GAME_STATES.PLAYING;
+                
+                // Check if this level has been previously solved
+                const levelKey = `${currentSet}_${currentLevelNumber}`;
+                const levelProgressData = levelProgress.get(levelKey);
+                
+                if (levelProgressData && levelProgressData.completed) {
+                    // Level was previously completed - show previously solved overlay
+                    currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                } else {
+                    // New or unsolved level - go straight to playing
+                    currentGameState = GAME_STATES.PLAYING;
+                }
+                
                 lastInputType = "Game Started!";
                 lastInputTime = Date.now();
                 inputFadeTimer = 2000;
@@ -5207,7 +5648,20 @@ function startSelectedLevel() {
     
     // Load the selected level and start the game
     loadLevel(currentSet, currentLevelNumber);
-    currentGameState = GAME_STATES.PLAYING;
+    
+    // Check if this level has been previously solved
+    const levelKey = `${currentSet}_${currentLevelNumber}`;
+    const levelProgressData = levelProgress.get(levelKey);
+    
+    if (levelProgressData && levelProgressData.completed) {
+        // Level was previously completed - show previously solved overlay
+        solutionCopiedState = false; // Reset copied state
+        currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+    } else {
+        // New or unsolved level - go straight to playing
+        currentGameState = GAME_STATES.PLAYING;
+    }
+    
     lastInputType = "Game Started!";
     lastInputTime = Date.now();
     inputFadeTimer = 2000;
@@ -5357,7 +5811,11 @@ async function loadLevelProgress() {
                 const key = `${record.setName}_${record.levelNumber}`;
                 levelProgress.set(key, {
                     attempted: record.attempted,
-                    completed: record.completed
+                    completed: record.completed,
+                    bestMoves: record.bestMoves,
+                    bestPushes: record.bestPushes,
+                    completionCount: record.completionCount,
+                    solution: record.solution
                 });
             });
             console.log(`Loaded progress for ${levelProgress.size} levels`);
@@ -5388,17 +5846,32 @@ async function saveLevelProgress(setName, levelNumber, attempted, completed, mov
         let bestMoves = existing?.bestMoves || null;
         let bestPushes = existing?.bestPushes || null;
         let completionCount = existing?.completionCount || 0;
+        let solution = existing?.solution || null;
         
         // If completing the level, update best scores and increment completion count
         if (completed && moves !== null && pushes !== null) {
+            let shouldUpdateSolution = false;
+            
             // Update best moves if this is better (or first completion)
             if (bestMoves === null || moves < bestMoves) {
                 bestMoves = moves;
+                shouldUpdateSolution = true;
             }
             
             // Update best pushes if this is better (or first completion)
             if (bestPushes === null || pushes < bestPushes) {
                 bestPushes = pushes;
+                shouldUpdateSolution = true;
+            }
+            
+            // If no solution exists yet (first completion), store it
+            if (solution === null) {
+                shouldUpdateSolution = true;
+            }
+            
+            // Store/update solution if performance improved or first completion
+            if (shouldUpdateSolution) {
+                solution = generateSolutionString();
             }
             
             // Increment completion count
@@ -5414,6 +5887,7 @@ async function saveLevelProgress(setName, levelNumber, attempted, completed, mov
             bestMoves: bestMoves,
             bestPushes: bestPushes,
             completionCount: completionCount,
+            solution: solution,
             lastPlayed: new Date().toISOString(),
             lastCompletionDate: completed ? new Date().toISOString() : (existing?.lastCompletionDate || null)
         };
@@ -5426,7 +5900,8 @@ async function saveLevelProgress(setName, levelNumber, attempted, completed, mov
             completed, 
             bestMoves, 
             bestPushes, 
-            completionCount 
+            completionCount,
+            solution
         });
         
         if (completed && moves !== null && pushes !== null) {
