@@ -5866,7 +5866,7 @@ async function saveLevelProgress(setName, levelNumber, attempted, completed, mov
             }
             
             // Normal case: Update best pushes if this is better (or first completion)  
-            if (solution !== null && (bestPushes === null || pushes < bestPushes)) {
+            if (bestPushes === null || pushes < bestPushes) {
                 bestPushes = pushes;
                 shouldUpdateSolution = true;
             }
