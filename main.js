@@ -3128,7 +3128,7 @@ function drawTitleScreen() {
     context.fillStyle = "#DDDDDD";
     const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
-    yPos = drawWrappedText(context, "Complete your shift by pushing all the crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
+    yPos = drawWrappedText(context, "Complete your shift by pushing all crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
 
     // MIDDLE CONTENT POSITIONING: Use available space between top content and bottom-anchored elements
     
