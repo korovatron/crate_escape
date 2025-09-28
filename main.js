@@ -63,28 +63,6 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
-    // Handle previously solved overlay
-    if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
-        if (e.key === 'Escape') {
-            // Dismiss overlay and return to gameplay - reset level to starting state
-            solutionCopiedState = false;
-            // Preserve attempt counter when returning to gameplay
-            const currentAttemptCount = attemptCount;
-            restartCurrentLevel(); // Reset level to starting position
-            attemptCount = currentAttemptCount; // Restore original count
-            currentGameState = GAME_STATES.PLAYING;
-        } else if (e.key === ' ') {
-            // Space key = Dismiss overlay and play - reset level to starting state
-            solutionCopiedState = false;
-            // Preserve attempt counter when returning to gameplay
-            const currentAttemptCount = attemptCount;
-            restartCurrentLevel(); // Reset level to starting position
-            attemptCount = currentAttemptCount; // Restore original count
-            currentGameState = GAME_STATES.PLAYING;
-        }
-        return;
-    }
-    
     // Solution Replay state controls
     if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
         if (e.key === 'Escape') {
@@ -210,8 +188,19 @@ function setupCanvasEventListeners() {
                 mouseY >= window.solutionButtonBounds.y && 
                 mouseY <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
                 
-                // Show previously solved overlay
-                currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                // Go directly to solution replay mode
+                const levelKey = `${currentSet}_${currentLevelNumber}`;
+                const levelProgressData = levelProgress.get(levelKey);
+                
+                if (levelProgressData && levelProgressData.solution) {
+                    // Has solution - start replay
+                    startSolutionReplay(levelProgressData.solution);
+                } else {
+                    // No solution stored - still go to replay mode but will show message
+                    currentGameState = GAME_STATES.SOLUTION_REPLAY;
+                    solutionReplayData.isActive = true;
+                    solutionReplayData.solution = ''; // Empty solution will show message
+                }
                 return;
             }
             
@@ -321,12 +310,47 @@ function setupCanvasEventListeners() {
                 return;
             }
             
+            // Handle share button click
+            if (window.solutionReplayShareButtonBounds && 
+                mouseX >= window.solutionReplayShareButtonBounds.x && 
+                mouseX <= window.solutionReplayShareButtonBounds.x + window.solutionReplayShareButtonBounds.width &&
+                mouseY >= window.solutionReplayShareButtonBounds.y && 
+                mouseY <= window.solutionReplayShareButtonBounds.y + window.solutionReplayShareButtonBounds.height) {
+                
+                // Copy current solution to clipboard
+                const levelKey = `${currentSet}_${currentLevelNumber}`;
+                const levelProgressData = levelProgress.get(levelKey);
+                if (levelProgressData && levelProgressData.solution) {
+                    copySavedSolutionToClipboard(levelProgressData).then(success => {
+                        if (success) {
+                            solutionCopiedState = true;
+                            // Reset the copied state after 3 seconds
+                            setTimeout(() => {
+                                solutionCopiedState = false;
+                            }, 3000);
+                        }
+                    });
+                }
+                return;
+            }
+            
             if (window.solutionReplayPlayPauseButtonBounds && 
                 mouseX >= window.solutionReplayPlayPauseButtonBounds.x && 
                 mouseX <= window.solutionReplayPlayPauseButtonBounds.x + window.solutionReplayPlayPauseButtonBounds.width &&
                 mouseY >= window.solutionReplayPlayPauseButtonBounds.y && 
                 mouseY <= window.solutionReplayPlayPauseButtonBounds.y + window.solutionReplayPlayPauseButtonBounds.height) {
                 toggleSolutionReplayPlayback();
+                return;
+            }
+            
+            // Rewind to start button - only works when paused, not animating, and not at beginning
+            if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0 && 
+                window.solutionReplayRewindButtonBounds && 
+                mouseX >= window.solutionReplayRewindButtonBounds.x && 
+                mouseX <= window.solutionReplayRewindButtonBounds.x + window.solutionReplayRewindButtonBounds.width &&
+                mouseY >= window.solutionReplayRewindButtonBounds.y && 
+                mouseY <= window.solutionReplayRewindButtonBounds.y + window.solutionReplayRewindButtonBounds.height) {
+                rewindSolutionReplayToStart();
                 return;
             }
             
@@ -382,65 +406,6 @@ function setupCanvasEventListeners() {
             // Otherwise advance to next level
             advanceToNextLevel();
             return;
-        } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
-            
-            // Check if click is on the copy saved solution button (only if it exists)
-            if (window.copySavedSolutionButtonBounds && 
-                mouseX >= window.copySavedSolutionButtonBounds.x && 
-                mouseX <= window.copySavedSolutionButtonBounds.x + window.copySavedSolutionButtonBounds.width &&
-                mouseY >= window.copySavedSolutionButtonBounds.y && 
-                mouseY <= window.copySavedSolutionButtonBounds.y + window.copySavedSolutionButtonBounds.height) {
-                
-                // Copy saved solution to clipboard
-                const levelKey = `${currentSet}_${currentLevelNumber}`;
-                const levelProgressData = levelProgress.get(levelKey);
-                if (levelProgressData && levelProgressData.solution) {
-                    copySavedSolutionToClipboard(levelProgressData).then(success => {
-                        if (success) {
-                            lastInputType = "Solution Copied!";
-                        } else {
-                            lastInputType = "Copy Failed";
-                        }
-                        clickCoordinates = "";
-                        lastInputTime = Date.now();
-                        inputFadeTimer = 3000;
-                    });
-                }
-                return;
-            }
-            
-            // Check if click is on the replay solution button
-            if (window.replaySolutionButtonBounds && 
-                mouseX >= window.replaySolutionButtonBounds.x && 
-                mouseX <= window.replaySolutionButtonBounds.x + window.replaySolutionButtonBounds.width &&
-                mouseY >= window.replaySolutionButtonBounds.y && 
-                mouseY <= window.replaySolutionButtonBounds.y + window.replaySolutionButtonBounds.height) {
-                
-                // Start solution replay
-                const levelKey = `${currentSet}_${currentLevelNumber}`;
-                const levelProgressData = levelProgress.get(levelKey);
-                if (levelProgressData && levelProgressData.solution) {
-                    startSolutionReplay(levelProgressData.solution);
-                }
-                return;
-            }
-            
-            // Check if click is on the back button
-            if (window.backButtonBounds && 
-                mouseX >= window.backButtonBounds.x && 
-                mouseX <= window.backButtonBounds.x + window.backButtonBounds.width &&
-                mouseY >= window.backButtonBounds.y && 
-                mouseY <= window.backButtonBounds.y + window.backButtonBounds.height) {
-                
-                // Dismiss overlay and return to gameplay - reset to starting state
-                solutionCopiedState = false; // Reset copied state
-                // Preserve attempt counter when returning to gameplay
-                const currentAttemptCount = attemptCount;
-                restartCurrentLevel(); // Reset level to starting position
-                attemptCount = currentAttemptCount; // Restore original count
-                currentGameState = GAME_STATES.PLAYING;
-                return;
-            }
         }
         
         // Visual feedback for mouse click during gameplay
@@ -584,8 +549,19 @@ function setupCanvasEventListeners() {
                         canvasPos.y >= window.solutionButtonBounds.y && 
                         canvasPos.y <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
                         
-                        // Show previously solved overlay
-                        currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                        // Go directly to solution replay mode
+                        const levelKey = `${currentSet}_${currentLevelNumber}`;
+                        const levelProgressData = levelProgress.get(levelKey);
+                        
+                        if (levelProgressData && levelProgressData.solution) {
+                            // Has solution - start replay
+                            startSolutionReplay(levelProgressData.solution);
+                        } else {
+                            // No solution stored - still go to replay mode but will show message
+                            currentGameState = GAME_STATES.SOLUTION_REPLAY;
+                            solutionReplayData.isActive = true;
+                            solutionReplayData.solution = ''; // Empty solution will show message
+                        }
                         return;
                     }
                     
@@ -709,80 +685,6 @@ function setupCanvasEventListeners() {
                     
                     // Otherwise advance to next level
                     advanceToNextLevel();
-                } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
-                    // Check if tap is on the play again button
-                    if (window.playAgainButtonBounds && 
-                        canvasPos.x >= window.playAgainButtonBounds.x && 
-                        canvasPos.x <= window.playAgainButtonBounds.x + window.playAgainButtonBounds.width &&
-                        canvasPos.y >= window.playAgainButtonBounds.y && 
-                        canvasPos.y <= window.playAgainButtonBounds.y + window.playAgainButtonBounds.height) {
-                        
-                        // Play again - start the level - reset to starting state
-                        // Preserve attempt counter when returning to gameplay
-                        const currentAttemptCount = attemptCount;
-                        restartCurrentLevel(); // Reset level to starting position
-                        attemptCount = currentAttemptCount; // Restore original count
-                        currentGameState = GAME_STATES.PLAYING;
-                        return;
-                    }
-                    
-                    // Check if tap is on the copy saved solution button (only if it exists)
-                    if (window.copySavedSolutionButtonBounds && 
-                        canvasPos.x >= window.copySavedSolutionButtonBounds.x && 
-                        canvasPos.x <= window.copySavedSolutionButtonBounds.x + window.copySavedSolutionButtonBounds.width &&
-                        canvasPos.y >= window.copySavedSolutionButtonBounds.y && 
-                        canvasPos.y <= window.copySavedSolutionButtonBounds.y + window.copySavedSolutionButtonBounds.height) {
-                        
-                        // Copy saved solution to clipboard
-                        const levelKey = `${currentSet}_${currentLevelNumber}`;
-                        const levelProgressData = levelProgress.get(levelKey);
-                        if (levelProgressData && levelProgressData.solution) {
-                            copySavedSolutionToClipboard(levelProgressData).then(success => {
-                                if (success) {
-                                    lastInputType = "Solution Copied!";
-                                } else {
-                                    lastInputType = "Copy Failed";
-                                }
-                                clickCoordinates = "";
-                                lastInputTime = Date.now();
-                                inputFadeTimer = 3000;
-                            });
-                        }
-                        return;
-                    }
-                    
-                    // Check if tap is on the replay solution button
-                    if (window.replaySolutionButtonBounds && 
-                        canvasPos.x >= window.replaySolutionButtonBounds.x && 
-                        canvasPos.x <= window.replaySolutionButtonBounds.x + window.replaySolutionButtonBounds.width &&
-                        canvasPos.y >= window.replaySolutionButtonBounds.y && 
-                        canvasPos.y <= window.replaySolutionButtonBounds.y + window.replaySolutionButtonBounds.height) {
-                        
-                        // Start solution replay
-                        const levelKey = `${currentSet}_${currentLevelNumber}`;
-                        const levelProgressData = levelProgress.get(levelKey);
-                        if (levelProgressData && levelProgressData.solution) {
-                            startSolutionReplay(levelProgressData.solution);
-                        }
-                        return;
-                    }
-                    
-                    // Check if tap is on the back button
-                    if (window.backButtonBounds && 
-                        canvasPos.x >= window.backButtonBounds.x && 
-                        canvasPos.x <= window.backButtonBounds.x + window.backButtonBounds.width &&
-                        canvasPos.y >= window.backButtonBounds.y && 
-                        canvasPos.y <= window.backButtonBounds.y + window.backButtonBounds.height) {
-                        
-                        // Dismiss overlay and return to gameplay - reset to starting state
-                        solutionCopiedState = false; // Reset copied state
-                        // Preserve attempt counter when returning to gameplay
-                        const currentAttemptCount = attemptCount;
-                        restartCurrentLevel(); // Reset level to starting position
-                        attemptCount = currentAttemptCount; // Restore original count
-                        currentGameState = GAME_STATES.PLAYING;
-                        return;
-                    }
                 } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
                     // Handle solution replay control taps
                     if (window.solutionReplayBackButtonBounds && 
@@ -794,12 +696,47 @@ function setupCanvasEventListeners() {
                         return;
                     }
                     
+                    // Handle share button tap
+                    if (window.solutionReplayShareButtonBounds && 
+                        canvasPos.x >= window.solutionReplayShareButtonBounds.x && 
+                        canvasPos.x <= window.solutionReplayShareButtonBounds.x + window.solutionReplayShareButtonBounds.width &&
+                        canvasPos.y >= window.solutionReplayShareButtonBounds.y && 
+                        canvasPos.y <= window.solutionReplayShareButtonBounds.y + window.solutionReplayShareButtonBounds.height) {
+                        
+                        // Copy current solution to clipboard
+                        const levelKey = `${currentSet}_${currentLevelNumber}`;
+                        const levelProgressData = levelProgress.get(levelKey);
+                        if (levelProgressData && levelProgressData.solution) {
+                            copySavedSolutionToClipboard(levelProgressData).then(success => {
+                                if (success) {
+                                    solutionCopiedState = true;
+                                    // Reset the copied state after 3 seconds
+                                    setTimeout(() => {
+                                        solutionCopiedState = false;
+                                    }, 3000);
+                                }
+                            });
+                        }
+                        return;
+                    }
+                    
                     if (window.solutionReplayPlayPauseButtonBounds && 
                         canvasPos.x >= window.solutionReplayPlayPauseButtonBounds.x && 
                         canvasPos.x <= window.solutionReplayPlayPauseButtonBounds.x + window.solutionReplayPlayPauseButtonBounds.width &&
                         canvasPos.y >= window.solutionReplayPlayPauseButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayPlayPauseButtonBounds.y + window.solutionReplayPlayPauseButtonBounds.height) {
                         toggleSolutionReplayPlayback();
+                        return;
+                    }
+                    
+                    // Rewind to start button - only works when paused, not animating, and not at beginning
+                    if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0 && 
+                        window.solutionReplayRewindButtonBounds && 
+                        canvasPos.x >= window.solutionReplayRewindButtonBounds.x && 
+                        canvasPos.x <= window.solutionReplayRewindButtonBounds.x + window.solutionReplayRewindButtonBounds.width &&
+                        canvasPos.y >= window.solutionReplayRewindButtonBounds.y && 
+                        canvasPos.y <= window.solutionReplayRewindButtonBounds.y + window.solutionReplayRewindButtonBounds.height) {
+                        rewindSolutionReplayToStart();
                         return;
                     }
                     
@@ -858,7 +795,6 @@ const GAME_STATES = {
     PLAYING: 'playing',
     PAUSED: 'paused',
     LEVEL_COMPLETE: 'level_complete',
-    PREVIOUSLY_SOLVED: 'previously_solved',
     SOLUTION_REPLAY: 'solution_replay',
     INSTRUCTIONS: 'instructions',
     CREDITS: 'credits',
@@ -1179,6 +1115,7 @@ const cartoonLogo = new Image();
 const backIcon = new Image();
 const restartIcon = new Image();
 const undoIcon = new Image();
+const shareIcon = new Image();
 const textureAtlas = {
   spriteSheet,
   frames: {
@@ -1370,7 +1307,7 @@ function getThemeSprites() {
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 7; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon
+    const numberImages = 8; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon, shareIcon
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
@@ -1422,6 +1359,14 @@ function init() {
     
     undoIcon.src = "assets/images/undoIcon.png";
     undoIcon.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            createCanvas();
+        }
+    }
+    
+    shareIcon.src = "assets/images/shareIcon.png";
+    shareIcon.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
             createCanvas();
@@ -3293,9 +3238,6 @@ function draw() {
         drawLevelSelectScreen();
     } else if (currentGameState === GAME_STATES.PLAYING) {
         drawGameplay();
-    } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
-        drawGameplay(); // Draw the level in background
-        drawPreviouslySolvedOverlay();
     } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
         drawGameplay(); // Draw the level being replayed
         drawSolutionReplayControls();
@@ -4594,8 +4536,7 @@ function drawNormalGameplay() {
     
     // Dim the status bar when overlays have the only active controls
     if (currentGameState === GAME_STATES.SOLUTION_REPLAY || 
-        currentGameState === GAME_STATES.LEVEL_COMPLETE || 
-        currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
+        currentGameState === GAME_STATES.LEVEL_COMPLETE) {
         context.fillStyle = "rgba(0, 0, 0, 0.6)"; // Semi-transparent black overlay
         context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     }
@@ -5165,211 +5106,20 @@ function drawSolutionButton() {
     context.textAlign = "left";
 }
 
-function drawPreviouslySolvedOverlay() {
-    // Calculate text positioning
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    
-    // Mobile detection and responsive sizing
-    const isMobile = canvas.width < 600;
-    const padding = isMobile ? 20 : 40;
-    
-    // Get level progress data
-    const levelKey = `${currentSet}_${currentLevelNumber}`;
-    const levelProgressData = levelProgress.get(levelKey);
-    const hasSolution = levelProgressData && levelProgressData.solution;
-    
-    // Calculate overlay height based on content
-    const overlayHeight = hasSolution ? 320 : 280; // Taller if has solution for extra button
-    const overlayY = centerY - overlayHeight / 2;
-    
-    // Draw semi-transparent overlay with dark gradient
-    const gradient = context.createLinearGradient(0, overlayY, 0, overlayY + overlayHeight);
-    gradient.addColorStop(0, "rgba(0, 10, 20, 0.7)");
-    gradient.addColorStop(0.5, "rgba(0, 0, 0, 0.7)");
-    gradient.addColorStop(1, "rgba(20, 0, 20, 0.7)");
-    context.fillStyle = gradient;
-    context.fillRect(0, overlayY, canvas.width, overlayHeight);
-    
-    // Draw neon borders at top and bottom
-    context.shadowColor = "#ffaa00";
-    context.shadowBlur = 10;
-    context.fillStyle = "#ffaa00";
-    context.fillRect(0, overlayY, canvas.width, 3); // Top border
-    context.fillRect(0, overlayY + overlayHeight - 3, canvas.width, 3); // Bottom border
-    context.shadowBlur = 0;
-    
-    // Helper function to draw responsive text
-    function drawResponsiveText(text, x, y, color = "#ffaa00", baseFontSize = 24) {
-        const fontSize = isMobile ? Math.max(baseFontSize * 0.7, 16) : baseFontSize;
-        context.font = `bold ${fontSize}px 'Courier New', monospace`;
-        
-        let adjustedText = text;
-        let textWidth = context.measureText(adjustedText).width;
-        const maxWidth = canvas.width - (padding * 2);
-        
-        if (textWidth > maxWidth) {
-            const smallerSize = fontSize * 0.8;
-            context.font = `bold ${smallerSize}px 'Courier New', monospace`;
-            textWidth = context.measureText(adjustedText).width;
-            
-            if (textWidth > maxWidth) {
-                while (textWidth > maxWidth && adjustedText.length > 10) {
-                    adjustedText = adjustedText.slice(0, -4) + "...";
-                    textWidth = context.measureText(adjustedText).width;
-                }
-            }
-        }
-        
-        context.shadowBlur = 0;
-        context.fillStyle = color;
-        context.fillText(adjustedText, x, y);
-        
-        return adjustedText;
-    }
-    
-    // Main message
-    context.textAlign = "center";
-    drawResponsiveText("PREVIOUSLY SOLVED", centerX, centerY - 80, "#ffaa00", 40);
-    
-    // Show best stats
-    if (levelProgressData) {
-        const statsText = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
-        drawResponsiveText(statsText, centerX, centerY - 40, "#ffdd00", 20);
-        
-        if (levelProgressData.completionCount > 1) {
-            const countText = `COMPLETED ${levelProgressData.completionCount} TIMES`;
-            drawResponsiveText(countText, centerX, centerY - 10, "#88ddff", 16);
-        }
-    }
-    
-    // Different content based on whether solution exists
-    if (hasSolution) {
-        // Has solution - show copy solution and replay solution buttons
-        
-        const buttonWidth = isMobile ? 140 : 160;
-        const buttonHeight = isMobile ? 30 : 35;
-        const buttonSpacing = 10;
-        
-        // Copy Solution button (left)
-        const copyButtonX = centerX - buttonWidth - buttonSpacing / 2;
-        const copyButtonY = centerY + 50;
-        
-        // Replay Solution button (right)
-        const replayButtonX = centerX + buttonSpacing / 2;
-        const replayButtonY = centerY + 50;
-        
-        window.copySavedSolutionButtonBounds = solutionCopiedState ? null : {
-            x: copyButtonX,
-            y: copyButtonY,
-            width: buttonWidth,
-            height: buttonHeight
-        };
-        
-        window.replaySolutionButtonBounds = {
-            x: replayButtonX,
-            y: replayButtonY,
-            width: buttonWidth,
-            height: buttonHeight
-        };
-        
-        // Clear play again button bounds since it's removed
-        window.playAgainButtonBounds = null;
-        
-        // Draw Copy Solution button or copied state
-        context.save();
-        const buttonColor = solutionCopiedState ? "#00ff88" : "#ffaa00";
-        const buttonText = solutionCopiedState ? "COPIED!" : "COPY SOLUTION";
-        
-        context.shadowColor = buttonColor;
-        context.shadowBlur = 15;
-        context.fillStyle = solutionCopiedState ? "rgba(0, 255, 136, 0.2)" : "rgba(255, 170, 0, 0.2)";
-        context.fillRect(copyButtonX, copyButtonY, buttonWidth, buttonHeight);
-        
-        context.strokeStyle = buttonColor;
-        context.lineWidth = 2;
-        context.strokeRect(copyButtonX, copyButtonY, buttonWidth, buttonHeight);
-        context.shadowBlur = 0;
-        
-        const copyButtonFontSize = isMobile ? 12 : 14;
-        context.font = `bold ${copyButtonFontSize}px 'Courier New', monospace`;
-        context.fillStyle = buttonColor;
-        context.textAlign = "center";
-        context.fillText(buttonText, copyButtonX + buttonWidth / 2, copyButtonY + buttonHeight / 2 + 5);
-        context.restore();
-        
-        // Draw Replay Solution button
-        context.save();
-        context.shadowColor = "#00aaff";
-        context.shadowBlur = 15;
-        context.fillStyle = "rgba(0, 170, 255, 0.2)";
-        context.fillRect(replayButtonX, replayButtonY, buttonWidth, buttonHeight);
-        
-        context.strokeStyle = "#00aaff";
-        context.lineWidth = 2;
-        context.strokeRect(replayButtonX, replayButtonY, buttonWidth, buttonHeight);
-        context.shadowBlur = 0;
-        
-        const replayButtonFontSize = isMobile ? 11 : 13;
-        context.font = `bold ${replayButtonFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#00aaff";
-        context.textAlign = "center";
-        context.fillText("REPLAY SOLUTION", replayButtonX + buttonWidth / 2, replayButtonY + buttonHeight / 2 + 5);
-        context.restore();
-        
-    } else {
-        // No solution stored - show message only
-        drawResponsiveText("No solution stored", centerX, centerY + 20, "#ff8888", 20);
-        drawResponsiveText("Solve again to save solution", centerX, centerY + 45, "#ffffff", 16);
-        
-        // Clear button bounds since there are no buttons in this case
-        window.playAgainButtonBounds = null;
-        window.copySavedSolutionButtonBounds = null;
-        window.replaySolutionButtonBounds = null;
-    }
-    
-    // Back button (always centered below content)
-    const backButtonWidth = isMobile ? 100 : 120;
-    const backButtonHeight = isMobile ? 25 : 30;
-    const backButtonX = centerX - backButtonWidth / 2;
-    const backButtonY = hasSolution ? centerY + 100 : centerY + 85;
-    
-    window.backButtonBounds = {
-        x: backButtonX,
-        y: backButtonY,
-        width: backButtonWidth,
-        height: backButtonHeight
-    };
-    
-    // Draw Back button
-    context.save();
-    context.shadowColor = "#ffffff";
-    context.shadowBlur = 10;
-    context.fillStyle = "rgba(255, 255, 255, 0.1)";
-    context.fillRect(backButtonX, backButtonY, backButtonWidth, backButtonHeight);
-    
-    context.strokeStyle = "#ffffff";
-    context.lineWidth = 1;
-    context.strokeRect(backButtonX, backButtonY, backButtonWidth, backButtonHeight);
-    context.shadowBlur = 0;
-    
-    const backButtonFontSize = isMobile ? 11 : 13;
-    context.font = `bold ${backButtonFontSize}px 'Courier New', monospace`;
-    context.fillStyle = "#ffffff";
-    context.textAlign = "center";
-    context.fillText("BACK", backButtonX + backButtonWidth / 2, backButtonY + backButtonHeight / 2 + 4);
-    context.restore();
-    context.textAlign = "left";
-}
-
 function drawSolutionReplayControls() {
     const isMobile = canvas.width < 600;
+    const centerX = canvas.width / 2;
+    
+    // Get level progress data for stats display
+    const levelKey = `${currentSet}_${currentLevelNumber}`;
+    const levelProgressData = levelProgress.get(levelKey);
+    const hasSolution = solutionReplayData.solution && solutionReplayData.solution.length > 0;
     
     // Button dimensions (declared early to calculate control bar height)
     const buttonHeight = isMobile ? 30 : 40;
     
-    // Control bar at bottom of screen - made taller for better spacing and iOS gesture avoidance
-    const controlBarHeight = isMobile ? 80 + (buttonHeight / 2) : 100 + (buttonHeight / 2);
+    // Control bar at bottom of screen - different heights for solution vs no-solution cases
+    const controlBarHeight = hasSolution ? (isMobile ? 120 : 140) : (isMobile ? 120 : 140);
     const controlBarY = canvas.height - controlBarHeight;
     
     // Draw control bar background
@@ -5385,83 +5135,193 @@ function drawSolutionReplayControls() {
     context.fillStyle = "#00aaff";
     context.fillRect(0, controlBarY, canvas.width, 2);
     context.shadowBlur = 0;
+
+    if (hasSolution) {
+        // Has solution - show normal replay controls
+        
+        // Button dimensions - match status bar button size for back button
+        const statusBarButtonSize = isMobile ? 35 : 45; // Same as status bar buttons
+        const buttonWidth = isMobile ? 50 : 65; // For step/play buttons
+        const buttonSpacing = isMobile ? 8 : 10;
+        
+        // Back button positioned on the right (like exit button) - same size as status bar
+        const rightMargin = isMobile ? 10 : 15;
+        const backButtonX = canvas.width - statusBarButtonSize - rightMargin;
+        const backButtonY = controlBarY + (controlBarHeight - statusBarButtonSize) / 2; // Vertically centered in control bar
+        
+        // Share button positioned on the left - same size as status bar
+        const leftMargin = isMobile ? 10 : 15;
+        const shareButtonX = leftMargin;
+        const shareButtonY = controlBarY + (controlBarHeight - statusBarButtonSize) / 2; // Vertically centered in control bar
+        
+        // Center the 4 main controls (rewind to start, step back, play/pause, step forward)
+        const mainButtonsWidth = (buttonWidth * 4) + (buttonSpacing * 3);
+        const mainButtonsStartX = (canvas.width - mainButtonsWidth) / 2;
+        const rewindButtonX = mainButtonsStartX;
+        const stepBackButtonX = mainButtonsStartX + buttonWidth + buttonSpacing;
+        const playPauseButtonX = mainButtonsStartX + (buttonWidth + buttonSpacing) * 2;
+        const stepForwardButtonX = mainButtonsStartX + (buttonWidth + buttonSpacing) * 3;
+        
+        // Center buttons vertically in the control bar (same as share and back buttons)
+        const buttonY = controlBarY + (controlBarHeight - buttonHeight) / 2;
+        
+        // Store button bounds for click detection
+        window.solutionReplayShareButtonBounds = {
+            x: shareButtonX,
+            y: shareButtonY,
+            width: statusBarButtonSize,
+            height: statusBarButtonSize
+        };
+        
+        window.solutionReplayBackButtonBounds = {
+            x: backButtonX,
+            y: backButtonY,
+            width: statusBarButtonSize,
+            height: statusBarButtonSize
+        };
+        
+        window.solutionReplayRewindButtonBounds = {
+            x: rewindButtonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        window.solutionReplayStepBackButtonBounds = {
+            x: stepBackButtonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        window.solutionReplayPlayPauseButtonBounds = {
+            x: playPauseButtonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        window.solutionReplayStepForwardButtonBounds = {
+            x: stepForwardButtonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        
+        // Draw share button (same style as back button) - PNG icon with text below
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(shareIcon, shareButtonX, shareButtonY, statusBarButtonSize, statusBarButtonSize);
+        context.restore();
+        
+        // Draw SHARE/COPIED text below the icon
+        const shareText = solutionCopiedState ? "COPIED" : "SHARE";
+        const shareTextColor = solutionCopiedState ? "#00ff88" : "#ffdd00";
+        const shareTextY = shareButtonY + statusBarButtonSize + (isMobile ? 12 : 15);
+        context.save();
+        context.font = `bold ${isMobile ? 10 : 12}px 'Courier New', monospace`;
+        context.fillStyle = shareTextColor;
+        context.textAlign = "center";
+        context.fillText(shareText, shareButtonX + statusBarButtonSize / 2, shareTextY);
+        context.restore();
+        
+        // Draw back button (same as exit button in gameplay) - just the PNG icon
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(backIcon, backButtonX, backButtonY, statusBarButtonSize, statusBarButtonSize);
+        context.restore();
+        
+        // Draw step/play buttons using the custom style
+        // Step buttons - enabled when paused, not animating, and within valid range
+        const baseEnabled = !solutionReplayData.isPlaying && !isPlayerMoving;
+        
+        // Rewind to start - enabled when paused and not at the beginning
+        const rewindEnabled = baseEnabled && solutionReplayData.currentMoveIndex > 0;
+        const rewindColor = rewindEnabled ? "#ffaa00" : "#666666";
+        drawSolutionReplayButton(rewindButtonX, buttonY, buttonWidth, buttonHeight, "<<", rewindColor);
+        
+        // Step backward - also check if we're not at the beginning
+        const stepBackEnabled = baseEnabled && solutionReplayData.currentMoveIndex > 0;
+        const stepBackColor = stepBackEnabled ? "#ffaa00" : "#666666";
+        drawSolutionReplayButton(stepBackButtonX, buttonY, buttonWidth, buttonHeight, "◄", stepBackColor);
+        
+        const playPauseText = solutionReplayData.isPlaying ? "PAUSE" : "PLAY";
+        const playPauseColor = solutionReplayData.isPlaying ? "#ff6666" : "#00ff88";
+        drawSolutionReplayButton(playPauseButtonX, buttonY, buttonWidth, buttonHeight, playPauseText, playPauseColor);
+        
+        // Step forward - also check if we're not at the end
+        const stepForwardEnabled = baseEnabled && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length;
+        const stepForwardColor = stepForwardEnabled ? "#ffaa00" : "#666666";
+        drawSolutionReplayButton(stepForwardButtonX, buttonY, buttonWidth, buttonHeight, "►", stepForwardColor);
+        
+        // Draw progress info - positioned in the space above the moved-up buttons
+        const progressY = buttonY - (isMobile ? 8 : 12);
+        context.font = `bold ${isMobile ? 12 : 16}px 'Courier New', monospace`;
+        context.fillStyle = "#00aaff";
+        context.textAlign = "center";
+        
+        const currentMove = getCurrentReplayMoveNumber();
+        const totalMoves = solutionReplayData.solution.length;
+        const progressText = `MOVE ${currentMove} / ${totalMoves}`;
+        
+        context.fillText(progressText, centerX, progressY);
+        
+        // Draw stats below the buttons
+        if (levelProgressData) {
+            const statsY = buttonY + buttonHeight + (isMobile ? 25 : 30);
+            const statsText = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
+            const statsFontSize = isMobile ? 12 : 14;
+            context.font = `bold ${statsFontSize}px 'Courier New', monospace`;
+            context.fillStyle = "#ffdd00";
+            context.textAlign = "center";
+            context.fillText(statsText, centerX, statsY);
+        }
+        
+    } else {
+        // No solution stored - show message and back button only
+        const messageY = controlBarY + (isMobile ? 40 : 50);
+        
+        context.textAlign = "center";
+        const messageFontSize = isMobile ? 16 : 20;
+        context.font = `bold ${messageFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#ff8888";
+        context.fillText("You solved this level before", centerX, messageY);
+        
+        const instructionFontSize = isMobile ? 14 : 16;
+        context.font = `bold ${instructionFontSize}px 'Courier New', monospace`;
+        context.fillStyle = "#ffffff";
+        context.fillText("the saving feature was implemented.", centerX, messageY + 25);
+        context.fillText("Solve again to store your solution", centerX, messageY + 50);
+        
+        // Position back button on the right (same as with solution case)
+        const statusBarButtonSize = isMobile ? 35 : 45;
+        const rightMargin = isMobile ? 10 : 15;
+        const backButtonX = canvas.width - statusBarButtonSize - rightMargin;
+        const backButtonY = controlBarY + (controlBarHeight - statusBarButtonSize) / 2; // Vertically centered in control bar
+        
+        window.solutionReplayBackButtonBounds = {
+            x: backButtonX,
+            y: backButtonY,
+            width: statusBarButtonSize,
+            height: statusBarButtonSize
+        };
+        
+        // Clear other button bounds
+        window.solutionReplayShareButtonBounds = null; // No share button when no solution
+        window.solutionReplayStepBackButtonBounds = null;
+        window.solutionReplayPlayPauseButtonBounds = null;
+        window.solutionReplayStepForwardButtonBounds = null;
+        
+        // Draw back button (same as exit button in gameplay) - just the PNG icon
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(backIcon, backButtonX, backButtonY, statusBarButtonSize, statusBarButtonSize);
+        context.restore();
+    }
     
-    // Button dimensions
-    const buttonWidth = isMobile ? 50 : 65;
-    const buttonSpacing = isMobile ? 8 : 10;
-    
-    // Back button positioned on the left
-    const leftMargin = isMobile ? 10 : 15;
-    const backButtonX = leftMargin;
-    const buttonY = controlBarY + (controlBarHeight - buttonHeight) / 2 + (isMobile ? 5 : 8) - (buttonHeight / 2); // Moved up by half button height
-    
-    // Center the other 3 main controls (step back, play/pause, step forward)
-    const mainButtonsWidth = (buttonWidth * 3) + (buttonSpacing * 2);
-    const mainButtonsStartX = (canvas.width - mainButtonsWidth) / 2;
-    const stepBackButtonX = mainButtonsStartX;
-    const playPauseButtonX = mainButtonsStartX + buttonWidth + buttonSpacing;
-    const stepForwardButtonX = mainButtonsStartX + (buttonWidth + buttonSpacing) * 2;
-    
-    // Store button bounds for click detection
-    window.solutionReplayBackButtonBounds = {
-        x: backButtonX,
-        y: buttonY,
-        width: buttonWidth,
-        height: buttonHeight
-    };
-    
-    window.solutionReplayStepBackButtonBounds = {
-        x: stepBackButtonX,
-        y: buttonY,
-        width: buttonWidth,
-        height: buttonHeight
-    };
-    
-    window.solutionReplayPlayPauseButtonBounds = {
-        x: playPauseButtonX,
-        y: buttonY,
-        width: buttonWidth,
-        height: buttonHeight
-    };
-    
-    window.solutionReplayStepForwardButtonBounds = {
-        x: stepForwardButtonX,
-        y: buttonY,
-        width: buttonWidth,
-        height: buttonHeight
-    };
-    
-    // Draw buttons
-    drawSolutionReplayButton(backButtonX, buttonY, buttonWidth, buttonHeight, "BACK", "#ffffff");
-    
-    // Step buttons - enabled when paused, not animating, and within valid range
-    const baseEnabled = !solutionReplayData.isPlaying && !isPlayerMoving;
-    
-    // Step backward - also check if we're not at the beginning
-    const stepBackEnabled = baseEnabled && solutionReplayData.currentMoveIndex > 0;
-    const stepBackColor = stepBackEnabled ? "#ffaa00" : "#666666";
-    drawSolutionReplayButton(stepBackButtonX, buttonY, buttonWidth, buttonHeight, "◄", stepBackColor);
-    
-    const playPauseText = solutionReplayData.isPlaying ? "PAUSE" : "PLAY";
-    const playPauseColor = solutionReplayData.isPlaying ? "#ff6666" : "#00ff88";
-    drawSolutionReplayButton(playPauseButtonX, buttonY, buttonWidth, buttonHeight, playPauseText, playPauseColor);
-    
-    // Step forward - also check if we're not at the end
-    const stepForwardEnabled = baseEnabled && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length;
-    const stepForwardColor = stepForwardEnabled ? "#ffaa00" : "#666666";
-    drawSolutionReplayButton(stepForwardButtonX, buttonY, buttonWidth, buttonHeight, "►", stepForwardColor);
-    
-    // Draw progress info - positioned in the space above the moved-up buttons
-    const progressY = buttonY - (isMobile ? 8 : 12); // Position above buttons with some spacing
-    context.font = `bold ${isMobile ? 12 : 16}px 'Courier New', monospace`;
-    context.fillStyle = "#00aaff";
-    context.textAlign = "center";
-    
-    const currentMove = getCurrentReplayMoveNumber();
-    const totalMoves = solutionReplayData.solution.length;
-    const progressText = `MOVE ${currentMove} / ${totalMoves}`;
-    
-    context.fillText(progressText, canvas.width / 2, progressY);
     context.textAlign = "left";
 }
 
@@ -6696,6 +6556,46 @@ function stepSolutionReplayBackward() {
     solutionReplayData.currentMoveIndex--;
 }
 
+function rewindSolutionReplayToStart() {
+    if (!solutionReplayData.isActive) return;
+    
+    // Don't allow rewind if player is currently moving (animation in progress)
+    if (isPlayerMoving) return;
+    
+    // Can't rewind if we're already at the beginning
+    if (solutionReplayData.currentMoveIndex <= 0) return;
+    
+    // Store the current solution string to preserve it
+    const currentSolution = solutionReplayData.solution;
+    
+    // Pause if playing
+    if (solutionReplayData.isPlaying) {
+        solutionReplayData.isPlaying = false;
+        if (solutionReplayData.intervalId) {
+            clearInterval(solutionReplayData.intervalId);
+            solutionReplayData.intervalId = null;
+        }
+    }
+    
+    // Reset to initial state - same as clicking "View Solution" button
+    const currentAttemptCount = attemptCount;
+    
+    // Use the standard restart but restore the attempt counter
+    restartCurrentLevel();
+    attemptCount = currentAttemptCount; // Restore original count
+    
+    // Set up the solution replay data (same as startSolutionReplay)
+    solutionReplayData.solution = currentSolution;
+    solutionReplayData.currentMoveIndex = 0;
+    solutionReplayData.isActive = true;
+    solutionReplayData.isPlaying = false; // Start paused
+    solutionReplayData.simulatedContinuousDirection = null;
+    solutionReplayData.shouldClearContinuousAfterMove = false;
+    
+    // Switch to solution replay state
+    currentGameState = GAME_STATES.SOLUTION_REPLAY;
+}
+
 function completeSolutionReplay() {
     solutionReplayData.isPlaying = false;
     if (solutionReplayData.intervalId) {
@@ -6721,8 +6621,12 @@ function exitSolutionReplay() {
         solutionReplayData.intervalId = null;
     }
     
-    // Return to previously solved overlay
-    currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+    // Return to normal gameplay - reset to starting state
+    // Preserve attempt counter when returning to gameplay
+    const currentAttemptCount = attemptCount;
+    restartCurrentLevel(); // Reset level to starting position
+    attemptCount = currentAttemptCount; // Restore original count
+    currentGameState = GAME_STATES.PLAYING;
 }
 
 // #endregion

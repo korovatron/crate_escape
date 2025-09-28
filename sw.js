@@ -11,6 +11,7 @@ const urlsToCache = [
   './assets/images/backIcon.png',
   './assets/images/restartIcon.png',
   './assets/images/undoIcon.png',
+  './assets/images/shareIcon.png',
   './apple-touch-icon-v2.png',
   './manifest.json',
   './firebase-config.js',
