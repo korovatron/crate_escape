@@ -876,7 +876,9 @@ let solutionReplayData = {
     currentMoveIndex: 0, // Index into the solution string
     solution: '',
     intervalId: null,
-    moveDelay: 500 // milliseconds between moves (increased for better visibility)
+    moveDelay: 500, // milliseconds between moves (increased for better visibility)
+    simulatedContinuousDirection: null, // Track simulated continuous input for smooth animation
+    shouldClearContinuousAfterMove: false // Flag to defer clearing continuous direction until move completes
 };
 
 // Hamburger menu variables
@@ -1951,6 +1953,48 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
         newAnimationState = 'moving-up';
     }
     
+    // During solution replay, check if next move is in same direction for continuous animation
+    if (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive) {
+        const nextMoveIndex = solutionReplayData.currentMoveIndex + 1;
+        if (nextMoveIndex < solutionReplayData.solution.length) {
+            const nextChar = solutionReplayData.solution[nextMoveIndex];
+            const nextDirection = getDirectionFromChar(nextChar);
+            
+            if (nextDirection && 
+                direction.x === nextDirection.x && 
+                direction.y === nextDirection.y) {
+                // Next move is in same direction - set up continuous animation
+                solutionReplayData.simulatedContinuousDirection = direction;
+                solutionReplayData.shouldClearContinuousAfterMove = false;
+            } else {
+                // Next move is different direction - defer clearing continuous animation until move completes
+                solutionReplayData.shouldClearContinuousAfterMove = true;
+            }
+        } else {
+            // This is the final move - check if we should continue continuous animation
+            if (solutionReplayData.currentMoveIndex > 0) {
+                // Check if previous move was in same direction
+                const previousChar = solutionReplayData.solution[solutionReplayData.currentMoveIndex - 1];
+                const previousDirection = getDirectionFromChar(previousChar);
+                
+                if (previousDirection && 
+                    direction.x === previousDirection.x && 
+                    direction.y === previousDirection.y) {
+                    // Final move is same direction as previous - keep continuous animation active
+                    solutionReplayData.simulatedContinuousDirection = direction;
+                    solutionReplayData.shouldClearContinuousAfterMove = false;
+                } else {
+                    // Final move is different direction - defer clearing continuous animation until move completes
+                    solutionReplayData.shouldClearContinuousAfterMove = true;
+                }
+            } else {
+                // This is the first and only move - no continuous animation
+                solutionReplayData.simulatedContinuousDirection = null;
+                solutionReplayData.shouldClearContinuousAfterMove = false;
+            }
+        }
+    }
+    
     // Only reset animation if direction changed, otherwise continue current animation
     if (playerAnimationState !== newAnimationState) {
         playerAnimationState = newAnimationState;
@@ -2050,6 +2094,14 @@ function updatePlayerMovement(deltaTime) {
             playerAnimationState = 'idle';
             playerAnimationFrame = 0;
             playerAnimationTimer = 0;
+            
+            // Clear continuous direction if flagged to do so during solution replay
+            if (currentGameState === GAME_STATES.SOLUTION_REPLAY && 
+                solutionReplayData.isActive && 
+                solutionReplayData.shouldClearContinuousAfterMove) {
+                solutionReplayData.simulatedContinuousDirection = null;
+                solutionReplayData.shouldClearContinuousAfterMove = false;
+            }
         }
     }
 }
@@ -2089,15 +2141,26 @@ function updatePlayerAnimation(deltaTime) {
 }
 
 function isContinuousInputActive() {
+    // During solution replay, check for simulated continuous direction
+    if (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.simulatedContinuousDirection) {
+        return true;
+    }
+    
     // Check if any movement keys are currently pressed
-    return isKeyDown('ArrowLeft') || isKeyDown('ArrowRight') || 
-           isKeyDown('ArrowUp') || isKeyDown('ArrowDown') ||
-           (isTouchActive && (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0));
+    const keyPressed = isKeyDown('ArrowLeft') || isKeyDown('ArrowRight') || 
+                      isKeyDown('ArrowUp') || isKeyDown('ArrowDown') ||
+                      (isTouchActive && (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0));
+    
+    return keyPressed;
 }
 
 function checkForContinuedInput() {
     // Only process continued input during normal gameplay, not during solution replay
     if (currentGameState !== GAME_STATES.PLAYING) {
+        // However, during solution replay, check for continued replay moves
+        if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
+            checkForContinuedReplayMove();
+        }
         return;
     }
     
@@ -2126,6 +2189,48 @@ function checkForContinuedInput() {
     if (moveDirection.x !== 0 || moveDirection.y !== 0) {
         attemptPlayerMove(moveDirection);
     }
+}
+
+function checkForContinuedReplayMove() {
+    // Only continue if replay is active and playing
+    if (!solutionReplayData.isActive || !solutionReplayData.isPlaying) {
+        return;
+    }
+    
+    // Check if there are more moves to execute
+    if (solutionReplayData.currentMoveIndex >= solutionReplayData.solution.length) {
+        // Solution complete - but don't clear simulated continuous direction here
+        // It will be cleared in completeSolutionReplay()
+        completeSolutionReplay();
+        return;
+    }
+    
+    // Get the current move direction
+    const currentChar = solutionReplayData.solution[solutionReplayData.currentMoveIndex];
+    const currentDirection = getDirectionFromChar(currentChar);
+    
+    if (!currentDirection) return;
+    
+    // Check if this move should continue immediately (same direction as previous)
+    // or if we should respect the interval delay
+    let shouldContinueImmediately = false;
+    
+    if (solutionReplayData.currentMoveIndex > 0) {
+        const previousChar = solutionReplayData.solution[solutionReplayData.currentMoveIndex - 1];
+        const previousDirection = getDirectionFromChar(previousChar);
+        
+        if (previousDirection && 
+            currentDirection.x === previousDirection.x && 
+            currentDirection.y === previousDirection.y) {
+            shouldContinueImmediately = true;
+        }
+    }
+    
+    if (shouldContinueImmediately) {
+        // Continue immediately for fluid multi-tile movement
+        executeNextReplayMove();
+    }
+    // If not continuing immediately, let the interval timer handle the next move
 }
 
 function getCurrentPlayerPixelPos() {
@@ -5274,8 +5379,8 @@ function drawSolutionReplayControls() {
     
     // Draw control bar background
     const gradient = context.createLinearGradient(0, controlBarY, 0, canvas.height);
-    gradient.addColorStop(0, "rgba(0, 0, 0, 0.8)");
-    gradient.addColorStop(1, "rgba(0, 10, 20, 0.9)");
+    gradient.addColorStop(0, "rgba(0, 0, 0, 0.4)");
+    gradient.addColorStop(1, "rgba(0, 10, 20, 0.5)");
     context.fillStyle = gradient;
     context.fillRect(0, controlBarY, canvas.width, controlBarHeight);
     
@@ -6437,6 +6542,8 @@ function startSolutionReplay(solutionString) {
     solutionReplayData.currentMoveIndex = 0;
     solutionReplayData.isActive = true;
     solutionReplayData.isPlaying = false; // Start paused
+    solutionReplayData.simulatedContinuousDirection = null; // Clear simulated continuous input
+    solutionReplayData.shouldClearContinuousAfterMove = false; // Clear flag
     
     // Switch to solution replay state
     currentGameState = GAME_STATES.SOLUTION_REPLAY;
@@ -6460,6 +6567,9 @@ function toggleSolutionReplayPlayback() {
             clearInterval(solutionReplayData.intervalId);
             solutionReplayData.intervalId = null;
         }
+        // Clear simulated continuous direction when paused to stop animation
+        solutionReplayData.simulatedContinuousDirection = null;
+        solutionReplayData.shouldClearContinuousAfterMove = false;
     }
 }
 
@@ -6491,7 +6601,7 @@ function executeNextReplayMove() {
     const direction = getDirectionFromChar(currentChar);
     
     if (direction) {
-        // Directly attempt the move
+        // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
         const moveSuccessful = attemptPlayerMove(direction);
         
         if (moveSuccessful) {
@@ -6500,6 +6610,8 @@ function executeNextReplayMove() {
         } else {
             // Move failed - this shouldn't happen with a valid solution
             console.warn('Solution replay move failed:', direction, 'at move', solutionReplayData.currentMoveIndex);
+            solutionReplayData.simulatedContinuousDirection = null;
+            solutionReplayData.shouldClearContinuousAfterMove = false;
             completeSolutionReplay();
         }
     }
@@ -6541,15 +6653,21 @@ function stepSolutionReplayForward() {
     const direction = getDirectionFromChar(currentChar);
     
     if (direction) {
-        // Directly attempt the move
+        // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
         const moveSuccessful = attemptPlayerMove(direction);
         
         if (moveSuccessful) {
             // Move to next character in solution
             solutionReplayData.currentMoveIndex++;
+            
+            // Since we're stepping manually (paused), clear any continuous animation that was set up
+            // The move is complete and we want to stop at this position
+            solutionReplayData.simulatedContinuousDirection = null;
+            solutionReplayData.shouldClearContinuousAfterMove = false;
         } else {
             // Move failed - this shouldn't happen with a valid solution
             console.warn('Solution replay move failed:', direction, 'at move', solutionReplayData.currentMoveIndex);
+            solutionReplayData.simulatedContinuousDirection = null;
         }
     }
 }
@@ -6572,6 +6690,10 @@ function stepSolutionReplayBackward() {
     // Can't go back if we're at the beginning
     if (solutionReplayData.currentMoveIndex <= 0) return;
     
+    // Clear simulated continuous input when stepping backward
+    solutionReplayData.simulatedContinuousDirection = null;
+    solutionReplayData.shouldClearContinuousAfterMove = false;
+    
     // Use the existing undo system - it's already perfect!
     undoLastMove();
     
@@ -6585,6 +6707,10 @@ function completeSolutionReplay() {
         clearInterval(solutionReplayData.intervalId);
         solutionReplayData.intervalId = null;
     }
+    
+    // Clear simulated continuous input
+    solutionReplayData.simulatedContinuousDirection = null;
+    solutionReplayData.shouldClearContinuousAfterMove = false;
     
     // Show completion message briefly, then return to controls
     // Don't trigger normal level completion logic
