@@ -23,6 +23,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Crate Escape">
     
+    <!-- iOS Safari specific meta tags to suppress system gestures -->
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="apple-touch-fullscreen" content="yes">
+    
     <!-- Google Fonts for industrial theme -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,6 +48,14 @@
 
     canvas {
       transform-origin: top left;
+      -webkit-touch-callout: none; /* Disable iOS callout */
+      -webkit-user-select: none; /* Disable selection */
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      touch-action: manipulation; /* More specific than none for better iOS handling */
+      -webkit-tap-highlight-color: transparent; /* Remove tap highlighting */
       -webkit-user-select: none; /* Prevent text selection */
       -webkit-touch-callout: none; /* Disable iOS callout (magnifier) */
       -webkit-tap-highlight-color: transparent; /* Remove tap highlight */

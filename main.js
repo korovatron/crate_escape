@@ -459,6 +459,11 @@ function setupCanvasEventListeners() {
     
     // Touch events
     canvas.addEventListener('touchstart', function(e) {
+        // Aggressive iOS system gesture suppression for all game states
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         isUsingTouch = true; // Mark that we're using touch
         if (e.touches.length === 1) {
             const touch = e.touches[0];
@@ -481,8 +486,11 @@ function setupCanvasEventListeners() {
     }, {passive: false});
     
     canvas.addEventListener('touchmove', function(e) {
+        // Always prevent default to stop iOS system gestures
+        e.preventDefault();
+        e.stopPropagation();
+        
         if (e.touches.length === 1 && isTouchActive && currentGameState === GAME_STATES.PLAYING) {
-            e.preventDefault();
             const touch = e.touches[0];
             const currentTime = Date.now();
             
@@ -531,6 +539,11 @@ function setupCanvasEventListeners() {
     }, {passive: false});
     
     canvas.addEventListener('touchend', function(e) {
+        // Aggressive iOS system gesture suppression for all game states
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         // Stop continuous movement
         isTouchActive = false;
         touchMoveDirection = { x: 0, y: 0 };
