@@ -376,35 +376,45 @@ function setupCanvasEventListeners() {
                 return;
             }
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
-            // Check if click is on the copy solution button
-            if (window.copySolutionButtonBounds && 
-                mouseX >= window.copySolutionButtonBounds.x && 
-                mouseX <= window.copySolutionButtonBounds.x + window.copySolutionButtonBounds.width &&
-                mouseY >= window.copySolutionButtonBounds.y && 
-                mouseY <= window.copySolutionButtonBounds.y + window.copySolutionButtonBounds.height) {
+            // Check if click is on the share button
+            if (window.shareCompletionButtonBounds && 
+                mouseX >= window.shareCompletionButtonBounds.x && 
+                mouseX <= window.shareCompletionButtonBounds.x + window.shareCompletionButtonBounds.width &&
+                mouseY >= window.shareCompletionButtonBounds.y && 
+                mouseY <= window.shareCompletionButtonBounds.y + window.shareCompletionButtonBounds.height) {
                 
-                // Copy solution to clipboard
+                // Copy solution to clipboard using the same function as replay controls
                 copySolutionToClipboard().then(success => {
                     if (success) {
                         // Set copy state and show success feedback
                         solutionCopied = true;
-                        lastInputType = "Solution Copied!";
+                        lastInputType = "Solution Shared!";
                         clickCoordinates = "";
                         lastInputTime = Date.now();
                         inputFadeTimer = 3000;
                     } else {
                         // Show error feedback
-                        lastInputType = "Copy Failed";
+                        lastInputType = "Share Failed";
                         clickCoordinates = "";
                         lastInputTime = Date.now();
                         inputFadeTimer = 3000;
                     }
                 });
-                return; // Only return after copy, don't advance level
+                return; // Don't advance level
             }
             
-            // Otherwise advance to next level
-            advanceToNextLevel();
+            // Check if click is on the next level button
+            if (window.nextLevelButtonBounds && 
+                mouseX >= window.nextLevelButtonBounds.x && 
+                mouseX <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
+                mouseY >= window.nextLevelButtonBounds.y && 
+                mouseY <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
+                
+                advanceToNextLevel();
+                return;
+            }
+            
+            // No longer advance to next level on any click - must click the button
             return;
         }
         
@@ -656,35 +666,46 @@ function setupCanvasEventListeners() {
                         }
                     }
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
-                    // Check if tap is on the copy solution button
-                    if (window.copySolutionButtonBounds && 
-                        canvasPos.x >= window.copySolutionButtonBounds.x && 
-                        canvasPos.x <= window.copySolutionButtonBounds.x + window.copySolutionButtonBounds.width &&
-                        canvasPos.y >= window.copySolutionButtonBounds.y && 
-                        canvasPos.y <= window.copySolutionButtonBounds.y + window.copySolutionButtonBounds.height) {
+                    // Check if tap is on the share button
+                    if (window.shareCompletionButtonBounds && 
+                        canvasPos.x >= window.shareCompletionButtonBounds.x && 
+                        canvasPos.x <= window.shareCompletionButtonBounds.x + window.shareCompletionButtonBounds.width &&
+                        canvasPos.y >= window.shareCompletionButtonBounds.y && 
+                        canvasPos.y <= window.shareCompletionButtonBounds.y + window.shareCompletionButtonBounds.height) {
                         
-                        // Copy solution to clipboard
+                        // Copy solution to clipboard using the same function as replay controls
                         copySolutionToClipboard().then(success => {
                             if (success) {
                                 // Set copy state and show success feedback
                                 solutionCopied = true;
-                                lastInputType = "Solution Copied!";
+                                lastInputType = "Solution Shared!";
                                 clickCoordinates = "";
                                 lastInputTime = Date.now();
                                 inputFadeTimer = 3000;
                             } else {
                                 // Show error feedback
-                                lastInputType = "Copy Failed";
+                                lastInputType = "Share Failed";
                                 clickCoordinates = "";
                                 lastInputTime = Date.now();
                                 inputFadeTimer = 3000;
                             }
                         });
-                        return; // Only return after copy, don't advance level
+                        return; // Don't advance level
                     }
                     
-                    // Otherwise advance to next level
-                    advanceToNextLevel();
+                    // Check if tap is on the next level button
+                    if (window.nextLevelButtonBounds && 
+                        canvasPos.x >= window.nextLevelButtonBounds.x && 
+                        canvasPos.x <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
+                        canvasPos.y >= window.nextLevelButtonBounds.y && 
+                        canvasPos.y <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
+                        
+                        advanceToNextLevel();
+                        return;
+                    }
+                    
+                    // No longer advance to next level on any tap - must tap the button
+                    return;
                 } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
                     // Handle solution replay control taps
                     if (window.solutionReplayBackButtonBounds && 
@@ -4889,9 +4910,9 @@ function drawLevelCompleteOverlay() {
     const isMobile = canvas.width < 600;
     const padding = isMobile ? 20 : 40; // Reduce padding on mobile
     
-    // Calculate overlay height based on content
-    const lineHeight = 60; // Space between text lines
-    const overlayHeight = 260; // Increased height for copy button + 5 lines of text + padding
+    // Calculate overlay height based on content - reduced since we removed elements
+    const lineHeight = 50; // Reduced space between elements
+    const overlayHeight = 200; // Reduced height since we removed subtitle and instructions
     const overlayY = centerY - overlayHeight / 2;
     
     // Draw semi-transparent overlay with dark gradient (more transparent)
@@ -4946,109 +4967,87 @@ function drawLevelCompleteOverlay() {
     
     // Main completion message with green neon glow
     context.textAlign = "center";
-    drawResponsiveText("LEVEL COMPLETE!", centerX, centerY - 60, "#00ff00", 48);
+    drawResponsiveText("LEVEL COMPLETE!", centerX, centerY - 40, "#00ff00", 48);
     
-    // Get next level info for subtitle
-    const nextLevel = getNextLevel();
-    let subtitle = "";
-    let subtitleColor = "#00ffff";
+    // Show completion stats with gold neon - moved closer to title
+    const statsText = `COMPLETED IN ${moveCount} MOVES, ${pushCount} PUSHES`;
+    drawResponsiveText(statsText, centerX, centerY - 5, "#ffdd00", 20);
     
-    if (nextLevel.isComplete) {
-        subtitle = "CONGRATULATIONS! GAME COMPLETE!";
-        subtitleColor = "#ff6600"; // Orange for game complete
-    } else if (nextLevel.setName !== currentSet) {
-        // Moving to new set
-        subtitle = `STARTING ${nextLevel.setName.toUpperCase()}`;
-        subtitleColor = "#ff00ff"; // Magenta for new set
-    } else {
-        // Next level in same set
-        subtitle = `NEXT: LEVEL ${nextLevel.levelNumber}`;
-        subtitleColor = "#00ffff"; // Cyan for next level
-    }
+    // Share button and Next Level button - moved up closer to content
+    const buttonHeight = isMobile ? 30 : 35;
+    const shareButtonSize = isMobile ? 35 : 45; // Same size as status bar buttons
+    const nextButtonWidth = isMobile ? 120 : 140;
+    const buttonSpacing = isMobile ? 15 : 20;
     
-    drawResponsiveText(subtitle, centerX, centerY - 20, subtitleColor, 24);
+    // Calculate total height of share button including text below
+    const shareTextSpacing = isMobile ? 12 : 15; // Space between icon and text
+    const shareTextHeight = isMobile ? 10 : 12; // Font size of SHARE/COPIED text
+    const shareTotalHeight = shareButtonSize + shareTextSpacing + shareTextHeight;
     
-    // Show completion stats with gold neon
-    const statsText = `COMPLETED IN ${moveCount} MOVES, ${pushCount} PUSHES (ATTEMPT ${attemptCount})`;
-    drawResponsiveText(statsText, centerX, centerY + 20, "#ffdd00", 20);
+    // Calculate positions to center both buttons - align share icon+text with Next Level button
+    const totalWidth = shareButtonSize + buttonSpacing + nextButtonWidth;
+    const startX = centerX - totalWidth / 2;
     
-    // Copy Solution button or confirmation message
-    if (!solutionCopied) {
-        // Show copy button
-        const buttonWidth = isMobile ? 140 : 160;
-        const buttonHeight = isMobile ? 30 : 35;
-        const buttonX = centerX - buttonWidth / 2;
-        const buttonY = centerY + 45;
-        
-        // Store button bounds for click detection (global variables)
-        window.copySolutionButtonBounds = {
-            x: buttonX,
-            y: buttonY,
-            width: buttonWidth,
-            height: buttonHeight
-        };
-        
-        // Save canvas context state before modifying it
-        context.save();
-        
-        // Draw button background with glow
-        context.shadowColor = "#00ff88";
-        context.shadowBlur = 15;
-        context.fillStyle = "rgba(0, 255, 136, 0.2)";
-        context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
-        
-        // Draw button border
-        context.strokeStyle = "#00ff88";
-        context.lineWidth = 2;
-        context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
-        context.shadowBlur = 0;
-        
-        // Draw button text
-        const buttonFontSize = isMobile ? 12 : 14;
-        context.font = `bold ${buttonFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#00ff88";
-        context.textAlign = "center";
-        context.fillText("COPY SOLUTION", centerX, buttonY + buttonHeight / 2 + 5);
-        
-        // Restore canvas context state
-        context.restore();
-    } else {
-        // Show confirmation message
-        context.save();
-        const confirmFontSize = isMobile ? 14 : 16;
-        context.font = `bold ${confirmFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#00ff88";
-        context.textAlign = "center";
-        context.fillText("SOLUTION COPIED TO CLIPBOARD", centerX, centerY + 65);
-        context.restore();
-        
-        // Clear button bounds since there's no button to click
-        window.copySolutionButtonBounds = null;
-    }
+    const shareButtonX = startX;
+    const nextButtonX = startX + shareButtonSize + buttonSpacing;
     
-    // Instructions with pulsing effect (save context again for this section)
+    // Align the centers of both button elements (share icon+text vs next level button)
+    const nextButtonCenterY = centerY + 25 + buttonHeight / 2; // Center of Next Level button
+    const shareButtonY = nextButtonCenterY - shareTotalHeight / 2; // Align share icon+text center with button center
+    const buttonY = nextButtonCenterY - buttonHeight / 2; // Keep Next Level button position
+    
+    // Store button bounds for click detection
+    window.shareCompletionButtonBounds = {
+        x: shareButtonX,
+        y: shareButtonY,
+        width: shareButtonSize,
+        height: shareButtonSize
+    };
+    
+    window.nextLevelButtonBounds = {
+        x: nextButtonX,
+        y: buttonY,
+        width: nextButtonWidth,
+        height: buttonHeight
+    };
+    
+    // Save canvas context state
     context.save();
-    const time = Date.now() / 1000;
-    const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
-    const instructColor = `rgba(255, 255, 255, ${pulse})`;
     
-    // Use responsive sizing for instructions too
-    const instructFontSize = isMobile ? 14 : 18;
-    context.font = `bold ${instructFontSize}px 'Courier New', monospace`;
-    context.shadowColor = "#ffffff";
-    context.shadowBlur = 10 * pulse;
-    context.fillStyle = instructColor;
+    // Draw share button (PNG icon) - always visible
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(shareIcon, shareButtonX, shareButtonY, shareButtonSize, shareButtonSize);
     
-    // Check if instruction text fits
-    let instructText = "PRESS SPACE OR TAP TO CONTINUE";
-    let instructWidth = context.measureText(instructText).width;
-    if (instructWidth > canvas.width - (padding * 2)) {
-        instructText = "TAP TO CONTINUE";
-    }
+    // Draw SHARE/COPIED text below the icon (changes based on solutionCopied state)
+    const shareText = solutionCopied ? "COPIED" : "SHARE";
+    const shareTextColor = solutionCopied ? "#00ff88" : "#ffdd00";
+    const shareTextY = shareButtonY + shareButtonSize + shareTextSpacing;
+    context.font = `bold ${isMobile ? 10 : 12}px 'Courier New', monospace`;
+    context.fillStyle = shareTextColor;
+    context.textAlign = "center";
+    context.fillText(shareText, shareButtonX + shareButtonSize / 2, shareTextY);
     
-    context.fillText(instructText, centerX, centerY + 105);
+    // Draw Next Level button background with glow
+    context.shadowColor = "#00ff00";
+    context.shadowBlur = 15;
+    context.fillStyle = "rgba(0, 255, 0, 0.2)";
+    context.fillRect(nextButtonX, buttonY, nextButtonWidth, buttonHeight);
     
-    // Restore context state after instructions
+    // Draw Next Level button border
+    context.strokeStyle = "#00ff00";
+    context.lineWidth = 2;
+    context.strokeRect(nextButtonX, buttonY, nextButtonWidth, buttonHeight);
+    context.shadowBlur = 0;
+    
+    // Draw Next Level button text
+    const buttonFontSize = isMobile ? 12 : 14;
+    context.font = `bold ${buttonFontSize}px 'Courier New', monospace`;
+    context.fillStyle = "#00ff00";
+    context.textAlign = "center";
+    context.fillText("NEXT LEVEL", nextButtonX + nextButtonWidth / 2, buttonY + buttonHeight / 2 + 5);
+    
+    // Restore canvas context state
     context.restore();
     
     // Reset text alignment
