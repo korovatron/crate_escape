@@ -4857,7 +4857,7 @@ function drawSolutionButton() {
     context.shadowBlur = 0;
     
     // Button text - two lines
-    const fontSize = isMobile ? 9 : 11;
+    const fontSize = isMobile ? 11 : 13;
     context.font = `bold ${fontSize}px 'Courier New', monospace`;
     context.fillStyle = "#00aaff";
     context.textAlign = "center";
