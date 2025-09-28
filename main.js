@@ -4558,7 +4558,7 @@ function drawNormalGameplay() {
     // Dim the status bar when overlays have the only active controls
     if (currentGameState === GAME_STATES.SOLUTION_REPLAY || 
         currentGameState === GAME_STATES.LEVEL_COMPLETE) {
-        context.fillStyle = "rgba(0, 0, 0, 0.6)"; // Semi-transparent black overlay
+        context.fillStyle = "rgba(0, 0, 0, 0.8)"; // More dimmed to emphasize it's not functional
         context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     }
     
