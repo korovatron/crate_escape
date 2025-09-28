@@ -66,10 +66,12 @@ document.addEventListener('keydown', (e) => {
     // Handle previously solved overlay
     if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
         if (e.key === 'Escape') {
-            currentGameState = GAME_STATES.LEVEL_SELECT;
-            initializeLevelSelect();
+            // Dismiss overlay and return to gameplay
+            solutionCopiedState = false;
+            currentGameState = GAME_STATES.PLAYING;
         } else if (e.key === ' ') {
-            // Space key = Play Again
+            // Space key = Dismiss overlay and play
+            solutionCopiedState = false;
             currentGameState = GAME_STATES.PLAYING;
         }
         return;
@@ -179,6 +181,18 @@ function setupCanvasEventListeners() {
         
         // Check for button clicks during gameplay
         if (currentGameState === GAME_STATES.PLAYING) {
+            // Check if click is on the solution button
+            if (showSolutionButton && window.solutionButtonBounds && 
+                mouseX >= window.solutionButtonBounds.x && 
+                mouseX <= window.solutionButtonBounds.x + window.solutionButtonBounds.width &&
+                mouseY >= window.solutionButtonBounds.y && 
+                mouseY <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
+                
+                // Show previously solved overlay
+                currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                return;
+            }
+            
             if (isClickOnOverviewButton(mouseX, mouseY)) {
                 toggleOverviewMode();
                 return;
@@ -306,17 +320,6 @@ function setupCanvasEventListeners() {
             advanceToNextLevel();
             return;
         } else if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
-            // Check if click is on the play again button
-            if (window.playAgainButtonBounds && 
-                mouseX >= window.playAgainButtonBounds.x && 
-                mouseX <= window.playAgainButtonBounds.x + window.playAgainButtonBounds.width &&
-                mouseY >= window.playAgainButtonBounds.y && 
-                mouseY <= window.playAgainButtonBounds.y + window.playAgainButtonBounds.height) {
-                
-                // Play again - start the level
-                currentGameState = GAME_STATES.PLAYING;
-                return;
-            }
             
             // Check if click is on the copy saved solution button (only if it exists)
             if (window.copySavedSolutionButtonBounds && 
@@ -350,9 +353,9 @@ function setupCanvasEventListeners() {
                 mouseY >= window.backButtonBounds.y && 
                 mouseY <= window.backButtonBounds.y + window.backButtonBounds.height) {
                 
-                // Go back to level select
+                // Dismiss overlay and return to gameplay
                 solutionCopiedState = false; // Reset copied state
-                currentGameState = GAME_STATES.LEVEL_SELECT;
+                currentGameState = GAME_STATES.PLAYING;
                 return;
             }
         }
@@ -478,6 +481,18 @@ function setupCanvasEventListeners() {
                 
                 // Check for button taps during gameplay
                 if (currentGameState === GAME_STATES.PLAYING) {
+                    // Check if tap is on the solution button
+                    if (showSolutionButton && window.solutionButtonBounds && 
+                        canvasPos.x >= window.solutionButtonBounds.x && 
+                        canvasPos.x <= window.solutionButtonBounds.x + window.solutionButtonBounds.width &&
+                        canvasPos.y >= window.solutionButtonBounds.y && 
+                        canvasPos.y <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
+                        
+                        // Show previously solved overlay
+                        currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                        return;
+                    }
+                    
                     if (isClickOnOverviewButton(canvasPos.x, canvasPos.y)) {
                         toggleOverviewMode();
                         return;
@@ -643,9 +658,9 @@ function setupCanvasEventListeners() {
                         canvasPos.y >= window.backButtonBounds.y && 
                         canvasPos.y <= window.backButtonBounds.y + window.backButtonBounds.height) {
                         
-                        // Go back to level select
+                        // Dismiss overlay and return to gameplay
                         solutionCopiedState = false; // Reset copied state
-                        currentGameState = GAME_STATES.LEVEL_SELECT;
+                        currentGameState = GAME_STATES.PLAYING;
                         return;
                     }
                 }
@@ -690,6 +705,7 @@ const GAME_STATES = {
 };
 let currentGameState = GAME_STATES.TITLE;
 let solutionCopiedState = false; // Track if solution was just copied
+let showSolutionButton = false; // Track if solution button should be shown during gameplay
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
@@ -1674,6 +1690,9 @@ Solution: ${levelProgressData.solution}`;
 
 // Player movement functions
 function attemptPlayerMove(direction) {
+    // Hide solution button when player attempts to move
+    showSolutionButton = false;
+    
     // Block player movement when in overview mode
     if (overviewMode) {
         return false;
@@ -2104,11 +2123,13 @@ function advanceToNextLevel() {
         const levelProgressData = levelProgress.get(levelKey);
         
         if (levelProgressData && levelProgressData.completed) {
-            // Level was previously completed - show previously solved overlay
+            // Level was previously completed - show solution button during gameplay
             solutionCopiedState = false; // Reset copied state
-            currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+            showSolutionButton = true; // Show solution button instead of overlay
+            currentGameState = GAME_STATES.PLAYING;
         } else {
             // New or unsolved level - go straight to playing
+            showSolutionButton = false; // No solution button for unsolved levels
             currentGameState = GAME_STATES.PLAYING;
         }
     } else {
@@ -4288,6 +4309,11 @@ function drawNormalGameplay() {
     
     // Draw status bar on top of everything
     drawStatusBar();
+    
+    // Draw solution button if this level was previously solved
+    if (showSolutionButton && currentGameState === GAME_STATES.PLAYING) {
+        drawSolutionButton();
+    }
 }
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
@@ -4799,6 +4825,57 @@ function drawLevelCompleteOverlay() {
     context.textAlign = "left";
 }
 
+function drawSolutionButton() {
+    // Mobile detection for responsive sizing
+    const isMobile = canvas.width < 600;
+    
+    // Button positioning in top-left of gameplay area (below status bar)
+    const padding = isMobile ? 15 : 20;
+    const buttonWidth = isMobile ? 90 : 110;
+    const buttonHeight = isMobile ? 40 : 50; // Taller for two lines of text
+    const buttonX = padding;
+    const buttonY = STATUS_BAR_HEIGHT + padding; // Position below status bar
+    
+    // Store button bounds for click detection
+    window.solutionButtonBounds = {
+        x: buttonX,
+        y: buttonY,
+        width: buttonWidth,
+        height: buttonHeight
+    };
+    
+    // Draw solution button with neon style
+    context.save();
+    context.shadowColor = "#00aaff";
+    context.shadowBlur = 10;
+    context.fillStyle = "rgba(0, 170, 255, 0.2)";
+    context.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    
+    context.strokeStyle = "#00aaff";
+    context.lineWidth = 2;
+    context.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+    context.shadowBlur = 0;
+    
+    // Button text - two lines
+    const fontSize = isMobile ? 9 : 11;
+    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.fillStyle = "#00aaff";
+    context.textAlign = "center";
+    
+    // First line: "VIEW YOUR"
+    const lineSpacing = isMobile ? 12 : 14;
+    const centerX = buttonX + buttonWidth / 2;
+    const centerY = buttonY + buttonHeight / 2;
+    context.fillText("VIEW YOUR", centerX, centerY - lineSpacing / 2 + 2);
+    
+    // Second line: "SOLUTION"
+    context.fillText("SOLUTION", centerX, centerY + lineSpacing / 2 + 2);
+    
+    context.restore();
+    
+    context.textAlign = "left";
+}
+
 function drawPreviouslySolvedOverlay() {
     // Calculate text positioning
     const centerX = canvas.width / 2;
@@ -4879,43 +4956,12 @@ function drawPreviouslySolvedOverlay() {
     
     // Different content based on whether solution exists
     if (hasSolution) {
-        // Has solution - show buttons
+        // Has solution - show copy solution button only
         
-        // Play Again button
-        const buttonWidth = isMobile ? 120 : 140;
+        // Copy Solution button (centered)
+        const buttonWidth = isMobile ? 140 : 160;
         const buttonHeight = isMobile ? 30 : 35;
-        const playButtonX = centerX - buttonWidth - 10;
-        const playButtonY = centerY + 50;
-        
-        // Store button bounds for click detection
-        window.playAgainButtonBounds = {
-            x: playButtonX,
-            y: playButtonY,
-            width: buttonWidth,
-            height: buttonHeight
-        };
-        
-        // Draw Play Again button
-        context.save();
-        context.shadowColor = "#00ff88";
-        context.shadowBlur = 15;
-        context.fillStyle = "rgba(0, 255, 136, 0.2)";
-        context.fillRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
-        
-        context.strokeStyle = "#00ff88";
-        context.lineWidth = 2;
-        context.strokeRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
-        context.shadowBlur = 0;
-        
-        const playButtonFontSize = isMobile ? 12 : 14;
-        context.font = `bold ${playButtonFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#00ff88";
-        context.textAlign = "center";
-        context.fillText("PLAY AGAIN", playButtonX + buttonWidth / 2, playButtonY + buttonHeight / 2 + 5);
-        context.restore();
-        
-        // Copy Solution button (or copied state)
-        const copyButtonX = centerX + 10;
+        const copyButtonX = centerX - buttonWidth / 2;
         const copyButtonY = centerY + 50;
         
         window.copySavedSolutionButtonBounds = solutionCopiedState ? null : {
@@ -4924,6 +4970,9 @@ function drawPreviouslySolvedOverlay() {
             width: buttonWidth,
             height: buttonHeight
         };
+        
+        // Clear play again button bounds since it's removed
+        window.playAgainButtonBounds = null;
         
         // Draw Copy Solution button or copied state
         context.save();
@@ -4948,62 +4997,20 @@ function drawPreviouslySolvedOverlay() {
         context.restore();
         
     } else {
-        // No solution stored - show message and side-by-side buttons
+        // No solution stored - show message only
         drawResponsiveText("No solution stored", centerX, centerY + 20, "#ff8888", 20);
         drawResponsiveText("Solve again to save solution", centerX, centerY + 45, "#ffffff", 16);
         
-        // Side-by-side buttons
-        const buttonWidth = isMobile ? 120 : 140;
-        const buttonHeight = isMobile ? 30 : 35;
-        const playButtonX = centerX - buttonWidth - 10;
-        const playButtonY = centerY + 75;
-        
-        window.playAgainButtonBounds = {
-            x: playButtonX,
-            y: playButtonY,
-            width: buttonWidth,
-            height: buttonHeight
-        };
-        
-        // Clear the copy button bounds since there's no copy button
+        // Clear button bounds since there are no buttons in this case
+        window.playAgainButtonBounds = null;
         window.copySavedSolutionButtonBounds = null;
-        
-        // Draw Play Again button
-        context.save();
-        context.shadowColor = "#00ff88";
-        context.shadowBlur = 15;
-        context.fillStyle = "rgba(0, 255, 136, 0.2)";
-        context.fillRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
-        
-        context.strokeStyle = "#00ff88";
-        context.lineWidth = 2;
-        context.strokeRect(playButtonX, playButtonY, buttonWidth, buttonHeight);
-        context.shadowBlur = 0;
-        
-        const playButtonFontSize = isMobile ? 12 : 14;
-        context.font = `bold ${playButtonFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#00ff88";
-        context.textAlign = "center";
-        context.fillText("PLAY AGAIN", playButtonX + buttonWidth / 2, playButtonY + buttonHeight / 2 + 5);
-        context.restore();
     }
     
-    // Back button for touch-friendly navigation
+    // Back button (always centered below content)
     const backButtonWidth = isMobile ? 100 : 120;
-    let backButtonHeight = isMobile ? 25 : 30; // Changed to let for reassignment
-    let backButtonX, backButtonY;
-    
-    if (hasSolution) {
-        // When solution exists, center the back button below other buttons
-        backButtonX = centerX - backButtonWidth / 2;
-        backButtonY = centerY + 100;
-    } else {
-        // When no solution, place back button next to play again button
-        backButtonX = centerX + 10;
-        backButtonY = centerY + 75;
-        // Use same height as play button for alignment
-        backButtonHeight = isMobile ? 30 : 35;
-    }
+    const backButtonHeight = isMobile ? 25 : 30;
+    const backButtonX = centerX - backButtonWidth / 2;
+    const backButtonY = hasSolution ? centerY + 100 : centerY + 85;
     
     window.backButtonBounds = {
         x: backButtonX,
@@ -5406,10 +5413,12 @@ function handleLevelSelectInput(key) {
             const levelProgressData = levelProgress.get(levelKey);
             
             if (levelProgressData && levelProgressData.completed) {
-                // Level was previously completed - show previously solved overlay
-                currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                // Level was previously completed - show solution button during gameplay
+                showSolutionButton = true;
+                currentGameState = GAME_STATES.PLAYING;
             } else {
                 // New or unsolved level - go straight to playing
+                showSolutionButton = false;
                 currentGameState = GAME_STATES.PLAYING;
             }
             
@@ -5575,10 +5584,12 @@ function isClickOnLevelGrid(x, y) {
                 const levelProgressData = levelProgress.get(levelKey);
                 
                 if (levelProgressData && levelProgressData.completed) {
-                    // Level was previously completed - show previously solved overlay
-                    currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+                    // Level was previously completed - show solution button during gameplay
+                    showSolutionButton = true;
+                    currentGameState = GAME_STATES.PLAYING;
                 } else {
                     // New or unsolved level - go straight to playing
+                    showSolutionButton = false;
                     currentGameState = GAME_STATES.PLAYING;
                 }
                 
@@ -5654,11 +5665,13 @@ function startSelectedLevel() {
     const levelProgressData = levelProgress.get(levelKey);
     
     if (levelProgressData && levelProgressData.completed) {
-        // Level was previously completed - show previously solved overlay
+        // Level was previously completed - show solution button during gameplay
         solutionCopiedState = false; // Reset copied state
-        currentGameState = GAME_STATES.PREVIOUSLY_SOLVED;
+        showSolutionButton = true;
+        currentGameState = GAME_STATES.PLAYING;
     } else {
         // New or unsolved level - go straight to playing
+        showSolutionButton = false;
         currentGameState = GAME_STATES.PLAYING;
     }
     
