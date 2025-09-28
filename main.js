@@ -5060,10 +5060,11 @@ function drawSolutionButton() {
     
     // Button positioning in bottom-left of screen
     const padding = isMobile ? 15 : 20;
+    const bottomPadding = isMobile ? 35 : 40; // Increased padding to avoid rounded phone corners
     const buttonWidth = isMobile ? 90 : 110;
     const buttonHeight = isMobile ? 40 : 50; // Taller for two lines of text
     const buttonX = padding;
-    const buttonY = canvas.height - buttonHeight - padding; // Position at bottom
+    const buttonY = canvas.height - buttonHeight - bottomPadding; // Position higher up from bottom
     
     // Store button bounds for click detection
     window.solutionButtonBounds = {
@@ -5280,19 +5281,15 @@ function drawSolutionReplayControls() {
         
     } else {
         // No solution stored - show message and back button only
-        const messageY = controlBarY + (isMobile ? 40 : 50);
+        const messageY = controlBarY + (isMobile ? 35 : 45); // Start slightly higher
         
         context.textAlign = "center";
-        const messageFontSize = isMobile ? 16 : 20;
+        const messageFontSize = isMobile ? 18 : 22; // Increased font size for all lines
         context.font = `bold ${messageFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#ff8888";
+        context.fillStyle = "#ffdd00"; // Yellow color for all text
         context.fillText("You solved this level before", centerX, messageY);
-        
-        const instructionFontSize = isMobile ? 14 : 16;
-        context.font = `bold ${instructionFontSize}px 'Courier New', monospace`;
-        context.fillStyle = "#ffffff";
         context.fillText("the saving feature was implemented.", centerX, messageY + 25);
-        context.fillText("Solve again to store your solution", centerX, messageY + 50);
+        context.fillText("Solve again to store your solution.", centerX, messageY + 50); // Added missing period
         
         // Position back button on the right (same as with solution case)
         const statusBarButtonSize = isMobile ? 35 : 45;
