@@ -5256,9 +5256,9 @@ function drawSolutionReplayControls() {
         const stepForwardColor = stepForwardEnabled ? "#ffaa00" : "#666666";
         drawSolutionReplayButton(stepForwardButtonX, buttonY, buttonWidth, buttonHeight, "►", stepForwardColor);
         
-        // Draw progress info - positioned in the space above the moved-up buttons
-        const progressY = buttonY - (isMobile ? 8 : 12);
-        context.font = `bold ${isMobile ? 12 : 16}px 'Courier New', monospace`;
+        // Draw progress info - centered between top of control bar and buttons
+        const progressY = controlBarY + (buttonY - controlBarY) / 2; // Center between control bar top and buttons
+        context.font = `bold ${isMobile ? 16 : 20}px 'Courier New', monospace`; // Increased from 12/16 to 16/20
         context.fillStyle = "#00aaff";
         context.textAlign = "center";
         
@@ -5272,7 +5272,7 @@ function drawSolutionReplayControls() {
         if (levelProgressData) {
             const statsY = buttonY + buttonHeight + (isMobile ? 25 : 30);
             const statsText = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
-            const statsFontSize = isMobile ? 12 : 14;
+            const statsFontSize = isMobile ? 16 : 18; // Increased from 12/14 to 16/18
             context.font = `bold ${statsFontSize}px 'Courier New', monospace`;
             context.fillStyle = "#ffdd00";
             context.textAlign = "center";
