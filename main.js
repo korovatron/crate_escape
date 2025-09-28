@@ -5287,8 +5287,8 @@ function drawSolutionReplayControls() {
         const messageFontSize = isMobile ? 18 : 22; // Increased font size for all lines
         context.font = `bold ${messageFontSize}px 'Courier New', monospace`;
         context.fillStyle = "#ffdd00"; // Yellow color for all text
-        context.fillText("You solved this level before", centerX, messageY);
-        context.fillText("the saving feature was implemented.", centerX, messageY + 25);
+        context.fillText("You solved this level before the", centerX, messageY);
+        context.fillText("saving feature was implemented.", centerX, messageY + 25);
         context.fillText("Solve again to store your solution.", centerX, messageY + 50); // Added missing period
         
         // Position back button on the right (same as with solution case)
