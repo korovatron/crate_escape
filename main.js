@@ -66,12 +66,14 @@ document.addEventListener('keydown', (e) => {
     // Handle previously solved overlay
     if (currentGameState === GAME_STATES.PREVIOUSLY_SOLVED) {
         if (e.key === 'Escape') {
-            // Dismiss overlay and return to gameplay
+            // Dismiss overlay and return to gameplay - reset level to starting state
             solutionCopiedState = false;
+            restartCurrentLevel(); // Reset level to starting position
             currentGameState = GAME_STATES.PLAYING;
         } else if (e.key === ' ') {
-            // Space key = Dismiss overlay and play
+            // Space key = Dismiss overlay and play - reset level to starting state
             solutionCopiedState = false;
+            restartCurrentLevel(); // Reset level to starting position
             currentGameState = GAME_STATES.PLAYING;
         }
         return;
@@ -424,8 +426,9 @@ function setupCanvasEventListeners() {
                 mouseY >= window.backButtonBounds.y && 
                 mouseY <= window.backButtonBounds.y + window.backButtonBounds.height) {
                 
-                // Dismiss overlay and return to gameplay
+                // Dismiss overlay and return to gameplay - reset to starting state
                 solutionCopiedState = false; // Reset copied state
+                restartCurrentLevel(); // Reset level to starting position
                 currentGameState = GAME_STATES.PLAYING;
                 return;
             }
@@ -692,7 +695,8 @@ function setupCanvasEventListeners() {
                         canvasPos.y >= window.playAgainButtonBounds.y && 
                         canvasPos.y <= window.playAgainButtonBounds.y + window.playAgainButtonBounds.height) {
                         
-                        // Play again - start the level
+                        // Play again - start the level - reset to starting state
+                        restartCurrentLevel(); // Reset level to starting position
                         currentGameState = GAME_STATES.PLAYING;
                         return;
                     }
@@ -745,8 +749,9 @@ function setupCanvasEventListeners() {
                         canvasPos.y >= window.backButtonBounds.y && 
                         canvasPos.y <= window.backButtonBounds.y + window.backButtonBounds.height) {
                         
-                        // Dismiss overlay and return to gameplay
+                        // Dismiss overlay and return to gameplay - reset to starting state
                         solutionCopiedState = false; // Reset copied state
+                        restartCurrentLevel(); // Reset level to starting position
                         currentGameState = GAME_STATES.PLAYING;
                         return;
                     }
@@ -2063,6 +2068,11 @@ function isContinuousInputActive() {
 }
 
 function checkForContinuedInput() {
+    // Only process continued input during normal gameplay, not during solution replay
+    if (currentGameState !== GAME_STATES.PLAYING) {
+        return;
+    }
+    
     // When movement completes, immediately check for continued input
     // This eliminates the pause between consecutive tile movements
     
@@ -6384,8 +6394,13 @@ async function loadSetting(key, defaultValue = null) {
 // #region Solution Replay Functions
 
 function startSolutionReplay(solutionString) {
-    // Reset the level to its original state before starting replay
+    // Reset the level to its original state WITHOUT incrementing attempt counter
+    // Store current attempt count to restore it
+    const currentAttemptCount = attemptCount;
+    
+    // Use the standard restart but restore the attempt counter
     restartCurrentLevel();
+    attemptCount = currentAttemptCount; // Restore original count
     
     // Set up the solution replay data
     solutionReplayData.solution = solutionString;
