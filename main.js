@@ -68,12 +68,18 @@ document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             // Dismiss overlay and return to gameplay - reset level to starting state
             solutionCopiedState = false;
+            // Preserve attempt counter when returning to gameplay
+            const currentAttemptCount = attemptCount;
             restartCurrentLevel(); // Reset level to starting position
+            attemptCount = currentAttemptCount; // Restore original count
             currentGameState = GAME_STATES.PLAYING;
         } else if (e.key === ' ') {
             // Space key = Dismiss overlay and play - reset level to starting state
             solutionCopiedState = false;
+            // Preserve attempt counter when returning to gameplay
+            const currentAttemptCount = attemptCount;
             restartCurrentLevel(); // Reset level to starting position
+            attemptCount = currentAttemptCount; // Restore original count
             currentGameState = GAME_STATES.PLAYING;
         }
         return;
@@ -428,7 +434,10 @@ function setupCanvasEventListeners() {
                 
                 // Dismiss overlay and return to gameplay - reset to starting state
                 solutionCopiedState = false; // Reset copied state
+                // Preserve attempt counter when returning to gameplay
+                const currentAttemptCount = attemptCount;
                 restartCurrentLevel(); // Reset level to starting position
+                attemptCount = currentAttemptCount; // Restore original count
                 currentGameState = GAME_STATES.PLAYING;
                 return;
             }
@@ -709,7 +718,10 @@ function setupCanvasEventListeners() {
                         canvasPos.y <= window.playAgainButtonBounds.y + window.playAgainButtonBounds.height) {
                         
                         // Play again - start the level - reset to starting state
+                        // Preserve attempt counter when returning to gameplay
+                        const currentAttemptCount = attemptCount;
                         restartCurrentLevel(); // Reset level to starting position
+                        attemptCount = currentAttemptCount; // Restore original count
                         currentGameState = GAME_STATES.PLAYING;
                         return;
                     }
@@ -764,7 +776,10 @@ function setupCanvasEventListeners() {
                         
                         // Dismiss overlay and return to gameplay - reset to starting state
                         solutionCopiedState = false; // Reset copied state
+                        // Preserve attempt counter when returning to gameplay
+                        const currentAttemptCount = attemptCount;
                         restartCurrentLevel(); // Reset level to starting position
+                        attemptCount = currentAttemptCount; // Restore original count
                         currentGameState = GAME_STATES.PLAYING;
                         return;
                     }
@@ -5250,8 +5265,11 @@ function drawPreviouslySolvedOverlay() {
 function drawSolutionReplayControls() {
     const isMobile = canvas.width < 600;
     
-    // Control bar at bottom of screen - made taller for better spacing
-    const controlBarHeight = isMobile ? 80 : 100;
+    // Button dimensions (declared early to calculate control bar height)
+    const buttonHeight = isMobile ? 30 : 40;
+    
+    // Control bar at bottom of screen - made taller for better spacing and iOS gesture avoidance
+    const controlBarHeight = isMobile ? 80 + (buttonHeight / 2) : 100 + (buttonHeight / 2);
     const controlBarY = canvas.height - controlBarHeight;
     
     // Draw control bar background
@@ -5270,13 +5288,12 @@ function drawSolutionReplayControls() {
     
     // Button dimensions
     const buttonWidth = isMobile ? 50 : 65;
-    const buttonHeight = isMobile ? 30 : 40;
     const buttonSpacing = isMobile ? 8 : 10;
     
     // Back button positioned on the left
     const leftMargin = isMobile ? 10 : 15;
     const backButtonX = leftMargin;
-    const buttonY = controlBarY + (controlBarHeight - buttonHeight) / 2 + (isMobile ? 5 : 8); // Moved down to leave space for text
+    const buttonY = controlBarY + (controlBarHeight - buttonHeight) / 2 + (isMobile ? 5 : 8) - (buttonHeight / 2); // Moved up by half button height
     
     // Center the other 3 main controls (step back, play/pause, step forward)
     const mainButtonsWidth = (buttonWidth * 3) + (buttonSpacing * 2);
@@ -5334,8 +5351,8 @@ function drawSolutionReplayControls() {
     const stepForwardColor = stepForwardEnabled ? "#ffaa00" : "#666666";
     drawSolutionReplayButton(stepForwardButtonX, buttonY, buttonWidth, buttonHeight, "►", stepForwardColor);
     
-    // Draw progress info - positioned with more space above buttons
-    const progressY = controlBarY + (isMobile ? 18 : 22);
+    // Draw progress info - positioned in the space above the moved-up buttons
+    const progressY = buttonY - (isMobile ? 8 : 12); // Position above buttons with some spacing
     context.font = `bold ${isMobile ? 12 : 16}px 'Courier New', monospace`;
     context.fillStyle = "#00aaff";
     context.textAlign = "center";
