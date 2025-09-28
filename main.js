@@ -2503,17 +2503,13 @@ function isClickOnExitButton(x, y) {
 function isClickOnUndoButton(x, y) {
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
-    const buttonSpacing = 8;
-    const rightMargin = 10;
     
-    // Use same calculations as drawStatusBar
-    const exitButtonX = canvas.width - buttonSize - rightMargin;
-    const exitButtonY = isMobile ? 15 : 10;
-    const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
-    const undoButtonX = restartButtonX - buttonSize - buttonSpacing;
-    const undoButtonY = exitButtonY;
+    // Use same calculations as drawStatusBar - UNDO button is centered between the original icons
+    const canvasCenterX = canvas.width / 2;
+    const undoButtonX = canvasCenterX - buttonSize / 2;
+    const undoButtonY = isMobile ? 15 : 10; // Same as exit button
     
-    // Standard button click area (no extra space needed since no counter)
+    // Standard button click area
     return x >= undoButtonX && x <= undoButtonX + buttonSize &&
            y >= undoButtonY && y <= undoButtonY + buttonSize;
 }
@@ -4769,14 +4765,14 @@ function drawStatusBar() {
     context.font = fontSize;
     context.textAlign = "left";
     
-    // Draw buttons (EXIT, RESTART, UNDO)
+    // Draw buttons (EXIT, RESTART) - removed UNDO from right side
     const buttonSize = isMobile ? 35 : 45; // Square buttons for all buttons
     const buttonSpacing = 8; // Reduced spacing since buttons are smaller
     const rightMargin = 10;
     
     // Calculate number of buttons in status bar (overview button now on playfield)
     const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
-    const numButtons = 3; // Exit, restart, and undo buttons in status bar
+    const numButtons = 2; // Exit and restart buttons in status bar (undo moved to center)
 
     // EXIT button (rightmost - primary action)
     const exitButtonX = canvas.width - buttonSize - rightMargin;
@@ -4785,10 +4781,6 @@ function drawStatusBar() {
     // RESTART button (left of EXIT button - secondary action)
     const restartButtonX = exitButtonX - buttonSize - buttonSpacing;
     const restartButtonY = exitButtonY;
-    
-    // UNDO button (left of RESTART button - tertiary action)
-    const undoButtonX = restartButtonX - buttonSize - buttonSpacing;
-    const undoButtonY = exitButtonY;
     
     // OVERVIEW button (positioned on playfield overlay, aligned with exit button)
     const overviewButtonX = exitButtonX; // Align horizontally with exit button
@@ -4802,12 +4794,12 @@ function drawStatusBar() {
     const overlayY = STATUS_BAR_HEIGHT + 10;
     const overviewButtonY = overlayY + (overlayHeight / 2) - (buttonSize / 2); // Center on green overlay
     
-    const reservedButtonSpace = (buttonSize * 3) + (buttonSpacing * 2) + rightMargin + 20; // Exit + restart + undo buttons
+    const reservedButtonSpace = (buttonSize * 2) + (buttonSpacing * 1) + rightMargin + 20; // Exit + restart buttons only
     
     // Available space for text (excluding button area)
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
     
-    // New layout: Set name and level number on separate lines, moves/pushes centered with icons
+    // New layout: Set name and level number on separate lines, moves/pushes with centered undo
     const setNameText = currentSet;
     const levelNumberText = `Level ${currentLevelNumber}`;
     
@@ -4820,56 +4812,66 @@ function drawStatusBar() {
     drawNeonText(setDisplayText, 15, 25, setColor, setColor);
     drawNeonText(levelNumberText, 15, 45, levelColor, levelColor);
     
-    // Center area: [move count] [footprint icon] [box icon] [push count]
+    // Center area: Move count, UNDO button, Push count
     // Use true canvas center, not adjusted for button area
     const canvasCenterX = canvas.width / 2;
     
-    const iconSize = isMobile ? 30 : 40; // Larger icons to take advantage of status bar height
-    const iconSpacing = 8; // Small gap between the two icons
+    const iconSize = isMobile ? 30 : 40; // Match original icon size
+    const iconSpacing = 8; // Original small gap between the two icons
     
     // Detect mobile portrait mode for space optimization
     const isPortrait = canvas.height > canvas.width;
     const isMobilePortrait = isMobile && isPortrait;
     
     // Adjust spacing and font size for mobile portrait to save space
-    const numberPadding = isMobilePortrait ? 4 : 12; // Even closer to icons in portrait
+    const numberPadding = isMobilePortrait ? 4 : 12; // Original padding
     
-    // Use smaller font for push/move counts in mobile portrait (match attempt count size)
+    // Font for move/push counts - match original
     const originalFont = context.font;
-    if (isMobilePortrait) {
-        context.font = "bold 20px 'Courier New', monospace"; // Match undo count font size
-    } else {
-        context.font = isMobile ? "bold 20px 'Courier New', monospace" : "bold 24px 'Courier New', monospace"; // Match undo count
-    }
+    context.font = isMobilePortrait ? "bold 18px 'Courier New', monospace" : (isMobile ? "bold 20px 'Courier New', monospace" : "bold 24px 'Courier New', monospace");
     context.textAlign = "center";
     
-    // Measure text widths for perfect positioning
+    // Calculate text widths for proper positioning
     const moveText = moveCount.toString();
     const pushText = pushCount.toString();
     const moveTextWidth = context.measureText(moveText).width;
     const pushTextWidth = context.measureText(pushText).width;
     
-    // Position icons so the center point is between them at canvas center
-    const footprintIconX = canvasCenterX - iconSize - iconSpacing / 2;
-    const boxIconX = canvasCenterX + iconSpacing / 2;
-    const iconY = 30; // Vertically centered in 60px status bar
+    // Original layout but spread out to make room for undo button in center
+    const undoButtonSpacing = buttonSize + 10; // Space needed for undo button plus padding
     
-    // Position numbers relative to the icons
+    // Position icons with undo button space in center
+    const footprintIconX = canvasCenterX - undoButtonSpacing / 2 - iconSize - iconSpacing / 2;
+    const boxIconX = canvasCenterX + undoButtonSpacing / 2 + iconSpacing / 2;
+    const iconY = 30; // Original vertical position
+    
+    // Position numbers relative to the icons (original logic)
     const moveCountX = footprintIconX - numberPadding - moveTextWidth / 2;
     const pushCountX = boxIconX + iconSize + numberPadding + pushTextWidth / 2;
     
-    // Draw move count
+    // Position undo button in the center
+    const undoButtonX = canvasCenterX - buttonSize / 2;
+    const undoButtonY = exitButtonY; // Same vertical position as other buttons
+    
+    // Draw move count (original positioning)
     drawNeonText(moveText, moveCountX, iconY + 6, "#00aaff", "#00aaff"); // Blue for moves
     
-    // Draw push count
+    // Draw push count (original positioning)
     drawNeonText(pushText, pushCountX, iconY + 6, "#00ff00", "#00ff00"); // Green for pushes
     
-    // Draw icons at calculated positions with smooth scaling
+    // Draw icons at original positions with undo button space
     context.save();
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
     context.drawImage(footprintLogo, footprintIconX, iconY - iconSize / 2, iconSize, iconSize);
     context.drawImage(pushLogo, boxIconX, iconY - iconSize / 2, iconSize, iconSize);
+    context.restore();
+    
+    // Draw undo button in center
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
     context.restore();
     
     // Restore original font and text alignment
@@ -4899,13 +4901,6 @@ function drawStatusBar() {
     const restartCenterX = restartButtonX + buttonSize / 2;
     const restartCenterY = restartButtonY + buttonSize / 2;
     context.fillText(attemptCount.toString(), restartCenterX, restartCenterY);
-    context.restore();
-    
-    // Draw UNDO button (left of restart button) - PNG icon with smooth scaling
-    context.save();
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
     context.restore();
     
     // Draw OVERVIEW button (leftmost when shown)
@@ -5123,12 +5118,12 @@ function drawSolutionButton() {
     // Mobile detection for responsive sizing
     const isMobile = canvas.width < 600;
     
-    // Button positioning in top-left of gameplay area (below status bar)
+    // Button positioning in bottom-left of screen
     const padding = isMobile ? 15 : 20;
     const buttonWidth = isMobile ? 90 : 110;
     const buttonHeight = isMobile ? 40 : 50; // Taller for two lines of text
     const buttonX = padding;
-    const buttonY = STATUS_BAR_HEIGHT + padding; // Position below status bar
+    const buttonY = canvas.height - buttonHeight - padding; // Position at bottom
     
     // Store button bounds for click detection
     window.solutionButtonBounds = {
