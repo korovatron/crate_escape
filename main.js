@@ -5500,20 +5500,39 @@ function drawLevelGrid(gridStartY, gridAreaHeight) {
     const centeredGridStartY = gridStartY + (gridAreaHeight - gridHeight) / 2;
     
     let levelNumber = startLevel;
+    let hasRedDotLevels = false; // Track if any levels on this page need red dots
     
     for (let row = 0; row < gridRows && levelNumber <= endLevel; row++) {
         for (let col = 0; col < gridColumns && levelNumber <= endLevel; col++) {
             const x = gridStartX + col * (buttonSize + buttonSpacing);
             const y = centeredGridStartY + row * (buttonSize + buttonSpacing);
             
+            // Check if this level needs a red dot before drawing
+            const progressStatus = getLevelProgressStatus(selectedSet, levelNumber);
+            const levelKey = `${selectedSet}_${levelNumber}`;
+            const levelProgressData = levelProgress.get(levelKey);
+            
+            if (progressStatus === 'completed' && levelProgressData && !levelProgressData.solution) {
+                hasRedDotLevels = true;
+            }
+            
             drawLevelButton(x, y, buttonSize, levelNumber, fontSize);
             levelNumber++;
         }
+    }
+    
+    // Draw legend if any levels on this page have red dots
+    if (hasRedDotLevels) {
+        drawRedDotLegend(centeredGridStartY + gridHeight + 15, buttonSize);
     }
 }
 
 function drawLevelButton(x, y, size, levelNumber, fontSize) {
     const progressStatus = getLevelProgressStatus(selectedSet, levelNumber);
+    
+    // Get the full progress data to check for solution string
+    const levelKey = `${selectedSet}_${levelNumber}`;
+    const levelProgressData = levelProgress.get(levelKey);
     
     // Determine colors based on progress status only
     let backgroundColor, borderColor, textColor;
@@ -5548,12 +5567,70 @@ function drawLevelButton(x, y, size, levelNumber, fontSize) {
     context.strokeStyle = borderColor;
     context.lineWidth = 2;
     context.strokeRect(x, y, size, size);
-    
+
     // Button text (level number)
     context.font = `bold ${fontSize}px 'Courier New', monospace`;
     context.fillStyle = textColor;
     context.textAlign = "center";
     context.fillText(levelNumber.toString(), x + size / 2, y + size / 2 + fontSize / 3);
+    
+    // Draw red circle indicator for completed levels without solution strings
+    if (progressStatus === 'completed' && levelProgressData && !levelProgressData.solution) {
+        const circleRadius = Math.max(3, size * 0.08); // Scale with button size, minimum 3px
+        const circleX = x + size - circleRadius - 4; // 4px margin from edge (moved left)
+        const circleY = y + circleRadius + 4; // 4px margin from edge (moved down)
+        
+        // Draw filled red circle
+        context.beginPath();
+        context.arc(circleX, circleY, circleRadius, 0, 2 * Math.PI);
+        context.fillStyle = "#ff0000";
+        context.fill();
+        
+        // Optional: Add a subtle border to make it more visible
+        context.strokeStyle = "#ffffff";
+        context.lineWidth = 1;
+        context.stroke();
+    }
+}
+
+function drawRedDotLegend(legendY, buttonSize) {
+    const isMobile = canvas.width < 600;
+    const fontSize = isMobile ? 14 : 16; // Increased font size
+    const centerX = canvas.width / 2;
+    
+    // Set up font to measure text
+    context.font = `${fontSize}px 'Courier New', monospace`;
+    const legendText = "Solve again to save solution";
+    const textMetrics = context.measureText(legendText);
+    const textWidth = textMetrics.width;
+    
+    // Calculate circle and spacing
+    const circleRadius = Math.max(3, buttonSize * 0.08); // Same size as on buttons
+    const spacing = 8; // Space between circle and text
+    
+    // Calculate total width of legend (circle + spacing + text)
+    const totalWidth = (circleRadius * 2) + spacing + textWidth;
+    
+    // Calculate starting positions to center the entire legend
+    const startX = centerX - (totalWidth / 2);
+    const circleX = startX + circleRadius; // Circle center
+    const textX = startX + (circleRadius * 2) + spacing; // Text start
+    
+    // Draw the red circle indicator
+    context.beginPath();
+    context.arc(circleX, legendY, circleRadius, 0, 2 * Math.PI);
+    context.fillStyle = "#ff0000";
+    context.fill();
+    
+    // Add white border like on the buttons
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = 1;
+    context.stroke();
+    
+    // Draw the explanation text
+    context.fillStyle = "#ffffff";
+    context.textAlign = "left";
+    context.fillText(legendText, textX, legendY + fontSize / 3);
 }
 
 function drawPageNavigation(navY, maxPages) {
