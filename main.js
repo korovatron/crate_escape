@@ -1454,17 +1454,26 @@ let audioLoaded = false;
 async function initAudioSystem() {
     try {
         // Create audio context (iOS requires user interaction first)
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
         
-        // Load all sound files
-        await Promise.all([
-            loadSound('click', 'assets/sounds/click.mp3'),
-            loadSound('share', 'assets/sounds/share.mp3'),
-            loadSound('undo', 'assets/sounds/undo.mp3'),
-            loadSound('restart', 'assets/sounds/restart.mp3')
-        ]);
+        // Resume audio context if suspended (iOS requirement)
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
         
-        audioLoaded = true;
+        // Load all sound files if not already loaded
+        if (!audioLoaded) {
+            await Promise.all([
+                loadSound('click', 'assets/sounds/click.mp3'),
+                loadSound('share', 'assets/sounds/share.mp3'),
+                loadSound('undo', 'assets/sounds/undo.mp3'),
+                loadSound('restart', 'assets/sounds/restart.mp3')
+            ]);
+            audioLoaded = true;
+        }
+        
         console.log('Audio system initialized successfully');
     } catch (error) {
         console.warn('Audio system failed to initialize:', error);
@@ -1483,7 +1492,12 @@ async function loadSound(name, url) {
     }
 }
 
-function playSound(soundName) {
+async function playSound(soundName) {
+    // Initialize audio system on first use (iOS compatibility)
+    if (!audioContext) {
+        await initAudioSystem();
+    }
+    
     if (!audioLoaded || !audioContext || !audioBuffers[soundName]) {
         return; // Fail silently if audio not available
     }
@@ -1491,7 +1505,7 @@ function playSound(soundName) {
     try {
         // Resume audio context if suspended (iOS requirement)
         if (audioContext.state === 'suspended') {
-            audioContext.resume();
+            await audioContext.resume();
         }
         
         const source = audioContext.createBufferSource();
@@ -1504,9 +1518,7 @@ function playSound(soundName) {
 }
 
 async function loadAudioAndCreateCanvas() {
-    // Initialize audio system
-    await initAudioSystem();
-    
+    // Skip audio initialization here - it will happen on first user interaction
     // Continue with canvas creation
     createCanvas();
 }
