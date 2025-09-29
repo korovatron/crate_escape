@@ -22,7 +22,7 @@ document.addEventListener('keydown', (e) => {
         if (currentGameState === GAME_STATES.TITLE) {
             // Check for cloud sync updates when navigating to level select
             if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
-                downloadGameProgress(true).catch(error => {
+                downloadGameProgress(true, false).catch(error => {
                     console.log('Background cloud sync failed (non-critical):', error);
                 });
             }
@@ -54,7 +54,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
         // Check for cloud sync updates when navigating back to level select
         if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
-            downloadGameProgress(true).catch(error => {
+            downloadGameProgress(true, false).catch(error => {
                 console.log('Background cloud sync failed (non-critical):', error);
             });
         }
