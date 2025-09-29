@@ -26,6 +26,7 @@ document.addEventListener('keydown', (e) => {
                     console.log('Background cloud sync failed (non-critical):', error);
                 });
             }
+            playSound('click');
             currentGameState = GAME_STATES.LEVEL_SELECT;
             initializeLevelSelect();
             lastInputType = "Level Select";
@@ -40,6 +41,7 @@ document.addEventListener('keydown', (e) => {
     
     // Handle level try again with R key
     if ((e.key === 'r' || e.key === 'R') && currentGameState === GAME_STATES.PLAYING) {
+        playSound('restart');
         restartCurrentLevel();
         return;
     }
@@ -52,6 +54,7 @@ document.addEventListener('keydown', (e) => {
     
     // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
+        playSound('click');
         // Check for cloud sync updates when navigating back to level select
         if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
             downloadGameProgress(true, false).catch(error => {
@@ -74,6 +77,16 @@ document.addEventListener('keydown', (e) => {
         } else if (e.key === 'ArrowLeft') {
             stepSolutionReplayBackward();
         }
+        return;
+    }
+    
+    // Handle exit with Escape key for hamburger menu screens
+    if (e.key === 'Escape' && (currentGameState === GAME_STATES.INSTRUCTIONS || 
+                               currentGameState === GAME_STATES.CREDITS ||
+                               currentGameState === GAME_STATES.CLOUD_SYNC ||
+                               currentGameState === GAME_STATES.IOS_INSTALL)) {
+        playSound('click');
+        currentGameState = GAME_STATES.TITLE;
         return;
     }
     
@@ -188,6 +201,7 @@ function setupCanvasEventListeners() {
                 mouseY >= window.solutionButtonBounds.y && 
                 mouseY <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
                 
+                playSound('click');
                 // Go directly to solution replay mode
                 const levelKey = `${currentSet}_${currentLevelNumber}`;
                 const levelProgressData = levelProgress.get(levelKey);
@@ -209,6 +223,7 @@ function setupCanvasEventListeners() {
                 return;
             }
             if (isClickOnTryAgainButton(mouseX, mouseY)) {
+                playSound('restart');
                 restartCurrentLevel();
                 return;
             }
@@ -217,6 +232,7 @@ function setupCanvasEventListeners() {
                 return;
             }
             if (isClickOnExitButton(mouseX, mouseY)) {
+                playSound('click');
                 currentGameState = GAME_STATES.LEVEL_SELECT;
                 downloadGameProgress(true); // Silent cloud sync on navigation
                 initializeLevelSelect();
@@ -228,6 +244,7 @@ function setupCanvasEventListeners() {
         if (currentGameState === GAME_STATES.TITLE) {
             // Check for hamburger menu click
             if (isClickOnHamburgerMenu(mouseX, mouseY)) {
+                playSound('click');
                 isHamburgerMenuOpen = !isHamburgerMenuOpen;
                 return;
             }
@@ -241,6 +258,7 @@ function setupCanvasEventListeners() {
             
             // Check for start button click from title screen (if menu not open)
             if (isClickOnStartButton(mouseX, mouseY)) {
+                playSound('click');
                 currentGameState = GAME_STATES.LEVEL_SELECT;
                 downloadGameProgress(true); // Silent cloud sync on navigation
                 initializeLevelSelect();
@@ -258,6 +276,7 @@ function setupCanvasEventListeners() {
                   currentGameState === GAME_STATES.CLOUD_SYNC) {
             // Check for hamburger menu click
             if (isClickOnHamburgerMenu(mouseX, mouseY)) {
+                playSound('click');
                 isHamburgerMenuOpen = !isHamburgerMenuOpen;
                 return;
             }
@@ -286,6 +305,7 @@ function setupCanvasEventListeners() {
             
             // Check for back button click
             if (isClickOnBackButton(mouseX, mouseY)) {
+                playSound('click');
                 currentGameState = GAME_STATES.TITLE;
                 return;
             }
@@ -317,6 +337,9 @@ function setupCanvasEventListeners() {
                 mouseY >= window.solutionReplayShareButtonBounds.y && 
                 mouseY <= window.solutionReplayShareButtonBounds.y + window.solutionReplayShareButtonBounds.height) {
                 
+                // Play share sound
+                playSound('share');
+                
                 // Copy current solution to clipboard
                 const levelKey = `${currentSet}_${currentLevelNumber}`;
                 const levelProgressData = levelProgress.get(levelKey);
@@ -339,6 +362,7 @@ function setupCanvasEventListeners() {
                 mouseX <= window.solutionReplayPlayPauseButtonBounds.x + window.solutionReplayPlayPauseButtonBounds.width &&
                 mouseY >= window.solutionReplayPlayPauseButtonBounds.y && 
                 mouseY <= window.solutionReplayPlayPauseButtonBounds.y + window.solutionReplayPlayPauseButtonBounds.height) {
+                playSound('click');
                 toggleSolutionReplayPlayback();
                 return;
             }
@@ -350,6 +374,7 @@ function setupCanvasEventListeners() {
                 mouseX <= window.solutionReplayRewindButtonBounds.x + window.solutionReplayRewindButtonBounds.width &&
                 mouseY >= window.solutionReplayRewindButtonBounds.y && 
                 mouseY <= window.solutionReplayRewindButtonBounds.y + window.solutionReplayRewindButtonBounds.height) {
+                playSound('click');
                 rewindSolutionReplayToStart();
                 return;
             }
@@ -361,6 +386,7 @@ function setupCanvasEventListeners() {
                 mouseX <= window.solutionReplayStepBackButtonBounds.x + window.solutionReplayStepBackButtonBounds.width &&
                 mouseY >= window.solutionReplayStepBackButtonBounds.y && 
                 mouseY <= window.solutionReplayStepBackButtonBounds.y + window.solutionReplayStepBackButtonBounds.height) {
+                playSound('click');
                 stepSolutionReplayBackward();
                 return;
             }
@@ -372,6 +398,7 @@ function setupCanvasEventListeners() {
                 mouseX <= window.solutionReplayStepForwardButtonBounds.x + window.solutionReplayStepForwardButtonBounds.width &&
                 mouseY >= window.solutionReplayStepForwardButtonBounds.y && 
                 mouseY <= window.solutionReplayStepForwardButtonBounds.y + window.solutionReplayStepForwardButtonBounds.height) {
+                playSound('click');
                 stepSolutionReplayForward();
                 return;
             }
@@ -382,6 +409,9 @@ function setupCanvasEventListeners() {
                 mouseX <= window.shareCompletionButtonBounds.x + window.shareCompletionButtonBounds.width &&
                 mouseY >= window.shareCompletionButtonBounds.y && 
                 mouseY <= window.shareCompletionButtonBounds.y + window.shareCompletionButtonBounds.height) {
+                
+                // Play share sound
+                playSound('share');
                 
                 // Copy solution to clipboard using the same function as replay controls
                 copySolutionToClipboard().then(success => {
@@ -559,6 +589,7 @@ function setupCanvasEventListeners() {
                         canvasPos.y >= window.solutionButtonBounds.y && 
                         canvasPos.y <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
                         
+                        playSound('click');
                         // Go directly to solution replay mode
                         const levelKey = `${currentSet}_${currentLevelNumber}`;
                         const levelProgressData = levelProgress.get(levelKey);
@@ -580,6 +611,7 @@ function setupCanvasEventListeners() {
                         return;
                     }
                     if (isClickOnTryAgainButton(canvasPos.x, canvasPos.y)) {
+                        playSound('restart');
                         restartCurrentLevel();
                         return;
                     }
@@ -588,6 +620,7 @@ function setupCanvasEventListeners() {
                         return;
                     }
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
                         currentGameState = GAME_STATES.LEVEL_SELECT;
                         downloadGameProgress(true); // Silent cloud sync on navigation
                         initializeLevelSelect();
@@ -599,6 +632,7 @@ function setupCanvasEventListeners() {
                 if (currentGameState === GAME_STATES.TITLE) {
                     // Check for hamburger menu click
                     if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
                         isHamburgerMenuOpen = !isHamburgerMenuOpen;
                         return;
                     }
@@ -612,6 +646,7 @@ function setupCanvasEventListeners() {
                     
                     // Check for start button tap from title screen (if menu not open)
                     if (isClickOnStartButton(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
                         currentGameState = GAME_STATES.LEVEL_SELECT;
                         downloadGameProgress(true); // Silent cloud sync on navigation
                         initializeLevelSelect();
@@ -627,6 +662,7 @@ function setupCanvasEventListeners() {
                           currentGameState === GAME_STATES.IOS_INSTALL) {
                     // Check for hamburger menu click
                     if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
                         isHamburgerMenuOpen = !isHamburgerMenuOpen;
                         return;
                     }
@@ -640,12 +676,14 @@ function setupCanvasEventListeners() {
                     
                     // Check for back button click
                     if (isClickOnBackButton(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
                         currentGameState = GAME_STATES.TITLE;
                         return;
                     }
                     
                     // Check for iOS install screen dismiss button
                     if (currentGameState === GAME_STATES.IOS_INSTALL && isClickOnIOSInstallDismissButton(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
                         acknowledgeIOSInstallNotification();
                         currentGameState = GAME_STATES.TITLE;
                         return;
@@ -655,12 +693,14 @@ function setupCanvasEventListeners() {
                     if (currentGameState === GAME_STATES.CLOUD_SYNC) {
                         // Sign-in button (when not authenticated or in error state)
                         if ((cloudSyncState === 'not_authenticated' || cloudSyncState === 'error') && isClickOnSignInButton(canvasPos.x, canvasPos.y)) {
+                            playSound('click');
                             startGoogleSignIn();
                             return;
                         }
                         
                         // Sign-out button (when authenticated)
                         if (isClickOnSignOutButton(canvasPos.x, canvasPos.y)) {
+                            playSound('click');
                             signOutFromCloud();
                             return;
                         }
@@ -672,6 +712,9 @@ function setupCanvasEventListeners() {
                         canvasPos.x <= window.shareCompletionButtonBounds.x + window.shareCompletionButtonBounds.width &&
                         canvasPos.y >= window.shareCompletionButtonBounds.y && 
                         canvasPos.y <= window.shareCompletionButtonBounds.y + window.shareCompletionButtonBounds.height) {
+                        
+                        // Play share sound
+                        playSound('share');
                         
                         // Copy solution to clipboard using the same function as replay controls
                         copySolutionToClipboard().then(success => {
@@ -713,6 +756,7 @@ function setupCanvasEventListeners() {
                         canvasPos.x <= window.solutionReplayBackButtonBounds.x + window.solutionReplayBackButtonBounds.width &&
                         canvasPos.y >= window.solutionReplayBackButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayBackButtonBounds.y + window.solutionReplayBackButtonBounds.height) {
+                        playSound('click');
                         exitSolutionReplay();
                         return;
                     }
@@ -724,6 +768,7 @@ function setupCanvasEventListeners() {
                         canvasPos.y >= window.solutionReplayShareButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayShareButtonBounds.y + window.solutionReplayShareButtonBounds.height) {
                         
+                        playSound('share');
                         // Copy current solution to clipboard
                         const levelKey = `${currentSet}_${currentLevelNumber}`;
                         const levelProgressData = levelProgress.get(levelKey);
@@ -746,6 +791,7 @@ function setupCanvasEventListeners() {
                         canvasPos.x <= window.solutionReplayPlayPauseButtonBounds.x + window.solutionReplayPlayPauseButtonBounds.width &&
                         canvasPos.y >= window.solutionReplayPlayPauseButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayPlayPauseButtonBounds.y + window.solutionReplayPlayPauseButtonBounds.height) {
+                        playSound('click');
                         toggleSolutionReplayPlayback();
                         return;
                     }
@@ -757,6 +803,7 @@ function setupCanvasEventListeners() {
                         canvasPos.x <= window.solutionReplayRewindButtonBounds.x + window.solutionReplayRewindButtonBounds.width &&
                         canvasPos.y >= window.solutionReplayRewindButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayRewindButtonBounds.y + window.solutionReplayRewindButtonBounds.height) {
+                        playSound('click');
                         rewindSolutionReplayToStart();
                         return;
                     }
@@ -768,6 +815,7 @@ function setupCanvasEventListeners() {
                         canvasPos.x <= window.solutionReplayStepBackButtonBounds.x + window.solutionReplayStepBackButtonBounds.width &&
                         canvasPos.y >= window.solutionReplayStepBackButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayStepBackButtonBounds.y + window.solutionReplayStepBackButtonBounds.height) {
+                        playSound('click');
                         stepSolutionReplayBackward();
                         return;
                     }
@@ -779,6 +827,7 @@ function setupCanvasEventListeners() {
                         canvasPos.x <= window.solutionReplayStepForwardButtonBounds.x + window.solutionReplayStepForwardButtonBounds.width &&
                         canvasPos.y >= window.solutionReplayStepForwardButtonBounds.y && 
                         canvasPos.y <= window.solutionReplayStepForwardButtonBounds.y + window.solutionReplayStepForwardButtonBounds.height) {
+                        playSound('click');
                         stepSolutionReplayForward();
                         return;
                     }
@@ -1390,10 +1439,76 @@ function init() {
     shareIcon.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
-            createCanvas();
+            loadAudioAndCreateCanvas();
         }
     }
 }
+
+// Audio system using Web Audio API
+let audioContext = null;
+let audioBuffers = {};
+let audioLoaded = false;
+
+async function initAudioSystem() {
+    try {
+        // Create audio context (iOS requires user interaction first)
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Load all sound files
+        await Promise.all([
+            loadSound('click', 'assets/sounds/click.mp3'),
+            loadSound('share', 'assets/sounds/share.mp3'),
+            loadSound('undo', 'assets/sounds/undo.mp3'),
+            loadSound('restart', 'assets/sounds/restart.mp3')
+        ]);
+        
+        audioLoaded = true;
+        console.log('Audio system initialized successfully');
+    } catch (error) {
+        console.warn('Audio system failed to initialize:', error);
+        audioLoaded = false;
+    }
+}
+
+async function loadSound(name, url) {
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffers[name] = await audioContext.decodeAudioData(arrayBuffer);
+        console.log(`Loaded sound: ${name}`);
+    } catch (error) {
+        console.warn(`Failed to load sound ${name}:`, error);
+    }
+}
+
+function playSound(soundName) {
+    if (!audioLoaded || !audioContext || !audioBuffers[soundName]) {
+        return; // Fail silently if audio not available
+    }
+    
+    try {
+        // Resume audio context if suspended (iOS requirement)
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffers[soundName];
+        source.connect(audioContext.destination);
+        source.start();
+    } catch (error) {
+        console.warn(`Failed to play sound ${soundName}:`, error);
+    }
+}
+
+async function loadAudioAndCreateCanvas() {
+    // Initialize audio system
+    await initAudioSystem();
+    
+    // Continue with canvas creation
+    createCanvas();
+}
+
 function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
@@ -1630,6 +1745,9 @@ function undoLastMove() {
     if (moveHistory.length === 0 || isPlayerMoving) {
         return; // No history or player is currently moving
     }
+    
+    // Play undo sound
+    playSound('undo');
     
     // Get the most recent saved state
     const previousState = moveHistory.pop();
@@ -2355,6 +2473,7 @@ function getNextLevel() {
 }
 
 function advanceToNextLevel() {
+    playSound('click');
     const nextLevel = getNextLevel();
     
     if (nextLevel.isComplete) {
@@ -2535,6 +2654,7 @@ function handleMenuOptionClick(mouseX, mouseY) {
     
     for (let i = 0; i < menuConfig.options.length; i++) {
         if (isClickOnMenuOption(mouseX, mouseY, i)) {
+            playSound('click');
             const targetState = menuConfig.gameStates[i];
             
             // Handle special cases
@@ -5816,12 +5936,14 @@ function handleLevelSelectInput(key) {
             break;
         case 'Escape':
             // Back button behavior: level select goes to title
+            playSound('click');
             currentGameState = GAME_STATES.TITLE;
             break;
     }
 }
 
 function handleLevelSelectLeft() {
+    playSound('click');
     // Always cycle through sets when using left/right arrows on keyboard
     // or when tapping on the set line
     const setNames = Object.keys(SOKOBAN_LEVELS);
@@ -5840,6 +5962,7 @@ function handleLevelSelectLeft() {
 }
 
 function handleLevelSelectRight() {
+    playSound('click');
     // Always cycle through sets when using left/right arrows on keyboard
     // or when tapping on the set line  
     const setNames = Object.keys(SOKOBAN_LEVELS);
@@ -5858,6 +5981,7 @@ function handleLevelSelectRight() {
 }
 
 function handleLevelSelectUp() {
+    playSound('click');
     if (selectedLevel > 1) {
         selectedLevel--;
     } else {
@@ -5868,6 +5992,7 @@ function handleLevelSelectUp() {
 }
 
 function handleLevelSelectDown() {
+    playSound('click');
     const maxLevel = getLevelCount(selectedSet);
     if (selectedLevel < maxLevel) {
         selectedLevel++;
@@ -5887,6 +6012,7 @@ function handleLevelSelectClick(x, y) {
     if (x >= exitButtonX && x <= exitButtonX + buttonSize &&
         y >= exitButtonY && y <= exitButtonY + buttonSize) {
         // Go back to title screen
+        playSound('click');
         currentGameState = GAME_STATES.TITLE;
         return;
     }
@@ -5899,6 +6025,7 @@ function handleLevelSelectClick(x, y) {
         // Left set button
         if (x >= leftBtn.x && x <= leftBtn.x + leftBtn.width &&
             y >= leftBtn.y && y <= leftBtn.y + leftBtn.height) {
+            playSound('click');
             const sets = Object.keys(SOKOBAN_LEVELS);
             const currentIndex = sets.indexOf(selectedSet);
             selectedSet = sets[(currentIndex - 1 + sets.length) % sets.length];
@@ -5911,6 +6038,7 @@ function handleLevelSelectClick(x, y) {
         // Right set button
         if (x >= rightBtn.x && x <= rightBtn.x + rightBtn.width &&
             y >= rightBtn.y && y <= rightBtn.y + rightBtn.height) {
+            playSound('click');
             const sets = Object.keys(SOKOBAN_LEVELS);
             const currentIndex = sets.indexOf(selectedSet);
             selectedSet = sets[(currentIndex + 1) % sets.length];
@@ -5961,6 +6089,7 @@ function isClickOnLevelGrid(x, y) {
             // Check if click is on this button
             if (x >= buttonX && x <= buttonX + buttonSize &&
                 y >= buttonY && y <= buttonY + buttonSize) {
+                playSound('click');
                 // Start the clicked level
                 selectedLevel = levelNumber;
                 currentSet = selectedSet;
@@ -6016,6 +6145,7 @@ function isClickOnPageNavigation(x, y) {
         const prevX = centerX - spacing - buttonSize;
         if (x >= prevX && x <= prevX + buttonSize &&
             y >= buttonY && y <= buttonY + buttonSize) {
+            playSound('click');
             currentLevelPage--;
             return true;
         }
@@ -6026,6 +6156,7 @@ function isClickOnPageNavigation(x, y) {
         const nextX = centerX + spacing;
         if (x >= nextX && x <= nextX + buttonSize &&
             y >= buttonY && y <= buttonY + buttonSize) {
+            playSound('click');
             currentLevelPage++;
             return true;
         }

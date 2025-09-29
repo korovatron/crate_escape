@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-29-09-2025:19.48';
+const CACHE_NAME = 'crate-escape-version-29-09-2025:21.15';
 const urlsToCache = [
   './',
   './index.html',
@@ -12,6 +12,10 @@ const urlsToCache = [
   './assets/images/restartIcon.png',
   './assets/images/undoIcon.png',
   './assets/images/shareIcon.png',
+  './assets/sounds/click.mp3',
+  './assets/sounds/share.mp3',
+  './assets/sounds/undo.mp3',
+  './assets/sounds/restart.mp3',
   './apple-touch-icon-v2.png',
   './manifest.json',
   './firebase-config.js',
