@@ -69,6 +69,7 @@ document.addEventListener('keydown', (e) => {
     // Solution Replay state controls
     if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
         if (e.key === 'Escape') {
+            playSound('click');
             exitSolutionReplay();
         } else if (e.key === ' ') {
             toggleSolutionReplayPlayback();
@@ -326,6 +327,7 @@ function setupCanvasEventListeners() {
                 mouseX <= window.solutionReplayBackButtonBounds.x + window.solutionReplayBackButtonBounds.width &&
                 mouseY >= window.solutionReplayBackButtonBounds.y && 
                 mouseY <= window.solutionReplayBackButtonBounds.y + window.solutionReplayBackButtonBounds.height) {
+                playSound('click');
                 exitSolutionReplay();
                 return;
             }
@@ -4953,6 +4955,12 @@ function drawStatusBar() {
     context.save();
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
+    
+    // Dim the undo button if there's nothing to undo
+    if (moveHistory.length === 0) {
+        context.globalAlpha = 0.3; // Make it 30% opacity when disabled
+    }
+    
     context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
     context.restore();
     
