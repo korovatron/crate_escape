@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-30-09-2025:21.48';
+const CACHE_NAME = 'crate-escape-version-30-09-2025:22.28';
 const urlsToCache = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ const urlsToCache = [
   './assets/sounds/share.mp3',
   './assets/sounds/undo.mp3',
   './assets/sounds/restart.mp3',
-  './apple-touch-icon-v2.png',
+  './app-icon.png',
   './manifest.json',
   './firebase-config.js'
 ];
@@ -118,8 +118,8 @@ self.addEventListener('push', event => {
     
     const options = {
       body: data.body || 'New notification from Crate Escape',
-      icon: './apple-touch-icon-v2.png',
-      badge: './apple-touch-icon-v2.png',
+      icon: './app-icon.png',
+      badge: './app-icon.png',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
