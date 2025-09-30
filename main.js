@@ -2730,7 +2730,7 @@ function isClickOnSignInButton(x, y) {
     if (cloudSyncState !== 'not_authenticated' && cloudSyncState !== 'error') return false;
     
     // Button dimensions (matching the drawing in drawCloudSyncScreen)
-    const buttonWidth = 220; // Updated for Google Sign-In button
+    const buttonWidth = 260; // Updated for Arial font (wider than Roboto Condensed)
     const buttonHeight = 50;
     const buttonX = (canvas.width - buttonWidth) / 2;
     
@@ -4201,7 +4201,7 @@ function drawCloudSyncScreen() {
                 yPos += lineHeight * 2;
                 
                 // Sign in button
-                const buttonWidth = 220;
+                const buttonWidth = 260; // Increased for Arial font (wider than Roboto Condensed)
                 const buttonHeight = 50;
                 const buttonX = (canvas.width - buttonWidth) / 2;
                 const buttonY = yPos;
