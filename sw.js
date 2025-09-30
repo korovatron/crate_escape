@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-30-09-2025:20.32';
+const CACHE_NAME = 'crate-escape-version-30-09-2025:21.48';
 const urlsToCache = [
   './',
   './index.html',
@@ -18,9 +18,7 @@ const urlsToCache = [
   './assets/sounds/restart.mp3',
   './apple-touch-icon-v2.png',
   './manifest.json',
-  './firebase-config.js',
-  // Google Fonts - these will be cached when first loaded
-  'https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Roboto+Condensed:wght@300;400;700&display=swap'
+  './firebase-config.js'
 ];
 
 // Install event - cache resources

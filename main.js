@@ -3522,7 +3522,7 @@ function drawTitleScreen() {
     } else {
         mainInstructionSize = textSize * 1.3; // Original size for desktop
     }
-    context.font = `400 ${mainInstructionSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${mainInstructionSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#DDDDDD";
     const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
     const mainInstructionLineHeight = mainInstructionSize * 1.4;
@@ -3715,7 +3715,7 @@ function drawTitleScreen() {
     }
     
     const creditsY = canvas.height * 0.95; // Always 5% from bottom
-    context.font = `400 ${authorSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${authorSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
     context.fillText("Copyright © 2025 Neil Kendall", canvas.width / 2, creditsY);
     
@@ -3735,7 +3735,7 @@ function drawTitleScreen() {
     
     // Button dimensions
     const buttonText = "START GAME";
-    context.font = `700 ${buttonTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `700 ${buttonTextSize}px Arial, system-ui, -apple-system, sans-serif`;
     const textMetrics = context.measureText(buttonText);
     const buttonPadding = buttonTextSize * 0.8;
     const buttonWidth = textMetrics.width + buttonPadding * 2;
@@ -3817,7 +3817,7 @@ function drawF11FullscreenHint() {
     const fontSize = Math.min(canvas.width / 32, 16); // Slightly larger: 32 instead of 40, max 16 instead of 14
     
     context.save();
-    context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = `rgba(180, 180, 180, ${opacity})`; // Light gray with fade
     context.textAlign = "right";
     context.textBaseline = "top";
@@ -3878,7 +3878,7 @@ function drawHamburgerMenu() {
         // Draw count number for all notifications (including 1)
         if (notificationCount >= 1) {
             const countFontSize = 12; // Increased from 8 to 12 for better mobile readability
-            context.font = `700 ${countFontSize}px 'Roboto Condensed', 'Arial', sans-serif`; // Slightly bolder
+            context.font = `700 ${countFontSize}px Arial, system-ui, -apple-system, sans-serif`; // Slightly bolder
             context.fillStyle = "#FFFFFF";
             context.textAlign = "center";
             context.textBaseline = "middle";
@@ -3917,7 +3917,7 @@ function drawHamburgerMenu() {
         // Menu options
         const isMobile = canvas.width < 600;
         const fontSize = isMobile ? 16 : 18;
-        context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+        context.font = `400 ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
         context.textAlign = "left";
         
         for (let i = 0; i < options.length; i++) {
@@ -3952,12 +3952,12 @@ function drawHamburgerMenu() {
                 
                 // Draw the indicator
                 context.fillStyle = indicatorColor;
-                context.font = `400 ${fontSize + 2}px 'Roboto Condensed', 'Arial', sans-serif`; // Slightly larger
+                context.font = `400 ${fontSize + 2}px Arial, system-ui, -apple-system, sans-serif`; // Slightly larger
                 context.fillText(indicator, indicatorX, textY);
                 
                 // Restore previous styles
                 context.fillStyle = savedFillStyle;
-                context.font = `400 ${fontSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+                context.font = `400 ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
             }
         }
         
@@ -3976,7 +3976,7 @@ function drawInstructionsScreen() {
     // Title
     const isMobile = canvas.width < 600;
     const titleSize = isMobile ? 28 : 36;
-    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `700 ${titleSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00FFFF";
     context.textAlign = "center";
     context.fillText("INSTRUCTIONS", canvas.width / 2, 80);
@@ -4019,7 +4019,7 @@ function drawInstructionsScreen() {
         lineHeight = textSize * 1.6; // Slightly tighter spacing when scaled
     }
     
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#CCCCCC";
     
     let yPos = startY;
@@ -4044,7 +4044,7 @@ function drawCreditsScreen() {
     // Title
     const isMobile = canvas.width < 600;
     const titleSize = isMobile ? 28 : 36;
-    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `700 ${titleSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00FFFF";
     context.textAlign = "center";
     context.fillText("CREDITS", canvas.width / 2, 80);
@@ -4097,13 +4097,13 @@ function drawCreditsScreen() {
     for (let i = 0; i < credits.length; i++) {
         if (i === 0) {
             // First line - larger and bolder
-            context.font = `600 ${largeTextSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+            context.font = `600 ${largeTextSize}px Arial, system-ui, -apple-system, sans-serif`;
             context.fillStyle = "#FFFFFF"; // Brighter white for emphasis
             yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, largeLineHeight);
             yPos += largeLineHeight * 0.8; // Gap after first line
         } else {
             // Rest of the credits - normal size
-            context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+            context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
             context.fillStyle = "#CCCCCC";
             yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, lineHeight);
             yPos += lineHeight * 0.6; // Smaller gap between regular credits
@@ -4126,7 +4126,7 @@ function drawCloudSyncScreen() {
     // Title
     const isMobile = canvas.width < 600;
     const titleSize = isMobile ? 28 : 36;
-    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `700 ${titleSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00FFFF";
     context.textAlign = "center";
     context.fillText("CLOUD SYNC", canvas.width / 2, 80);
@@ -4134,7 +4134,7 @@ function drawCloudSyncScreen() {
     // Cloud sync content
     const textSize = isMobile ? 16 : 20;
     const lineHeight = textSize * 1.5;
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#CCCCCC";
     
     let yPos = 140;
@@ -4177,7 +4177,7 @@ function drawCloudSyncScreen() {
         
         // Button text
         context.fillStyle = "#FFFFFF";
-        context.font = `600 ${textSize - 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+        context.font = `600 ${textSize - 2}px Arial, system-ui, -apple-system, sans-serif`;
         context.fillText("SIGN OUT", canvas.width / 2, signOutButtonY + signOutButtonHeight/2 + 5);
     } else if (window.firebaseAuth === undefined) {
         // Firebase not loaded yet
@@ -4212,7 +4212,7 @@ function drawCloudSyncScreen() {
                 
                 // Button text
                 context.fillStyle = "#FFFFFF";
-                context.font = `600 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+                context.font = `600 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
                 context.fillText("SIGN IN WITH GOOGLE", canvas.width / 2, buttonY + buttonHeight/2 + 6);
                 break;
                 
@@ -4265,7 +4265,7 @@ function drawCloudSyncScreen() {
                 
                 // Button text
                 context.fillStyle = "#FFFFFF";
-                context.font = `600 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+                context.font = `600 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
                 context.fillText("TRY AGAIN", canvas.width / 2, retryButtonY + retryButtonHeight/2 + 6);
                 break;
         }
@@ -4287,7 +4287,7 @@ function drawIOSInstallScreen() {
     // Title
     const isMobile = canvas.width < 600;
     const titleSize = isMobile ? 28 : 36;
-    context.font = `700 ${titleSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `700 ${titleSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00FFFF";
     context.textAlign = "center";
     context.fillText("📱 INSTALL APP", canvas.width / 2, 80);
@@ -4295,7 +4295,7 @@ function drawIOSInstallScreen() {
     // Content
     const textSize = isMobile ? 18 : 22; // Reduced from 22/24 to fit better on mobile
     const lineHeight = textSize * 1.5; // Reduced from 1.8 to 1.5 for tighter spacing
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#CCCCCC";
     
     let yPos = 150;
@@ -4309,13 +4309,13 @@ function drawIOSInstallScreen() {
     
     // Benefits section
     context.fillStyle = "#FFFFFF"; // Brighter for emphasis
-    context.font = `600 ${textSize + 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `600 ${textSize + 2}px Arial, system-ui, -apple-system, sans-serif`;
     yPos = drawWrappedText(context, "Why install Crate Escape?", canvas.width / 2, yPos, maxContentWidth, lineHeight);
     yPos += lineHeight * 0.8;
     
     // Reset to normal style
     context.fillStyle = "#CCCCCC";
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
     
     const benefits = [
         "• Full-screen experience without browser UI",
@@ -4334,13 +4334,13 @@ function drawIOSInstallScreen() {
     
     // Installation instructions
     context.fillStyle = "#FFFFFF"; // Brighter for emphasis
-    context.font = `600 ${textSize + 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `600 ${textSize + 2}px Arial, system-ui, -apple-system, sans-serif`;
     yPos = drawWrappedText(context, "How to install:", canvas.width / 2, yPos, maxContentWidth, lineHeight);
     yPos += lineHeight * 0.8;
     
     // Reset to normal style
     context.fillStyle = "#CCCCCC";
-    context.font = `400 ${textSize}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
     
     const instructions = [
         "1. Tap the Share button (⬆️) in Safari",
@@ -4368,7 +4368,7 @@ function drawIOSInstallScreen() {
     
     // Button text
     context.fillStyle = "#FFFFFF";
-    context.font = `600 ${textSize - 2}px 'Roboto Condensed', 'Arial', sans-serif`;
+    context.font = `600 ${textSize - 2}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillText("NOT INTERESTED", canvas.width / 2, buttonY + buttonHeight/2 + 6);
     
     // Store button bounds for click detection
@@ -4571,8 +4571,8 @@ function drawOverviewMode() {
     // Calculate text dimensions for compact overlay
     context.save();
     const isMobile = canvas.width < 600;
-    const fontSize = isMobile ? "bold 24px 'Courier New', monospace" : "bold 36px 'Courier New', monospace";
-    const subtitleFont = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
+    const fontSize = isMobile ? "bold 24px Arial, system-ui, -apple-system, sans-serif" : "bold 36px Arial, system-ui, -apple-system, sans-serif";
+    const subtitleFont = isMobile ? "bold 14px Arial, system-ui, -apple-system, sans-serif" : "bold 18px Arial, system-ui, -apple-system, sans-serif";
     
     // Measure text to calculate overlay height
     context.font = fontSize;
@@ -4853,7 +4853,7 @@ function drawStatusBar() {
     
     // Responsive layout based on screen width
     const isMobile = canvas.width < 600;
-    const fontSize = isMobile ? "bold 14px 'Courier New', monospace" : "bold 18px 'Courier New', monospace";
+    const fontSize = isMobile ? "bold 14px Arial, system-ui, -apple-system, sans-serif" : "bold 18px Arial, system-ui, -apple-system, sans-serif";
     
     // Set text properties
     context.font = fontSize;
@@ -4903,8 +4903,13 @@ function drawStatusBar() {
     const levelColor = "#ffff00"; // Bright yellow
     
     // Left side: Set name (top) and level number (bottom)
+    // Temporarily switch to Arial for level display
+    const currentFont = context.font;
+    context.font = isMobile ? "bold 14px Arial, system-ui, -apple-system, sans-serif" : "bold 18px Arial, system-ui, -apple-system, sans-serif";
     drawNeonText(setDisplayText, 15, 25, setColor, setColor);
     drawNeonText(levelNumberText, 15, 45, levelColor, levelColor);
+    // Restore original font
+    context.font = currentFont;
     
     // Center area: Move count, UNDO button, Push count
     // Use true canvas center, not adjusted for button area
@@ -4922,7 +4927,7 @@ function drawStatusBar() {
     
     // Font for move/push counts - match original
     const originalFont = context.font;
-    context.font = isMobilePortrait ? "bold 18px 'Courier New', monospace" : (isMobile ? "bold 20px 'Courier New', monospace" : "bold 24px 'Courier New', monospace");
+    context.font = isMobilePortrait ? "bold 18px Arial, system-ui, -apple-system, sans-serif" : (isMobile ? "bold 20px Arial, system-ui, -apple-system, sans-serif" : "bold 24px Arial, system-ui, -apple-system, sans-serif");
     context.textAlign = "center";
     
     // Calculate text widths for proper positioning
@@ -4994,7 +4999,7 @@ function drawStatusBar() {
     
     // Draw attempt count in center of restart button
     context.save();
-    context.font = isMobile ? "bold 12px 'Courier New', monospace" : "bold 16px 'Courier New', monospace";
+    context.font = isMobile ? "bold 12px Arial, system-ui, -apple-system, sans-serif" : "bold 16px Arial, system-ui, -apple-system, sans-serif";
     context.fillStyle = "#FF9E0A"; // Orange color
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -5030,7 +5035,7 @@ function drawStatusBar() {
         context.shadowBlur = 0;
         
         // Button text with appropriate neon color
-        context.font = isMobile ? "bold 16px 'Courier New', monospace" : "bold 20px 'Courier New', monospace";
+        context.font = isMobile ? "bold 16px Arial, system-ui, -apple-system, sans-serif" : "bold 20px Arial, system-ui, -apple-system, sans-serif";
         context.textAlign = "center";
         drawNeonText("⊙", overviewButtonX + buttonSize / 2, overviewButtonY + buttonSize / 2 + 5, glowColor, glowColor);
     }
@@ -5073,7 +5078,7 @@ function drawLevelCompleteOverlay() {
     function drawResponsiveText(text, x, y, color = "#00ffff", baseFontSize = 24) {
         // Responsive font sizing
         const fontSize = isMobile ? Math.max(baseFontSize * 0.7, 16) : baseFontSize;
-        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
         
         // Check if text fits, if not, try smaller font or truncate
         let adjustedText = text;
@@ -5083,7 +5088,7 @@ function drawLevelCompleteOverlay() {
         if (textWidth > maxWidth) {
             // Try smaller font first
             const smallerSize = fontSize * 0.8;
-            context.font = `bold ${smallerSize}px 'Courier New', monospace`;
+            context.font = `bold ${smallerSize}px Arial, system-ui, -apple-system, sans-serif`;
             textWidth = context.measureText(adjustedText).width;
             
             // If still too wide, truncate text
@@ -5161,7 +5166,7 @@ function drawLevelCompleteOverlay() {
     const shareText = solutionCopied ? "COPIED" : "SHARE";
     const shareTextColor = solutionCopied ? "#00ff88" : "#ffdd00";
     const shareTextY = shareButtonY + shareButtonSize + shareTextSpacing;
-    context.font = `bold ${isMobile ? 10 : 12}px 'Courier New', monospace`;
+    context.font = `bold ${isMobile ? 10 : 12}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = shareTextColor;
     context.textAlign = "center";
     context.fillText(shareText, shareButtonX + shareButtonSize / 2, shareTextY);
@@ -5180,7 +5185,7 @@ function drawLevelCompleteOverlay() {
     
     // Draw Next Level button text
     const buttonFontSize = isMobile ? 12 : 14;
-    context.font = `bold ${buttonFontSize}px 'Courier New', monospace`;
+    context.font = `bold ${buttonFontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00ff00";
     context.textAlign = "center";
     context.fillText("NEXT LEVEL", nextButtonX + nextButtonWidth / 2, buttonY + buttonHeight / 2 + 5);
@@ -5226,7 +5231,7 @@ function drawSolutionButton() {
     
     // Button text - two lines
     const fontSize = isMobile ? 11 : 13;
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00aaff";
     context.textAlign = "center";
     
@@ -5358,7 +5363,7 @@ function drawSolutionReplayControls() {
         const shareTextColor = solutionCopiedState ? "#00ff88" : "#ffdd00";
         const shareTextY = shareButtonY + statusBarButtonSize + (isMobile ? 12 : 15);
         context.save();
-        context.font = `bold ${isMobile ? 10 : 12}px 'Courier New', monospace`;
+        context.font = `bold ${isMobile ? 10 : 12}px Arial, system-ui, -apple-system, sans-serif`;
         context.fillStyle = shareTextColor;
         context.textAlign = "center";
         context.fillText(shareText, shareButtonX + statusBarButtonSize / 2, shareTextY);
@@ -5396,7 +5401,7 @@ function drawSolutionReplayControls() {
         
         // Draw progress info - centered between top of control bar and buttons
         const progressY = controlBarY + (buttonY - controlBarY) / 2; // Center between control bar top and buttons
-        context.font = `bold ${isMobile ? 16 : 20}px 'Courier New', monospace`; // Increased from 12/16 to 16/20
+        context.font = `bold ${isMobile ? 16 : 20}px Arial, system-ui, -apple-system, sans-serif`; // Increased from 12/16 to 16/20
         context.fillStyle = "#00aaff";
         context.textAlign = "center";
         
@@ -5411,7 +5416,7 @@ function drawSolutionReplayControls() {
             const statsY = buttonY + buttonHeight + (isMobile ? 25 : 30);
             const statsText = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
             const statsFontSize = isMobile ? 16 : 18; // Increased from 12/14 to 16/18
-            context.font = `bold ${statsFontSize}px 'Courier New', monospace`;
+            context.font = `bold ${statsFontSize}px Arial, system-ui, -apple-system, sans-serif`;
             context.fillStyle = "#ffdd00";
             context.textAlign = "center";
             context.fillText(statsText, centerX, statsY);
@@ -5423,7 +5428,7 @@ function drawSolutionReplayControls() {
         
         context.textAlign = "center";
         const messageFontSize = isMobile ? 18 : 22; // Increased font size for all lines
-        context.font = `bold ${messageFontSize}px 'Courier New', monospace`;
+        context.font = `bold ${messageFontSize}px Arial, system-ui, -apple-system, sans-serif`;
         context.fillStyle = "#ffdd00"; // Yellow color for all text
         context.fillText("You solved this level before the", centerX, messageY);
         context.fillText("saving feature was implemented.", centerX, messageY + 25);
@@ -5477,7 +5482,7 @@ function drawSolutionReplayButton(x, y, width, height, text, color) {
     // Button text
     const isMobile = canvas.width < 600;
     const fontSize = isMobile ? 10 : 12;
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = color;
     context.textAlign = "center";
     context.fillText(text, x + width / 2, y + height / 2 + 4);
@@ -5582,7 +5587,7 @@ function drawLevelSelectScreen() {
     const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     
     // Title - moved slightly lower to avoid conflict with back button
-    context.font = `bold ${titleFontSize}px 'Courier New', monospace`;
+    context.font = `bold ${titleFontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#00ffff";
     context.textAlign = "center";
     context.fillText("SELECT LEVEL", centerX, headerHeight * 0.35);
@@ -5707,7 +5712,7 @@ function drawLevelButton(x, y, size, levelNumber, fontSize) {
     context.strokeRect(x, y, size, size);
 
     // Button text (level number)
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = textColor;
     context.textAlign = "center";
     context.fillText(levelNumber.toString(), x + size / 2, y + size / 2 + fontSize / 3);
@@ -5737,7 +5742,7 @@ function drawRedDotLegend(legendY, buttonSize) {
     const centerX = canvas.width / 2;
     
     // Set up font to measure text
-    context.font = `${fontSize}px 'Courier New', monospace`;
+    context.font = `${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     const legendText = "Solve again to save solution";
     const textMetrics = context.measureText(legendText);
     const textWidth = textMetrics.width;
@@ -5778,7 +5783,7 @@ function drawPageNavigation(navY, maxPages) {
     const centerX = canvas.width / 2;
     
     // Page info text
-    context.font = `${fontSize}px 'Courier New', monospace`;
+    context.font = `${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#ffffff";
     context.textAlign = "center";
     context.fillText(`Page ${currentLevelPage + 1} of ${maxPages}`, centerX, navY);
@@ -5796,7 +5801,7 @@ function drawPageNavigation(navY, maxPages) {
         context.lineWidth = 2;
         context.strokeRect(prevX, buttonY, buttonSize, buttonSize);
         context.fillStyle = "#ffffff";
-        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
         context.textAlign = "center";
         context.fillText("◀", prevX + buttonSize / 2, buttonY + buttonSize / 2 + fontSize / 3);
     }
@@ -5810,7 +5815,7 @@ function drawPageNavigation(navY, maxPages) {
         context.lineWidth = 2;
         context.strokeRect(nextX, buttonY, buttonSize, buttonSize);
         context.fillStyle = "#ffffff";
-        context.font = `bold ${fontSize}px 'Courier New', monospace`;
+        context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
         context.textAlign = "center";
         context.fillText("▶", nextX + buttonSize / 2, buttonY + buttonSize / 2 + fontSize / 3);
     }
@@ -5818,7 +5823,7 @@ function drawPageNavigation(navY, maxPages) {
 
 function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, type, fontSize) {
     // Label - positioned above the indicator box with more spacing
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#ffffff";
     context.textAlign = "center";
     context.fillText(label, centerX, y - 35);
@@ -5842,7 +5847,7 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
     context.strokeRect(leftButtonX, buttonY, buttonWidth, buttonHeight);
     
     // Left arrow text - centered in button
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#ffffff";
     context.textAlign = "center";
     context.fillText("◀", leftButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + fontSize / 3);
@@ -5860,7 +5865,7 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
     context.strokeRect(rightButtonX, buttonY, buttonWidth, buttonHeight);
     
     // Right arrow text - centered in button
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#ffffff";
     context.textAlign = "center";
     context.fillText("▶", rightButtonX + buttonWidth / 2, buttonY + buttonHeight / 2 + fontSize / 3);
@@ -5876,7 +5881,7 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
     context.strokeRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
     
     // Value text - centered in indicator box
-    context.font = `bold ${fontSize}px 'Courier New', monospace`;
+    context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#ffdd00";
     context.fillText(value, centerX, indicatorY + indicatorHeight / 2 + 6);
     
