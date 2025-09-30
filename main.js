@@ -1,5 +1,3 @@
-// DEBUG VERSION 9.9.2025-C - GREEN UPDATES
-console.log("LOADED: Main.js with GREEN updates - Sept 9 2025");
 // #region Event Handlers & Input
 "use strict";
 const pressedKeys = new Set();
