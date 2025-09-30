@@ -235,7 +235,7 @@ function setupCanvasEventListeners() {
             if (isClickOnExitButton(mouseX, mouseY)) {
                 playSound('click');
                 currentGameState = GAME_STATES.LEVEL_SELECT;
-                downloadGameProgress(true); // Silent cloud sync on navigation
+                downloadGameProgress(true, false); // Silent cloud sync on navigation
                 initializeLevelSelect();
                 return;
             }
@@ -261,7 +261,7 @@ function setupCanvasEventListeners() {
             if (isClickOnStartButton(mouseX, mouseY)) {
                 playSound('click');
                 currentGameState = GAME_STATES.LEVEL_SELECT;
-                downloadGameProgress(true); // Silent cloud sync on navigation
+                downloadGameProgress(true, false); // Silent cloud sync on navigation
                 initializeLevelSelect();
                 lastInputType = "Level Select";
                 lastInputTime = Date.now();
@@ -624,7 +624,7 @@ function setupCanvasEventListeners() {
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
                         playSound('click');
                         currentGameState = GAME_STATES.LEVEL_SELECT;
-                        downloadGameProgress(true); // Silent cloud sync on navigation
+                        downloadGameProgress(true, false); // Silent cloud sync on navigation
                         initializeLevelSelect();
                         return;
                     }
@@ -650,7 +650,7 @@ function setupCanvasEventListeners() {
                     if (isClickOnStartButton(canvasPos.x, canvasPos.y)) {
                         playSound('click');
                         currentGameState = GAME_STATES.LEVEL_SELECT;
-                        downloadGameProgress(true); // Silent cloud sync on navigation
+                        downloadGameProgress(true, false); // Silent cloud sync on navigation
                         initializeLevelSelect();
                         lastInputType = "Level Select";
                         lastInputTime = Date.now();
