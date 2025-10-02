@@ -5604,11 +5604,11 @@ function drawLevelSelectScreen() {
     // Draw level grid
     drawLevelGrid(headerHeight, gridAreaHeight);
     
-    // Draw page navigation if needed
+    // Show page info if needed (without navigation buttons)
     const maxLevel = getLevelCount(selectedSet);
     const maxPages = Math.ceil(maxLevel / levelsPerPage);
     if (maxPages > 1) {
-        drawPageNavigation(headerHeight + gridAreaHeight + 20, maxPages);
+        drawPageInfo(headerHeight + gridAreaHeight + 20, maxPages);
     }
 
     // Draw back button (same as exit button in gameplay) - just the PNG icon
@@ -5821,6 +5821,19 @@ function drawPageNavigation(navY, maxPages) {
     }
 }
 
+// New simplified page info display (no navigation buttons)
+function drawPageInfo(navY, maxPages) {
+    const isMobile = canvas.width < 600;
+    const fontSize = isMobile ? 16 : 20; // Use same font size as main UI elements
+    const centerX = canvas.width / 2;
+    
+    // Page info text only - no buttons
+    context.font = `${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
+    context.fillStyle = "#ffffff";
+    context.textAlign = "center";
+    context.fillText(`Page ${currentLevelPage + 1} of ${maxPages}`, centerX, navY);
+}
+
 function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, type, fontSize) {
     // Label - positioned above the indicator box with more spacing
     context.font = `bold ${fontSize}px Arial, system-ui, -apple-system, sans-serif`;
@@ -5911,25 +5924,36 @@ function drawSelector(label, value, centerX, y, buttonWidth, buttonHeight, indic
 function handleLevelSelectInput(key) {
     switch (key) {
         case 'ArrowLeft':
-            // Change to previous set
+            // Unified navigation: previous page/set
             handleLevelSelectLeft();
             break;
         case 'ArrowRight':
-            // Change to next set
+            // Unified navigation: next page/set
             handleLevelSelectRight();
             break;
         case 'ArrowUp':
-            // Previous page
-            if (currentLevelPage > 0) {
-                currentLevelPage--;
+            // Keep up/down for level selection within current page
+            if (selectedLevel > 1) {
+                selectedLevel--;
+            } else {
+                // Wrap to max level on current page
+                const maxLevel = getLevelCount(selectedSet);
+                const startLevel = currentLevelPage * levelsPerPage + 1;
+                const endLevel = Math.min(startLevel + levelsPerPage - 1, maxLevel);
+                selectedLevel = endLevel;
             }
             break;
         case 'ArrowDown':
-            // Next page
+            // Keep up/down for level selection within current page
             const maxLevel = getLevelCount(selectedSet);
-            const maxPages = Math.ceil(maxLevel / levelsPerPage);
-            if (currentLevelPage < maxPages - 1) {
-                currentLevelPage++;
+            const startLevel = currentLevelPage * levelsPerPage + 1;
+            const endLevel = Math.min(startLevel + levelsPerPage - 1, maxLevel);
+            
+            if (selectedLevel < endLevel) {
+                selectedLevel++;
+            } else {
+                // Wrap to first level on current page
+                selectedLevel = startLevel;
             }
             break;
         case ' ':
@@ -5967,40 +5991,61 @@ function handleLevelSelectInput(key) {
 
 function handleLevelSelectLeft() {
     playSound('click');
-    // Always cycle through sets when using left/right arrows on keyboard
-    // or when tapping on the set line
-    const setNames = Object.keys(SOKOBAN_LEVELS);
-    const currentSetIndex = setNames.indexOf(selectedSet);
     
-    if (currentSetIndex > 0) {
-        selectedSet = setNames[currentSetIndex - 1];
-        selectedLevel = 0; // No level selected when changing sets
+    // Unified navigation: Previous page of current set OR previous set's last page
+    const maxLevel = getLevelCount(selectedSet);
+    const maxPages = Math.ceil(maxLevel / levelsPerPage);
+    
+    if (currentLevelPage > 0) {
+        // Go to previous page of current set
+        currentLevelPage--;
     } else {
-        // Wrap around to last set
-        selectedSet = setNames[setNames.length - 1];
-        selectedLevel = 0;
+        // Go to previous set's last page
+        const setNames = Object.keys(SOKOBAN_LEVELS);
+        const currentSetIndex = setNames.indexOf(selectedSet);
+        
+        if (currentSetIndex > 0) {
+            selectedSet = setNames[currentSetIndex - 1];
+        } else {
+            // Wrap around to last set
+            selectedSet = setNames[setNames.length - 1];
+        }
+        
+        // Calculate last page of new set
+        const newMaxLevel = getLevelCount(selectedSet);
+        const newMaxPages = Math.ceil(newMaxLevel / levelsPerPage);
+        currentLevelPage = newMaxPages - 1; // Go to last page of new set
+        selectedLevel = 0; // No level selected when changing sets
+        calculateGridLayout(); // Recalculate for new set
     }
-    currentLevelPage = 0; // Reset to first page
-    calculateGridLayout(); // Recalculate for new set
 }
 
 function handleLevelSelectRight() {
     playSound('click');
-    // Always cycle through sets when using left/right arrows on keyboard
-    // or when tapping on the set line  
-    const setNames = Object.keys(SOKOBAN_LEVELS);
-    const currentSetIndex = setNames.indexOf(selectedSet);
     
-    if (currentSetIndex < setNames.length - 1) {
-        selectedSet = setNames[currentSetIndex + 1];
-        selectedLevel = 0; // No level selected when changing sets
+    // Unified navigation: Next page of current set OR next set's first page
+    const maxLevel = getLevelCount(selectedSet);
+    const maxPages = Math.ceil(maxLevel / levelsPerPage);
+    
+    if (currentLevelPage < maxPages - 1) {
+        // Go to next page of current set
+        currentLevelPage++;
     } else {
-        // Wrap around to first set
-        selectedSet = setNames[0];
-        selectedLevel = 0;
+        // Go to next set's first page
+        const setNames = Object.keys(SOKOBAN_LEVELS);
+        const currentSetIndex = setNames.indexOf(selectedSet);
+        
+        if (currentSetIndex < setNames.length - 1) {
+            selectedSet = setNames[currentSetIndex + 1];
+        } else {
+            // Wrap around to first set
+            selectedSet = setNames[0];
+        }
+        
+        currentLevelPage = 0; // Go to first page of new set
+        selectedLevel = 0; // No level selected when changing sets
+        calculateGridLayout(); // Recalculate for new set
     }
-    currentLevelPage = 0; // Reset to first page
-    calculateGridLayout(); // Recalculate for new set
 }
 
 function handleLevelSelectUp() {
@@ -6040,34 +6085,22 @@ function handleLevelSelectClick(x, y) {
         return;
     }
 
-    // Check set navigation buttons (if they exist from the old system)
+    // Check set navigation buttons - now unified navigation
     if (window.levelSelectButtons && window.levelSelectButtons.set) {
         const leftBtn = window.levelSelectButtons.set.left;
         const rightBtn = window.levelSelectButtons.set.right;
         
-        // Left set button
+        // Left navigation button - unified previous page/set logic
         if (x >= leftBtn.x && x <= leftBtn.x + leftBtn.width &&
             y >= leftBtn.y && y <= leftBtn.y + leftBtn.height) {
-            playSound('click');
-            const sets = Object.keys(SOKOBAN_LEVELS);
-            const currentIndex = sets.indexOf(selectedSet);
-            selectedSet = sets[(currentIndex - 1 + sets.length) % sets.length];
-            selectedLevel = 0; // No level selected when changing sets
-            currentLevelPage = 0; // Reset to first page
-            calculateGridLayout(); // Recalculate for new set
+            handleLevelSelectLeft(); // Uses new unified logic
             return;
         }
         
-        // Right set button
+        // Right navigation button - unified next page/set logic
         if (x >= rightBtn.x && x <= rightBtn.x + rightBtn.width &&
             y >= rightBtn.y && y <= rightBtn.y + rightBtn.height) {
-            playSound('click');
-            const sets = Object.keys(SOKOBAN_LEVELS);
-            const currentIndex = sets.indexOf(selectedSet);
-            selectedSet = sets[(currentIndex + 1) % sets.length];
-            selectedLevel = 0; // No level selected when changing sets
-            currentLevelPage = 0; // Reset to first page
-            calculateGridLayout(); // Recalculate for new set
+            handleLevelSelectRight(); // Uses new unified logic
             return;
         }
     }
@@ -6077,10 +6110,7 @@ function handleLevelSelectClick(x, y) {
         return;
     }
     
-    // Check page navigation buttons
-    if (isClickOnPageNavigation(x, y)) {
-        return;
-    }
+    // Bottom page navigation removed - now handled by unified top arrows
 }
 
 function isClickOnLevelGrid(x, y) {
