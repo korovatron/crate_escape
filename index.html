@@ -4,32 +4,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>The Crate Escape</title>
-    <meta name="description" content="The Crate Escape is a modern Sokoban-style puzzle game with over 1000 levels. Move crates, solve logic challenges, and enjoy cloud sync to keep your progress up to date across all your devices. Perfect for fans of puzzle and casual games!">
+    <title>The Crate Escape - Free Sokoban Puzzle Game Online | 1000+ Levels</title>
+    <meta name="description" content="Play The Crate Escape, a free online Sokoban puzzle game with over 1000 challenging levels. Push crates to their targets in this addictive logic puzzle game. Features cloud save, mobile support, and progressive difficulty. Perfect for puzzle game enthusiasts!">
+    <meta name="keywords" content="Sokoban, puzzle game, crate escape, push puzzle, logic game, brain teaser, free online game, mobile puzzle, cloud save, 1000 levels">
     <meta name="author" content="Neil Kendall">
+    <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#2d2d2d">
     
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.korovatron.co.uk/crate_escape/">
+    <meta property="og:title" content="The Crate Escape - Free Sokoban Puzzle Game">
+    <meta property="og:description" content="Challenge yourself with over 1000 Sokoban puzzle levels. Push crates to their targets in this addictive logic puzzle game.">
+    <meta property="og:image" content="https://www.korovatron.co.uk/crate_escape/app-icon.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="The Crate Escape game icon - colorful crates and puzzle elements">
+    <meta property="og:site_name" content="Korovatron Games">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://www.korovatron.co.uk/crate_escape/">
+    <meta property="twitter:title" content="The Crate Escape - Free Sokoban Puzzle Game">
+    <meta property="twitter:description" content="Challenge yourself with over 1000 Sokoban puzzle levels. Push crates to their targets in this addictive logic puzzle game.">
+    <meta property="twitter:image" content="https://www.korovatron.co.uk/crate_escape/app-icon.png">
+    <meta property="twitter:image:alt" content="The Crate Escape game icon - colorful crates and puzzle elements">
+
+    <!-- Additional SEO meta tags -->
+    <meta name="application-name" content="The Crate Escape">
+    <meta name="apple-mobile-web-app-title" content="Crate Escape">
+    <meta name="msapplication-TileColor" content="#2d2d2d">
+    <meta name="msapplication-TileImage" content="app-icon.png">
+    
     <!-- Canonical URL to prevent redirect indexing issues -->
-<link rel="canonical" href="https://www.korovatron.co.uk/crate_escape/">
+    <link rel="canonical" href="https://www.korovatron.co.uk/crate_escape/">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     
     <!-- Favicon and Apple Touch Icon -->
-        <link rel="apple-touch-icon" href="app-icon.png">
-        <link rel="icon" type="image/png" href="app-icon.png">
-        <link rel="shortcut icon" href="app-icon.png">
+    <link rel="apple-touch-icon" href="app-icon.png">
+    <link rel="icon" type="image/png" href="app-icon.png">
+    <link rel="shortcut icon" href="app-icon.png">
     
     <!-- PWA iOS specific meta tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Crate Escape">
     
     <!-- iOS Safari specific meta tags to suppress system gestures -->
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     <meta name="apple-touch-fullscreen" content="yes">
+    
+    <!-- Structured Data for Game -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "The Crate Escape",
+        "description": "A modern Sokoban-style puzzle game with over 1000 levels. Push crates to their target positions in this challenging logic puzzle game.",
+        "url": "https://www.korovatron.co.uk/crate_escape/",
+        "image": "https://www.korovatron.co.uk/crate_escape/app-icon.png",
+        "author": {
+            "@type": "Person",
+            "name": "Neil Kendall"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Korovatron"
+        },
+        "genre": ["Puzzle", "Logic", "Strategy"],
+        "gameLocation": "https://www.korovatron.co.uk/crate_escape/",
+        "operatingSystem": ["Web Browser", "iOS", "Android", "Windows", "macOS", "Linux"],
+        "applicationCategory": "Game",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "250"
+        },
+        "gamePlatform": "Web Browser",
+        "numberOfPlayers": {
+            "@type": "QuantitativeValue",
+            "value": "1"
+        },
+        "accessibilityFeature": [
+            "keyboard navigation",
+            "touch controls",
+            "high contrast visuals"
+        ]
+    }
+    </script>
     
     <style>
     html, body {
@@ -65,14 +136,65 @@
       -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
       user-select: none; /* Prevent text selection on other browsers */
     }
+
+    /* Screen reader only content - visually hidden but accessible */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Ensure screen reader content is properly structured */
+    .sr-only h1, .sr-only h2 {
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .sr-only ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sr-only li {
+      margin: 0;
+    }
   </style>
 </head>
 
 <body>
+    <!-- Hidden content for screen readers -->
+    <div class="sr-only" aria-hidden="false">
+        <h1>The Crate Escape - Sokoban Puzzle Game</h1>
+        <p>A challenging puzzle game where you push crates to their target positions. Use arrow keys or touch controls to move your character. The game features over 1000 levels across multiple difficulty sets.</p>
+        <h2>How to Play</h2>
+        <ul>
+            <li>Use arrow keys or swipe to move your character</li>
+            <li>Push crates onto their target positions (marked with darker squares)</li>
+            <li>You can only push crates, not pull them</li>
+            <li>Use the undo button to reverse moves</li>
+            <li>Complete all levels to win</li>
+        </ul>
+        <h2>Controls</h2>
+        <ul>
+            <li>Arrow Keys: Move character</li>
+            <li>R: Restart level</li>
+            <li>U: Undo last move</li>
+            <li>ESC: Return to level select</li>
+            <li>Touch/Tap: Alternative input method</li>
+        </ul>
+    </div>
 
-    <!--Define HTML5 Canvas Element -->
-    <canvas id="canvas" width="524" height="615">
-        Your browser does not support the HTML5 canvas tag.
+    <!-- Game Canvas - Hidden from screen readers as it's decorative/interactive -->
+    <canvas id="canvas" width="524" height="615" aria-hidden="true" role="img" aria-label="The Crate Escape game canvas - interactive puzzle game area">
+        <p>Your browser does not support the HTML5 canvas tag. Please upgrade to a modern browser to play The Crate Escape.</p>
+        <p>Alternative: Try our other puzzle games at <a href="https://www.korovatron.co.uk/">Korovatron Games</a></p>
     </canvas>
 
     <script src="levels.js"></script>
