@@ -1007,6 +1007,7 @@ function acknowledgeIOSInstallNotification() {
 
 // Cloud Sync authentication variables
 let cloudSyncState = 'checking'; // 'checking', 'not_authenticated', 'signing_in', 'authenticated', 'error'
+let hasCloudSyncedThisSession = false; // Track if cloud sync has happened this session
 
 // Expose cloudSyncState globally so Firebase config can update it
 window.cloudSyncState = cloudSyncState;
@@ -3261,9 +3262,6 @@ async function signOutFromCloud() {
         
         // Reset cloud sync state
         updateCloudSyncState('not_authenticated');
-        phoneNumber = null;
-        verificationId = null;
-        recaptchaVerifier = null;
         
         console.log('Successfully signed out');
         
