@@ -5,6 +5,20 @@ const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
 const isKeyDown = (key) => pressedKeys.has(key);
 
+// Google Analytics gameplay tracking
+let lastPlayEventTime = 0;
+const playEventThrottle = 30000; // 30 seconds
+
+function trackGameplayEvent() {
+    const now = Date.now();
+    if (now - lastPlayEventTime >= playEventThrottle) {
+        lastPlayEventTime = now;
+        if (typeof gtag === 'function') {
+            gtag('event', 'CRATE-ESCAPE-play');
+        }
+    }
+}
+
 // Check if enough time has passed since last key action
 const canProcessKey = (key) => {
     const now = Date.now();
@@ -115,6 +129,7 @@ document.addEventListener('keydown', (e) => {
         }
         
         if (moveDirection.x !== 0 || moveDirection.y !== 0) {
+            trackGameplayEvent();
             attemptPlayerMove(moveDirection);
         }
     }
@@ -534,6 +549,7 @@ function setupCanvasEventListeners() {
                 
                 // Attempt immediate movement
                 if (!isPlayerMoving) {
+                    trackGameplayEvent();
                     attemptPlayerMove(touchMoveDirection);
                 }
                 
