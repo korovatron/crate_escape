@@ -21,7 +21,7 @@ function trackGameplayEvent() {
 
 function trackLevelCompleteEvent(levelSet, levelNumber) {
     if (typeof gtag === 'function') {
-        gtag('event', 'level_complete', {
+        gtag('event', 'CRATE_LEV_COMP', {
             level_set: levelSet,
             level_number: levelNumber
         });
