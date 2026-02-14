@@ -19,6 +19,15 @@ function trackGameplayEvent() {
     }
 }
 
+function trackLevelCompleteEvent(levelSet, levelNumber) {
+    if (typeof gtag === 'function') {
+        gtag('event', 'level_complete', {
+            level_set: levelSet,
+            level_number: levelNumber
+        });
+    }
+}
+
 // Check if enough time has passed since last key action
 const canProcessKey = (key) => {
     const now = Date.now();
@@ -2462,6 +2471,7 @@ function checkLevelCompletion() {
         currentGameState = GAME_STATES.LEVEL_COMPLETE;
         levelCompletionStartTime = Date.now();
         solutionCopied = false; // Reset copy state for new completion
+        trackLevelCompleteEvent(currentSet, currentLevelNumber);
         
         // Mark level as completed for progress tracking
         markLevelCompleted(currentSet, currentLevelNumber);
