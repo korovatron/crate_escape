@@ -4536,13 +4536,16 @@ function drawOverviewMode() {
             const tileY = y * overviewTileSize;
             
             const char = currentLevel.grid[y][x];
+            const isExteriorSpace = char === ' ' && currentLevel.exteriorSpaces && currentLevel.exteriorSpaces.has(`${x},${y}`);
             
             // Temporarily set tileSize for drawing functions
             const originalTileSize = tileSize;
             tileSize = overviewTileSize;
             
-            // Draw background/floor for all tiles
-            drawFloorTile(tileX, tileY);
+            // Draw background/floor for playable/interior tiles only
+            if (!isExteriorSpace) {
+                drawFloorTile(tileX, tileY);
+            }
             
             // Draw the appropriate sprite based on the character
             switch (char) {
@@ -4675,9 +4678,12 @@ function drawNormalGameplay() {
             }
             
             const char = currentLevel.grid[y][x];
+            const isExteriorSpace = char === ' ' && currentLevel.exteriorSpaces && currentLevel.exteriorSpaces.has(`${x},${y}`);
             
-            // Draw background/floor for all tiles
-            drawFloorTile(tileX, tileY);
+            // Draw background/floor for playable/interior tiles only
+            if (!isExteriorSpace) {
+                drawFloorTile(tileX, tileY);
+            }
             
             // Draw the appropriate sprite based on the character
             switch (char) {

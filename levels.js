@@ -17201,7 +17201,8 @@ const LevelManager = {
       playerStart: { x: 0, y: 0 },
       boxes: [],
       goals: [],
-      walls: []
+      walls: [],
+      exteriorSpaces: new Set()
     };
 
     // Find the maximum width
@@ -17243,6 +17244,44 @@ const LevelManager = {
             break;
         }
       }
+    }
+
+    // Flood-fill from map edges to find cells outside the enclosing wall.
+    // We only use this to hide floor rendering for outside spaces.
+    const visited = Array.from({ length: level.height }, () => Array(level.width).fill(false));
+    const queue = [];
+    let queueIndex = 0;
+
+    function enqueueIfExteriorCandidate(x, y) {
+      if (x < 0 || y < 0 || x >= level.width || y >= level.height) return;
+      if (visited[y][x]) return;
+      if (level.grid[y][x] === '#') return;
+      visited[y][x] = true;
+      queue.push({ x, y });
+    }
+
+    // Seed flood-fill from all border cells
+    for (let x = 0; x < level.width; x++) {
+      enqueueIfExteriorCandidate(x, 0);
+      enqueueIfExteriorCandidate(x, level.height - 1);
+    }
+    for (let y = 0; y < level.height; y++) {
+      enqueueIfExteriorCandidate(0, y);
+      enqueueIfExteriorCandidate(level.width - 1, y);
+    }
+
+    while (queueIndex < queue.length) {
+      const { x, y } = queue[queueIndex++];
+
+      // Only spaces should lose their floor; goals/walls remain visually explicit.
+      if (level.grid[y][x] === ' ') {
+        level.exteriorSpaces.add(`${x},${y}`);
+      }
+
+      enqueueIfExteriorCandidate(x + 1, y);
+      enqueueIfExteriorCandidate(x - 1, y);
+      enqueueIfExteriorCandidate(x, y + 1);
+      enqueueIfExteriorCandidate(x, y - 1);
     }
 
     return level;
