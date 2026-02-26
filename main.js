@@ -38,6 +38,12 @@ const canProcessKey = (key) => {
 
 document.addEventListener('keydown', (e) => {
     pressedKeys.add(e.key);
+
+    const isNumpadEnd = e.code === 'Numpad1';
+    const isNumpadHome = e.code === 'Numpad7';
+    const isNumpadInsert = e.code === 'Numpad0';
+    const isUndoShortcut = e.key === 'u' || e.key === 'U' || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'End' || isNumpadEnd;
+    const isRedoShortcut = e.key === 'Insert' || e.key === 'Home' || isNumpadHome || isNumpadInsert;
     
     // Handle game state transitions
     if (e.key === ' ') {
@@ -68,9 +74,17 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     
-    // Handle undo with U key
-    if ((e.key === 'u' || e.key === 'U') && currentGameState === GAME_STATES.PLAYING) {
+    // Handle undo with U / Backspace / Delete / End keys (+ Numpad End regardless of Num Lock)
+    if (isUndoShortcut && currentGameState === GAME_STATES.PLAYING) {
+        e.preventDefault();
         undoLastMove();
+        return;
+    }
+
+    // Handle redo with Insert / Home keys (+ Numpad Home/Insert regardless of Num Lock)
+    if (isRedoShortcut && currentGameState === GAME_STATES.PLAYING) {
+        e.preventDefault();
+        redoLastMove();
         return;
     }
     
@@ -145,12 +159,21 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    if (currentGameState === GAME_STATES.PLAYING && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R', 'u', 'U'].includes(e.key)) {
+    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R'].includes(e.key);
+    if (currentGameState === GAME_STATES.PLAYING && (isMovementOrUiKey || isUndoShortcut || isRedoShortcut)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
         if (e.key === 'Escape') keyName = 'Escape (Exit)';
         if (e.key === 'r' || e.key === 'R') keyName = 'R (Try Again)';
         if (e.key === 'u' || e.key === 'U') keyName = 'U (Undo)';
+        if (e.key === 'Backspace') keyName = 'Backspace (Undo)';
+        if (e.key === 'Delete') keyName = 'Delete (Undo)';
+        if (e.key === 'End') keyName = 'End (Undo)';
+        if (e.key === 'Insert') keyName = 'Insert (Redo)';
+        if (e.key === 'Home') keyName = 'Home (Redo)';
+        if (isNumpadEnd && e.key !== 'End') keyName = 'Numpad End (Undo)';
+        if (isNumpadHome && e.key !== 'Home') keyName = 'Numpad Home (Redo)';
+        if (isNumpadInsert && e.key !== 'Insert') keyName = 'Numpad Insert (Redo)';
         
         lastInputType = `Keyboard: ${keyName}`;
         lastInputTime = Date.now();
@@ -177,6 +200,26 @@ document.addEventListener('keydown', (e) => {
         case "Escape":
             e.preventDefault();
             break;
+        case "Backspace":
+            e.preventDefault();
+            break;
+        case "Delete":
+            e.preventDefault();
+            break;
+        case "End":
+            e.preventDefault();
+            break;
+        case "Insert":
+            e.preventDefault();
+            break;
+        case "Home":
+            e.preventDefault();
+            break;
+    }
+
+    // Ensure numpad navigation keys are suppressed when used as undo/redo shortcuts
+    if (isNumpadEnd || isNumpadHome || isNumpadInsert) {
+        e.preventDefault();
     }
 }
 );
@@ -4157,8 +4200,10 @@ function drawInstructionsScreen() {
         "• Push all crates onto their goal positions",
         "• Use arrow keys or swipe to move",
         "• You can only push crates, not pull them",
-        "• Use the undo button to reverse moves",
-        "• Keyboard controls: Arrow keys (move), R (restart), U (undo), ESC (back)",
+        "• Use the undo and redo buttons to step backward/forward through moves",
+        "• Keyboard controls: Arrow keys (move), R (restart), ESC (back)",
+        "• Undo keys: U, Backspace, Delete, End (including Numpad End)",
+        "• Redo keys: Insert, Home (including Numpad Insert/Home)",
     ];
     
     // Calculate available space and adjust text size to fit
