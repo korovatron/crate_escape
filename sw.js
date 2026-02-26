@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-1.1.3';
+const CACHE_NAME = 'crate-escape-version-1.1.4';
 const urlsToCache = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const urlsToCache = [
   './assets/images/restartIcon.png',
   './assets/images/undoIcon.png',
   './assets/images/shareIcon.png',
+  './assets/images/keyboardIcon.png',
   './assets/sounds/click.mp3',
   './assets/sounds/share.mp3',
   './assets/sounds/undo.mp3',
