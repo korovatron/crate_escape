@@ -1123,6 +1123,7 @@ let attemptCount = 1; // Start at 1 since first play is attempt 1
 let moveHistory = []; // Array to store game state snapshots
 let redoHistory = []; // Array to store redo snapshots
 let pendingUndoState = null; // State to apply after undo animation completes
+let pendingRedoState = null; // State to apply after redo animation completes
 let isReverseAnimation = false; // Flag to indicate reverse animation for undo
 
 // Player movement variables
@@ -1696,6 +1697,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     moveHistory = [];
     redoHistory = [];
     pendingUndoState = null;
+    pendingRedoState = null;
     isReverseAnimation = false;
     
     // Only reset attempt count for new levels, not restarts
@@ -1926,6 +1928,15 @@ function redoLastMove() {
 
     const redoState = redoHistory.pop();
 
+    // Find any box that moved between current and redo state
+    let movedBoxIndex = null;
+    for (let i = 0; i < currentLevel.boxes.length; i++) {
+        if (currentState.boxes[i].x !== redoState.boxes[i].x || currentState.boxes[i].y !== redoState.boxes[i].y) {
+            movedBoxIndex = i;
+            break;
+        }
+    }
+
     // Update facing direction based on redo movement
     const deltaX = redoState.playerPos.x - currentState.playerPos.x;
     const deltaY = redoState.playerPos.y - currentState.playerPos.y;
@@ -1939,26 +1950,41 @@ function redoLastMove() {
         playerFacingDirection = 'up';
     }
 
-    // Apply redo state directly
-    playerPos.x = redoState.playerPos.x;
-    playerPos.y = redoState.playerPos.y;
-    for (let i = 0; i < currentLevel.boxes.length; i++) {
-        currentLevel.boxes[i].x = redoState.boxes[i].x;
-        currentLevel.boxes[i].y = redoState.boxes[i].y;
-    }
-    moveCount = redoState.moveCount;
-    pushCount = redoState.pushCount;
-
-    // Stabilize animation state after direct restore
+    // Start forward movement animation for redo
+    isPlayerMoving = true;
+    moveAnimationProgress = 0;
     isReverseAnimation = false;
     pendingUndoState = null;
-    movingBox = null;
-    playerAnimationState = getIdleAnimationState();
+    pendingRedoState = redoState;
+
+    moveStartPos = { x: currentState.playerPos.x, y: currentState.playerPos.y };
+    moveTargetPos = { x: redoState.playerPos.x, y: redoState.playerPos.y };
+
+    if (movedBoxIndex !== null) {
+        movingBox = {
+            index: movedBoxIndex,
+            startPos: { x: currentState.boxes[movedBoxIndex].x, y: currentState.boxes[movedBoxIndex].y },
+            targetPos: { x: redoState.boxes[movedBoxIndex].x, y: redoState.boxes[movedBoxIndex].y }
+        };
+    } else {
+        movingBox = null;
+    }
+
+    // Set animation state based on redo direction
+    let redoAnimationState = 'idle';
+    if (deltaX > 0) {
+        redoAnimationState = 'moving-right';
+    } else if (deltaX < 0) {
+        redoAnimationState = 'moving-left';
+    } else if (deltaY > 0) {
+        redoAnimationState = 'moving-down';
+    } else if (deltaY < 0) {
+        redoAnimationState = 'moving-up';
+    }
+
+    playerAnimationState = redoAnimationState;
     playerAnimationFrame = 0;
     playerAnimationTimer = 0;
-
-    // Keep camera in sync
-    updateCameraPosition();
 
     // Visual feedback
     lastInputType = "Redo";
@@ -2287,6 +2313,15 @@ function updatePlayerMovement(deltaTime) {
             // Clear pending undo state and reset reverse animation flag
             pendingUndoState = null;
             isReverseAnimation = false;
+        } else if (pendingRedoState) {
+            // Apply the redo state after forward animation completes
+            playerPos.x = pendingRedoState.playerPos.x;
+            playerPos.y = pendingRedoState.playerPos.y;
+            moveCount = pendingRedoState.moveCount;
+            pushCount = pendingRedoState.pushCount;
+
+            // Clear pending redo state
+            pendingRedoState = null;
         } else {
             // Normal movement completion - update final positions
             playerPos.x = moveTargetPos.x;
