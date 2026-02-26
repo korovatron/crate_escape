@@ -1,5 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
+const APP_VERSION = '1.1.0';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -3769,7 +3770,7 @@ function drawTitleScreen() {
     const creditsY = canvas.height * 0.95; // Always 5% from bottom
     context.font = `400 ${authorSize}px Arial, system-ui, -apple-system, sans-serif`;
     context.fillStyle = "#FFCC00"; // Yellow color
-    context.fillText("Copyright © 2025 Neil Kendall", canvas.width / 2, creditsY);
+    context.fillText("Copyright © 2025-2026 Neil Kendall", canvas.width / 2, creditsY);
     
     // Start button - positioned above credits with fixed spacing
     let buttonTextSize;
@@ -4107,8 +4108,8 @@ function drawCreditsScreen() {
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
         "Spritesheet: Kenney",
         "Level Designs: David W Skinner & Ward De Langhe",
-        "Built with HTML5 Canvas & JavaScript",
-        "Created in 2025"
+        `Version: ${APP_VERSION}`,
+        "Created 2025-2026"
     ];
     
     // Calculate available space and adjust text size to fit
