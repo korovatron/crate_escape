@@ -1130,6 +1130,7 @@ let moveTargetBoxPos = { x: 0, y: 0 };
 
 // Player animation variables
 let playerAnimationState = 'idle'; // 'idle', 'moving-down', 'moving-up', 'moving-left', 'moving-right'
+let playerFacingDirection = 'down'; // 'down', 'up', 'left', 'right'
 let playerAnimationFrame = 0;
 let playerAnimationTimer = 0;
 const playerAnimationSpeed = 0.083; // Seconds between frame changes (matches movement duration / 3 frames)
@@ -1137,11 +1138,29 @@ const playerAnimationSpeed = 0.083; // Seconds between frame changes (matches mo
 // Player animation frame sequences
 const playerAnimations = {
     idle: [3],
+    'idle-down': [3],
+    'idle-up': [6],
+    'idle-left': [18],
+    'idle-right': [15],
     'moving-down': [3, 4, 5],
     'moving-up': [6, 7, 8], 
     'moving-left': [18, 19, 20],
     'moving-right': [15, 16, 17]
 };
+
+function getIdleAnimationState() {
+    switch (playerFacingDirection) {
+        case 'up':
+            return 'idle-up';
+        case 'left':
+            return 'idle-left';
+        case 'right':
+            return 'idle-right';
+        case 'down':
+        default:
+            return 'idle-down';
+    }
+}
 
 // Function to calculate optimal tile size with mobile-friendly constraints
 function calculateOptimalTileSize() {
@@ -1737,7 +1756,8 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     movingBox = null;
     
     // Reset animation state
-    playerAnimationState = 'idle';
+    playerFacingDirection = 'down';
+    playerAnimationState = getIdleAnimationState();
     playerAnimationFrame = 0;
     playerAnimationTimer = 0;
     
@@ -1829,12 +1849,16 @@ function undoLastMove() {
     // Set animation state based on ORIGINAL direction (for true rewind effect)
     let originalAnimationState = 'idle';
     if (originalDirection.x > 0) {
+        playerFacingDirection = 'right';
         originalAnimationState = 'moving-right'; // They moved right originally
     } else if (originalDirection.x < 0) {
+        playerFacingDirection = 'left';
         originalAnimationState = 'moving-left'; // They moved left originally
     } else if (originalDirection.y > 0) {
+        playerFacingDirection = 'down';
         originalAnimationState = 'moving-down'; // They moved down originally
     } else if (originalDirection.y < 0) {
+        playerFacingDirection = 'up';
         originalAnimationState = 'moving-up'; // They moved up originally
     }
     
@@ -2066,12 +2090,16 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
     // Determine new animation state based on movement direction
     let newAnimationState = 'idle';
     if (direction.x > 0) {
+        playerFacingDirection = 'right';
         newAnimationState = 'moving-right';
     } else if (direction.x < 0) {
+        playerFacingDirection = 'left';
         newAnimationState = 'moving-left';
     } else if (direction.y > 0) {
+        playerFacingDirection = 'down';
         newAnimationState = 'moving-down';
     } else if (direction.y < 0) {
+        playerFacingDirection = 'up';
         newAnimationState = 'moving-up';
     }
     
@@ -2213,7 +2241,7 @@ function updatePlayerMovement(deltaTime) {
         
         // Reset to idle animation when movement completes and no continuous input
         if (!isContinuousInputActive()) {
-            playerAnimationState = 'idle';
+            playerAnimationState = getIdleAnimationState();
             playerAnimationFrame = 0;
             playerAnimationTimer = 0;
             
@@ -2230,8 +2258,8 @@ function updatePlayerMovement(deltaTime) {
 
 function updatePlayerAnimation(deltaTime) {
     // If there's no continuous input and no movement happening, reset to idle
-    if (!isContinuousInputActive() && !isPlayerMoving && playerAnimationState !== 'idle') {
-        playerAnimationState = 'idle';
+    if (!isContinuousInputActive() && !isPlayerMoving && playerAnimationState !== getIdleAnimationState()) {
+        playerAnimationState = getIdleAnimationState();
         playerAnimationFrame = 0;
         playerAnimationTimer = 0;
         return;
