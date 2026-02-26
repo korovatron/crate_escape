@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -253,6 +253,10 @@ function setupCanvasEventListeners() {
             }
             if (isClickOnUndoButton(mouseX, mouseY)) {
                 undoLastMove();
+                return;
+            }
+            if (isClickOnRedoButton(mouseX, mouseY)) {
+                redoLastMove();
                 return;
             }
             if (isClickOnExitButton(mouseX, mouseY)) {
@@ -643,6 +647,10 @@ function setupCanvasEventListeners() {
                     }
                     if (isClickOnUndoButton(canvasPos.x, canvasPos.y)) {
                         undoLastMove();
+                        return;
+                    }
+                    if (isClickOnRedoButton(canvasPos.x, canvasPos.y)) {
+                        redoLastMove();
                         return;
                     }
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
@@ -1113,6 +1121,7 @@ let attemptCount = 1; // Start at 1 since first play is attempt 1
 
 // Undo system variables
 let moveHistory = []; // Array to store game state snapshots
+let redoHistory = []; // Array to store redo snapshots
 let pendingUndoState = null; // State to apply after undo animation completes
 let isReverseAnimation = false; // Flag to indicate reverse animation for undo
 
@@ -1685,6 +1694,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     
     // Reset undo system for level load/restart
     moveHistory = [];
+    redoHistory = [];
     pendingUndoState = null;
     isReverseAnimation = false;
     
@@ -1786,14 +1796,20 @@ function loadLevel(setName, levelNumber, isRestart = false) {
 
 // #region Update Game State
 // Undo system functions
-function saveGameState() {
-    // Create a deep copy of the current game state
-    const gameState = {
+function createCurrentGameStateSnapshot() {
+    return {
         playerPos: { x: playerPos.x, y: playerPos.y },
         boxes: currentLevel.boxes.map(box => ({ x: box.x, y: box.y })),
         moveCount: moveCount,
         pushCount: pushCount
     };
+}
+
+function saveGameState() {
+    const gameState = createCurrentGameStateSnapshot();
+
+    // New forward moves invalidate redo history
+    redoHistory = [];
     
     // Add to history (unlimited undo)
     moveHistory.push(gameState);
@@ -1807,6 +1823,9 @@ function undoLastMove() {
     
     // Play undo sound
     playSound('undo');
+
+    // Save current state so we can redo
+    redoHistory.push(createCurrentGameStateSnapshot());
     
     // Get the most recent saved state
     const previousState = moveHistory.pop();
@@ -1893,17 +1912,66 @@ function undoLastMove() {
     inputFadeTimer = 2000;
 }
 
+function redoLastMove() {
+    // Check if redo is available
+    if (redoHistory.length === 0 || isPlayerMoving) {
+        return;
+    }
+
+    playSound('undo');
+
+    // Save current state to undo history before applying redo
+    const currentState = createCurrentGameStateSnapshot();
+    moveHistory.push(currentState);
+
+    const redoState = redoHistory.pop();
+
+    // Update facing direction based on redo movement
+    const deltaX = redoState.playerPos.x - currentState.playerPos.x;
+    const deltaY = redoState.playerPos.y - currentState.playerPos.y;
+    if (deltaX > 0) {
+        playerFacingDirection = 'right';
+    } else if (deltaX < 0) {
+        playerFacingDirection = 'left';
+    } else if (deltaY > 0) {
+        playerFacingDirection = 'down';
+    } else if (deltaY < 0) {
+        playerFacingDirection = 'up';
+    }
+
+    // Apply redo state directly
+    playerPos.x = redoState.playerPos.x;
+    playerPos.y = redoState.playerPos.y;
+    for (let i = 0; i < currentLevel.boxes.length; i++) {
+        currentLevel.boxes[i].x = redoState.boxes[i].x;
+        currentLevel.boxes[i].y = redoState.boxes[i].y;
+    }
+    moveCount = redoState.moveCount;
+    pushCount = redoState.pushCount;
+
+    // Stabilize animation state after direct restore
+    isReverseAnimation = false;
+    pendingUndoState = null;
+    movingBox = null;
+    playerAnimationState = getIdleAnimationState();
+    playerAnimationFrame = 0;
+    playerAnimationTimer = 0;
+
+    // Keep camera in sync
+    updateCameraPosition();
+
+    // Visual feedback
+    lastInputType = "Redo";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
+}
+
 // Solution generation function
 function generateSolutionString() {
     if (moveHistory.length === 0) return "";
     
     // Create current game state to complete the move sequence
-    const currentState = {
-        playerPos: { x: playerPos.x, y: playerPos.y },
-        boxes: currentLevel.boxes.map(box => ({ x: box.x, y: box.y })),
-        moveCount: moveCount,
-        pushCount: pushCount
-    };
+    const currentState = createCurrentGameStateSnapshot();
     
     // Create the full move sequence by adding current state to history
     const fullHistory = [...moveHistory, currentState];
@@ -2656,15 +2724,30 @@ function isClickOnExitButton(x, y) {
 function isClickOnUndoButton(x, y) {
     const isMobile = canvas.width < 600;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const buttonSpacing = 6;
     
-    // Use same calculations as drawStatusBar - UNDO button is centered between the original icons
+    // Use same calculations as drawStatusBar - UNDO button is left of center
     const canvasCenterX = canvas.width / 2;
-    const undoButtonX = canvasCenterX - buttonSize / 2;
+    const undoButtonX = canvasCenterX - buttonSize - buttonSpacing / 2;
     const undoButtonY = isMobile ? 15 : 10; // Same as exit button
     
     // Standard button click area
     return x >= undoButtonX && x <= undoButtonX + buttonSize &&
            y >= undoButtonY && y <= undoButtonY + buttonSize;
+}
+
+function isClickOnRedoButton(x, y) {
+    const isMobile = canvas.width < 600;
+    const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
+    const buttonSpacing = 6;
+
+    // Use same calculations as drawStatusBar - REDO button is to the right of UNDO
+    const canvasCenterX = canvas.width / 2;
+    const redoButtonX = canvasCenterX + buttonSpacing / 2;
+    const redoButtonY = isMobile ? 15 : 10; // Same as exit button
+
+    return x >= redoButtonX && x <= redoButtonX + buttonSize &&
+           y >= redoButtonY && y <= redoButtonY + buttonSize;
 }
 
 function isClickOnHamburgerMenu(x, y) {
@@ -4995,21 +5078,24 @@ function drawStatusBar() {
     const moveTextWidth = context.measureText(moveText).width;
     const pushTextWidth = context.measureText(pushText).width;
     
-    // Original layout but spread out to make room for undo button in center
-    const undoButtonSpacing = buttonSize + 10; // Space needed for undo button plus padding
+    // Original layout but spread out to make room for undo/redo buttons in center
+    const centerButtonSpacing = 6;
+    const centerButtonsWidth = (buttonSize * 2) + centerButtonSpacing;
     
-    // Position icons with undo button space in center
-    const footprintIconX = canvasCenterX - undoButtonSpacing / 2 - iconSize - iconSpacing / 2;
-    const boxIconX = canvasCenterX + undoButtonSpacing / 2 + iconSpacing / 2;
+    // Position icons with undo/redo button space in center
+    const footprintIconX = canvasCenterX - centerButtonsWidth / 2 - iconSize - iconSpacing / 2;
+    const boxIconX = canvasCenterX + centerButtonsWidth / 2 + iconSpacing / 2;
     const iconY = 30; // Original vertical position
     
     // Position numbers relative to the icons (original logic)
     const moveCountX = footprintIconX - numberPadding - moveTextWidth / 2;
     const pushCountX = boxIconX + iconSize + numberPadding + pushTextWidth / 2;
     
-    // Position undo button in the center
-    const undoButtonX = canvasCenterX - buttonSize / 2;
+    // Position undo and redo buttons in the center
+    const undoButtonX = canvasCenterX - buttonSize - centerButtonSpacing / 2;
+    const redoButtonX = canvasCenterX + centerButtonSpacing / 2;
     const undoButtonY = exitButtonY; // Same vertical position as other buttons
+    const redoButtonY = exitButtonY; // Same vertical position as other buttons
     
     // Draw move count (original positioning)
     drawNeonText(moveText, moveCountX, iconY + 6, "#00aaff", "#00aaff"); // Blue for moves
@@ -5036,6 +5122,21 @@ function drawStatusBar() {
     }
     
     context.drawImage(undoIcon, undoButtonX, undoButtonY, buttonSize, buttonSize);
+    context.restore();
+
+    // Draw redo button to the right of undo (mirrored icon)
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+
+    // Dim the redo button if there's nothing to redo
+    if (redoHistory.length === 0) {
+        context.globalAlpha = 0.3; // Make it 30% opacity when disabled
+    }
+
+    context.translate(redoButtonX + buttonSize, redoButtonY);
+    context.scale(-1, 1);
+    context.drawImage(undoIcon, 0, 0, buttonSize, buttonSize);
     context.restore();
     
     // Restore original font and text alignment
