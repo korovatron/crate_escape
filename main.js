@@ -87,6 +87,13 @@ document.addEventListener('keydown', (e) => {
         redoLastMove();
         return;
     }
+
+    // Toggle keyboard controls overlay with K key (desktop gameplay only)
+    if ((e.key === 'k' || e.key === 'K') && currentGameState === GAME_STATES.PLAYING && !isTouchDevice()) {
+        e.preventDefault();
+        showKeyboardControlsOverlay = !showKeyboardControlsOverlay;
+        return;
+    }
     
     // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
@@ -159,7 +166,7 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R'].includes(e.key);
+    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R', 'k', 'K'].includes(e.key);
     if (currentGameState === GAME_STATES.PLAYING && (isMovementOrUiKey || isUndoShortcut || isRedoShortcut)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
@@ -171,6 +178,7 @@ document.addEventListener('keydown', (e) => {
         if (e.key === 'End') keyName = 'End (Undo)';
         if (e.key === 'Insert') keyName = 'Insert (Redo)';
         if (e.key === 'Home') keyName = 'Home (Redo)';
+        if (e.key === 'k' || e.key === 'K') keyName = 'K (Toggle Controls)';
         if (isNumpadEnd && e.key !== 'End') keyName = 'Numpad End (Undo)';
         if (isNumpadHome && e.key !== 'Home') keyName = 'Numpad Home (Redo)';
         if (isNumpadInsert && e.key !== 'Insert') keyName = 'Numpad Insert (Redo)';
@@ -213,6 +221,12 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             break;
         case "Home":
+            e.preventDefault();
+            break;
+        case "k":
+            e.preventDefault();
+            break;
+        case "K":
             e.preventDefault();
             break;
     }
@@ -951,6 +965,7 @@ const GAME_STATES = {
 let currentGameState = GAME_STATES.TITLE;
 let solutionCopiedState = false; // Track if solution was just copied
 let showSolutionButton = false; // Track if solution button should be shown during gameplay
+let showKeyboardControlsOverlay = true; // Session default: shown until user toggles it
 
 // Solution replay variables
 let solutionReplayData = {
@@ -999,6 +1014,13 @@ function isIOSSafariNotInstalled() {
 // Windows platform detection for F11 fullscreen hint
 function isWindowsPlatform() {
     return navigator.platform.includes('Win') || navigator.userAgent.includes('Windows');
+}
+
+function isTouchDevice() {
+    const supportsTouchEvents = 'ontouchstart' in window;
+    const hasTouchPoints = navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+    const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches;
+    return supportsTouchEvents || hasTouchPoints || hasCoarsePointer;
 }
 
 // Font loading management
@@ -1285,6 +1307,7 @@ const backIcon = new Image();
 const restartIcon = new Image();
 const undoIcon = new Image();
 const shareIcon = new Image();
+const keyboardIcon = new Image();
 const textureAtlas = {
   spriteSheet,
   frames: {
@@ -1476,7 +1499,7 @@ function getThemeSprites() {
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 8; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon, shareIcon
+    const numberImages = 9; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon, shareIcon, keyboardIcon
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
@@ -1536,6 +1559,14 @@ function init() {
     
     shareIcon.src = "assets/images/shareIcon.png";
     shareIcon.onload = function () {
+        imagesLoaded++;
+        if (imagesLoaded == numberImages) {
+            loadAudioAndCreateCanvas();
+        }
+    }
+
+    keyboardIcon.src = "assets/images/keyboardIcon.png";
+    keyboardIcon.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
             loadAudioAndCreateCanvas();
@@ -4670,6 +4701,71 @@ function drawGameplay() {
     } else {
         drawNormalGameplay();
     }
+
+    if (currentGameState === GAME_STATES.PLAYING && !isTouchDevice()) {
+        if (showKeyboardControlsOverlay) {
+            drawKeyboardControlsOverlay();
+        }
+    }
+}
+
+function drawKeyboardControlsOverlay() {
+    const overlayPaddingX = 14;
+    const overlayPaddingY = 10;
+    const rowHeight = 20;
+    const titleHeight = 0;
+    const overlayWidth = 300;
+    const bottomIconHeight = 56;
+    const bottomIconSpacing = 8;
+    const overlayHeight = overlayPaddingY * 2 + titleHeight + rowHeight * 5 + bottomIconSpacing + bottomIconHeight;
+    const minY = STATUS_BAR_HEIGHT + 10;
+    const x = Math.max(10, canvas.width - overlayWidth - 12);
+    const y = Math.max(minY, canvas.height - overlayHeight - 12);
+
+    context.save();
+
+    context.fillStyle = "rgba(0, 0, 0, 0.7)";
+    context.fillRect(x, y, overlayWidth, overlayHeight);
+
+    context.strokeStyle = "#84D348";
+    context.lineWidth = 2;
+    context.strokeRect(x, y, overlayWidth, overlayHeight);
+
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.font = "12px Arial, system-ui, -apple-system, sans-serif";
+    context.fillStyle = "#ffffff";
+    const lineStartY = y + overlayPaddingY + titleHeight + rowHeight / 2;
+    const leftX = x + overlayPaddingX;
+    const rightX = x + overlayWidth - overlayPaddingX;
+    const controls = [
+        { label: "Back", keys: "ESC" },
+        { label: "Undo", keys: "U, Backspace, Del, End" },
+        { label: "Redo", keys: "Insert, Home" },
+        { label: "Restart Level", keys: "R" },
+        { label: "Toggle this overlay", keys: "K" }
+    ];
+
+    for (let i = 0; i < controls.length; i++) {
+        const lineY = lineStartY + rowHeight * i;
+        context.textAlign = "left";
+        context.fillText(controls[i].label, leftX, lineY);
+        context.textAlign = "right";
+        context.fillText(controls[i].keys, rightX, lineY);
+    }
+
+    if (keyboardIcon.complete && keyboardIcon.naturalWidth > 0) {
+        const bottomIconWidth = Math.round((keyboardIcon.naturalWidth / keyboardIcon.naturalHeight) * bottomIconHeight);
+        const iconX = x + overlayWidth - overlayPaddingX - bottomIconWidth;
+        const iconY = y + overlayHeight - overlayPaddingY - bottomIconHeight;
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(keyboardIcon, iconX, iconY, bottomIconWidth, bottomIconHeight);
+        context.restore();
+    }
+
+    context.restore();
 }
 
 function drawOverviewMode() {
