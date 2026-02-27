@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.13';
+const APP_VERSION = '1.1.14';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -5311,15 +5311,26 @@ function drawStatusBar() {
     // Left side: Set name (top) and level number (bottom)
     // Temporarily switch to Arial for level display
     const currentFont = context.font;
-    const levelLabelFont = isVeryNarrowMobilePortrait
-        ? "bold 11px Arial, system-ui, -apple-system, sans-serif"
-        : (isMobile
-            ? "bold 14px Arial, system-ui, -apple-system, sans-serif"
-            : "bold 18px Arial, system-ui, -apple-system, sans-serif");
-    const levelLabelX = isVeryNarrowMobilePortrait ? 58 : 65;
-    context.font = levelLabelFont;
-    drawNeonText(setDisplayText, levelLabelX, 25, setColor, setColor);
-    drawNeonText(levelNumberText, levelLabelX, 45, levelColor, levelColor);
+    const levelLabelFont = isMobile
+        ? "bold 14px Arial, system-ui, -apple-system, sans-serif"
+        : "bold 18px Arial, system-ui, -apple-system, sans-serif";
+    const levelLabelX = 65;
+
+    if (!isVeryNarrowMobilePortrait) {
+        context.font = levelLabelFont;
+        drawNeonText(setDisplayText, levelLabelX, 25, setColor, setColor);
+        drawNeonText(levelNumberText, levelLabelX, 45, levelColor, levelColor);
+    } else {
+        // On very narrow portrait screens, keep the header row clear and show
+        // subtle inline level metadata just below the yellow separator.
+        const inlineMetaText = `${setDisplayText} • ${levelNumberText}`;
+        context.save();
+        context.globalAlpha = 0.55;
+        context.font = "bold 11px Arial, system-ui, -apple-system, sans-serif";
+        context.textAlign = "left";
+        drawNeonText(inlineMetaText, 12, STATUS_BAR_HEIGHT + 14, setColor, setColor);
+        context.restore();
+    }
     // Restore original font
     context.font = currentFont;
     
