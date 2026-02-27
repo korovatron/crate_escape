@@ -2988,11 +2988,52 @@ function isClickOnExitButton(x, y) {
 function isClickOnUndoButton(x, y) {
     const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
-    const buttonSpacing = 6;
+    const isPortrait = canvas.height > canvas.width;
+    const isMobilePortrait = isMobile && isPortrait;
+    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
+    const buttonSpacing = isVeryNarrowMobilePortrait ? 2 : 6;
     
-    // Use same calculations as drawStatusBar - UNDO button is left of center
-    const canvasCenterX = canvas.width / 2;
-    const undoButtonX = canvasCenterX - buttonSize - buttonSpacing / 2;
+    // Match drawStatusBar cluster center logic so hitbox aligns with rendered button
+    let clusterCenterX = canvas.width / 2;
+    if (isVeryNarrowMobilePortrait) {
+        const iconSize = isMobile ? 30 : 40;
+        const iconSpacing = 8;
+        const numberPadding = isMobilePortrait ? 4 : 12;
+        const centerButtonsWidth = (buttonSize * 2) + buttonSpacing;
+
+        const rightMargin = 10;
+        const rightButtonSpacing = 8;
+        const exitButtonX = canvas.width - buttonSize - rightMargin;
+        const restartButtonX = exitButtonX - buttonSize - rightButtonSpacing;
+
+        const pushText = pushCount.toString();
+        const previousFont = context.font;
+        context.font = isMobilePortrait
+            ? "bold 18px Arial, system-ui, -apple-system, sans-serif"
+            : (isMobile
+                ? "bold 20px Arial, system-ui, -apple-system, sans-serif"
+                : "bold 24px Arial, system-ui, -apple-system, sans-serif");
+        const pushTextWidth = context.measureText(pushText).width;
+        context.font = previousFont;
+
+        clusterCenterX += 40;
+
+        const estimatedRightEdge = clusterCenterX +
+            (centerButtonsWidth / 2) +
+            (iconSpacing / 2) +
+            iconSize +
+            numberPadding +
+            pushTextWidth;
+
+        const minGapBeforeRightButtons = 12;
+        const maxRightEdge = restartButtonX - minGapBeforeRightButtons;
+        if (estimatedRightEdge > maxRightEdge) {
+            clusterCenterX -= (estimatedRightEdge - maxRightEdge);
+        }
+    }
+
+    // Use same calculations as drawStatusBar - UNDO button is left of center cluster
+    const undoButtonX = clusterCenterX - buttonSize - buttonSpacing / 2;
     const undoButtonY = isMobile ? 15 : 10; // Same as exit button
     
     // Standard button click area
@@ -3003,11 +3044,52 @@ function isClickOnUndoButton(x, y) {
 function isClickOnRedoButton(x, y) {
     const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
-    const buttonSpacing = 6;
+    const isPortrait = canvas.height > canvas.width;
+    const isMobilePortrait = isMobile && isPortrait;
+    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
+    const buttonSpacing = isVeryNarrowMobilePortrait ? 2 : 6;
+
+    // Match drawStatusBar cluster center logic so hitbox aligns with rendered button
+    let clusterCenterX = canvas.width / 2;
+    if (isVeryNarrowMobilePortrait) {
+        const iconSize = isMobile ? 30 : 40;
+        const iconSpacing = 8;
+        const numberPadding = isMobilePortrait ? 4 : 12;
+        const centerButtonsWidth = (buttonSize * 2) + buttonSpacing;
+
+        const rightMargin = 10;
+        const rightButtonSpacing = 8;
+        const exitButtonX = canvas.width - buttonSize - rightMargin;
+        const restartButtonX = exitButtonX - buttonSize - rightButtonSpacing;
+
+        const pushText = pushCount.toString();
+        const previousFont = context.font;
+        context.font = isMobilePortrait
+            ? "bold 18px Arial, system-ui, -apple-system, sans-serif"
+            : (isMobile
+                ? "bold 20px Arial, system-ui, -apple-system, sans-serif"
+                : "bold 24px Arial, system-ui, -apple-system, sans-serif");
+        const pushTextWidth = context.measureText(pushText).width;
+        context.font = previousFont;
+
+        clusterCenterX += 40;
+
+        const estimatedRightEdge = clusterCenterX +
+            (centerButtonsWidth / 2) +
+            (iconSpacing / 2) +
+            iconSize +
+            numberPadding +
+            pushTextWidth;
+
+        const minGapBeforeRightButtons = 12;
+        const maxRightEdge = restartButtonX - minGapBeforeRightButtons;
+        if (estimatedRightEdge > maxRightEdge) {
+            clusterCenterX -= (estimatedRightEdge - maxRightEdge);
+        }
+    }
 
     // Use same calculations as drawStatusBar - REDO button is to the right of UNDO
-    const canvasCenterX = canvas.width / 2;
-    const redoButtonX = canvasCenterX + buttonSpacing / 2;
+    const redoButtonX = clusterCenterX + buttonSpacing / 2;
     const redoButtonY = isMobile ? 15 : 10; // Same as exit button
 
     return x >= redoButtonX && x <= redoButtonX + buttonSize &&
@@ -5311,6 +5393,7 @@ function drawStatusBar() {
     // Detect mobile portrait mode for space optimization
     const isPortrait = canvas.height > canvas.width;
     const isMobilePortrait = isMobile && isPortrait;
+    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
     
     // Adjust spacing and font size for mobile portrait to save space
     const numberPadding = isMobilePortrait ? 4 : 12; // Original padding
@@ -5327,7 +5410,7 @@ function drawStatusBar() {
     const pushTextWidth = context.measureText(pushText).width;
     
     // Original layout but spread out to make room for undo/redo buttons in center
-    const centerButtonSpacing = 6;
+    const centerButtonSpacing = isVeryNarrowMobilePortrait ? 2 : 6;
     const centerButtonsWidth = (buttonSize * 2) + centerButtonSpacing;
 
     // Base center point for the move/push/undo/redo cluster
@@ -5335,7 +5418,6 @@ function drawStatusBar() {
 
     // Very narrow mobile portrait: shift cluster right to reduce overlap with left labels,
     // while preserving a visible gap before right-aligned restart/exit buttons.
-    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
     if (isVeryNarrowMobilePortrait) {
         clusterCenterX += 40;
 
