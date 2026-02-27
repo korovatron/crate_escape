@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.11';
+const APP_VERSION = '1.1.12';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -5328,6 +5328,9 @@ function drawStatusBar() {
     
     // Responsive layout based on screen width
     const isMobile = canvas.width < 600;
+    const isPortrait = canvas.height > canvas.width;
+    const isMobilePortrait = isMobile && isPortrait;
+    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
     const fontSize = isMobile ? "bold 14px Arial, system-ui, -apple-system, sans-serif" : "bold 18px Arial, system-ui, -apple-system, sans-serif";
     
     // Set text properties
@@ -5380,20 +5383,21 @@ function drawStatusBar() {
     // Left side: Set name (top) and level number (bottom)
     // Temporarily switch to Arial for level display
     const currentFont = context.font;
-    context.font = isMobile ? "bold 14px Arial, system-ui, -apple-system, sans-serif" : "bold 18px Arial, system-ui, -apple-system, sans-serif";
-    drawNeonText(setDisplayText, 65, 25, setColor, setColor);
-    drawNeonText(levelNumberText, 65, 45, levelColor, levelColor);
+    const levelLabelFont = isVeryNarrowMobilePortrait
+        ? "bold 12px Arial, system-ui, -apple-system, sans-serif"
+        : (isMobile
+            ? "bold 14px Arial, system-ui, -apple-system, sans-serif"
+            : "bold 18px Arial, system-ui, -apple-system, sans-serif");
+    const levelLabelX = isVeryNarrowMobilePortrait ? 58 : 65;
+    context.font = levelLabelFont;
+    drawNeonText(setDisplayText, levelLabelX, 25, setColor, setColor);
+    drawNeonText(levelNumberText, levelLabelX, 45, levelColor, levelColor);
     // Restore original font
     context.font = currentFont;
     
     // Center area: Move count, UNDO button, Push count
     const iconSize = isMobile ? 30 : 40; // Match original icon size
     const iconSpacing = 8; // Original small gap between the two icons
-    
-    // Detect mobile portrait mode for space optimization
-    const isPortrait = canvas.height > canvas.width;
-    const isMobilePortrait = isMobile && isPortrait;
-    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
     
     // Adjust spacing and font size for mobile portrait to save space
     const numberPadding = isMobilePortrait ? 4 : 12; // Original padding
