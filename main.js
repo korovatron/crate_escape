@@ -291,6 +291,12 @@ function setupCanvasEventListeners() {
         
         // Check for button clicks during gameplay
         if (currentGameState === GAME_STATES.PLAYING) {
+            if (!isTouchDevice() && isClickOnKeyboardToggleIcon(mouseX, mouseY)) {
+                playSound('click');
+                showKeyboardControlsOverlay = !showKeyboardControlsOverlay;
+                return;
+            }
+
             // Check if click is on the solution button
             if (showSolutionButton && window.solutionButtonBounds && 
                 mouseX >= window.solutionButtonBounds.x && 
@@ -4817,7 +4823,48 @@ function drawGameplay() {
         if (showKeyboardControlsOverlay) {
             drawKeyboardControlsOverlay();
         }
+        drawKeyboardOverlayToggleIcon();
     }
+}
+
+function getKeyboardOverlayToggleIconBounds() {
+    const overlayPaddingX = 14;
+    const overlayPaddingY = 10;
+    const rowHeight = 20;
+    const titleHeight = 0;
+    const overlayWidth = 300;
+    const bottomIconHeight = 56;
+    const bottomIconSpacing = 8;
+    const overlayHeight = overlayPaddingY * 2 + titleHeight + rowHeight * 6 + bottomIconSpacing + bottomIconHeight;
+    const x = canvas.width - 12 - overlayPaddingX - Math.round((keyboardIcon.naturalWidth / keyboardIcon.naturalHeight) * bottomIconHeight);
+    const y = canvas.height - 12 - overlayPaddingY - bottomIconHeight;
+    const width = Math.round((keyboardIcon.naturalWidth / keyboardIcon.naturalHeight) * bottomIconHeight);
+    const height = bottomIconHeight;
+
+    return { x, y, width, height };
+}
+
+function isClickOnKeyboardToggleIcon(x, y) {
+    if (!keyboardIcon.complete || keyboardIcon.naturalWidth === 0) {
+        return false;
+    }
+
+    const bounds = getKeyboardOverlayToggleIconBounds();
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
+function drawKeyboardOverlayToggleIcon() {
+    if (!keyboardIcon.complete || keyboardIcon.naturalWidth === 0) {
+        return;
+    }
+
+    const bounds = getKeyboardOverlayToggleIconBounds();
+    context.save();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(keyboardIcon, bounds.x, bounds.y, bounds.width, bounds.height);
+    context.restore();
 }
 
 function drawKeyboardControlsOverlay() {
@@ -4855,7 +4902,7 @@ function drawKeyboardControlsOverlay() {
         { label: "Redo", keys: "Insert" },
         { label: "Reset", keys: "Home, R" },
         { label: "Go To End", keys: "End" },
-        { label: "Toggle this overlay", keys: "K" }
+        { label: "Toggle this legend", keys: "K" }
     ];
 
     for (let i = 0; i < controls.length; i++) {
@@ -4864,17 +4911,6 @@ function drawKeyboardControlsOverlay() {
         context.fillText(controls[i].label, leftX, lineY);
         context.textAlign = "right";
         context.fillText(controls[i].keys, rightX, lineY);
-    }
-
-    if (keyboardIcon.complete && keyboardIcon.naturalWidth > 0) {
-        const bottomIconWidth = Math.round((keyboardIcon.naturalWidth / keyboardIcon.naturalHeight) * bottomIconHeight);
-        const iconX = x + overlayWidth - overlayPaddingX - bottomIconWidth;
-        const iconY = y + overlayHeight - overlayPaddingY - bottomIconHeight;
-        context.save();
-        context.imageSmoothingEnabled = true;
-        context.imageSmoothingQuality = 'high';
-        context.drawImage(keyboardIcon, iconX, iconY, bottomIconWidth, bottomIconHeight);
-        context.restore();
     }
 
     context.restore();
