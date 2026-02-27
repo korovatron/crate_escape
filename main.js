@@ -107,6 +107,7 @@ document.addEventListener('keydown', (e) => {
     // Toggle keyboard controls overlay with K key (desktop gameplay only)
     if ((e.key === 'k' || e.key === 'K') && currentGameState === GAME_STATES.PLAYING && !isTouchDevice()) {
         e.preventDefault();
+        playSound('click');
         showKeyboardControlsOverlay = !showKeyboardControlsOverlay;
         return;
     }
@@ -4908,7 +4909,7 @@ function drawKeyboardControlsOverlay() {
         { label: "Redo", keys: "Insert" },
         { label: "Reset", keys: "Home, R" },
         { label: "Go To End", keys: "End" },
-        { label: "Toggle this legend", keys: "K" }
+        { label: "Toggle this legend", keys: "K or Click" }
     ];
 
     for (let i = 0; i < controls.length; i++) {
