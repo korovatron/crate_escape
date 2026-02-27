@@ -4348,18 +4348,25 @@ function drawInstructionsScreen() {
     context.textAlign = "center";
     context.fillText("INSTRUCTIONS", canvas.width / 2, 80);
     
-    // Instructions content
-    const instructions = [
-        "• Push all crates onto their goal positions",
-        "• Use arrow keys or swipe to move",
-        "• You can only push crates, not pull them",
-        "• Use the undo and redo buttons to step backward/forward through moves",
-        "• Keyboard controls: Arrow keys (move), R/Home (reset), ESC (back)",
-        "• Undo keys: U, Backspace, Delete",
-        "• Redo key: Insert (including Numpad Insert)",
-        "• Reset to start: Home, R (including Numpad Home)",
-        "• Jump to latest move: End (including Numpad End)",
-    ];
+    // Instructions content (device-specific)
+    const viewingOnTouchDevice = isTouchDevice();
+    const instructions = viewingOnTouchDevice
+        ? [
+            "• Push all crates onto their goal positions",
+            "• Swipe to move",
+            "• You can only push crates, not pull them",
+        ]
+        : [
+            "• Push all crates onto their goal positions",
+            "• Use arrow keys to move",
+            "• You can only push crates, not pull them",
+            "• Use the undo and redo buttons to step backward/forward through moves",
+            "• Keyboard controls: Arrow keys (move), R/Home (reset), ESC (back)",
+            "• Undo keys: U, Backspace, Delete",
+            "• Redo key: Insert (including Numpad Insert)",
+            "• Reset to start: Home, R (including Numpad Home)",
+            "• Jump to latest move: End (including Numpad End)",
+        ];
     
     // Calculate available space and adjust text size to fit
     const startY = 150;
