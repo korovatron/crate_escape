@@ -2212,11 +2212,14 @@ async function copySolutionToClipboard() {
         }
         
         // Format the solution output
-        const solutionText = `Crate Escape Solution
-Set: ${currentSet}
-Level: ${currentLevelNumber}
-Moves: ${moveCount} | Pushes: ${pushCount}
-Solution: ${solutionMoves}`;
+        const solutionText = [
+            "Crate Escape Solution",
+            `Set: ${currentSet}`,
+            `Level: ${currentLevelNumber}`,
+            `Moves: ${moveCount}`,
+            `Pushes: ${pushCount}`,
+            `Solution: ${solutionMoves}`
+        ].join('\n');
         
         // Copy to clipboard using modern API
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2250,11 +2253,14 @@ async function copySavedSolutionToClipboard(levelProgressData) {
         }
         
         // Format the saved solution output
-        const solutionText = `Crate Escape Solution
-Set: ${currentSet}
-Level: ${currentLevelNumber}
-Best: ${levelProgressData.bestMoves || '?'} Moves | ${levelProgressData.bestPushes || '?'} Pushes
-Solution: ${levelProgressData.solution}`;
+        const solutionText = [
+            "Crate Escape Solution",
+            `Set: ${currentSet}`,
+            `Level: ${currentLevelNumber}`,
+            `Moves: ${levelProgressData.bestMoves || '?'}`,
+            `Pushes: ${levelProgressData.bestPushes || '?'}`,
+            `Solution: ${levelProgressData.solution}`
+        ].join('\n');
         
         // Copy to clipboard using modern API
         let success = false;
