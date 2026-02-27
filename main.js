@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.15';
+const APP_VERSION = '1.1.16';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -5326,9 +5326,9 @@ function drawStatusBar() {
         const inlineMetaText = `${setDisplayText} • ${levelNumberText}`;
         context.save();
         context.globalAlpha = 0.55;
-        context.font = "bold 12px Arial, system-ui, -apple-system, sans-serif";
+        context.font = "bold 16px Arial, system-ui, -apple-system, sans-serif";
         context.textAlign = "left";
-        drawNeonText(inlineMetaText, 12, STATUS_BAR_HEIGHT + 14, setColor, setColor);
+        drawNeonText(inlineMetaText, 12, STATUS_BAR_HEIGHT + 18, setColor, setColor);
         context.restore();
     }
     // Restore original font
