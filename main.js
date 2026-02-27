@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.10';
+const APP_VERSION = '1.1.11';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2195,7 +2195,7 @@ function resetHistoryToStart() {
 
     historyPointer = 0;
     applyGameStateSnapshot(moveHistory[0]);
-    playSound('undo');
+    playSound('restart');
     lastInputType = "Reset";
     lastInputTime = Date.now();
     inputFadeTimer = 2000;
