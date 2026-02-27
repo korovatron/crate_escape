@@ -68,6 +68,28 @@ document.addEventListener('keydown', (e) => {
             return;
         }
     }
+
+    // While hamburger menu is open, block gameplay/level-select keyboard input.
+    // Escape closes the menu first.
+    if (isHamburgerMenuOpen && (currentGameState === GAME_STATES.TITLE ||
+                                currentGameState === GAME_STATES.LEVEL_SELECT ||
+                                currentGameState === GAME_STATES.PLAYING ||
+                                currentGameState === GAME_STATES.INSTRUCTIONS ||
+                                currentGameState === GAME_STATES.CREDITS ||
+                                currentGameState === GAME_STATES.CLOUD_SYNC ||
+                                currentGameState === GAME_STATES.IOS_INSTALL)) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            playSound('click');
+            isHamburgerMenuOpen = false;
+            return;
+        }
+
+        if (currentGameState === GAME_STATES.PLAYING || currentGameState === GAME_STATES.LEVEL_SELECT) {
+            e.preventDefault();
+        }
+        return;
+    }
     
     // Handle soft reset with R key (same behavior as Home)
     if ((e.key === 'r' || e.key === 'R') && currentGameState === GAME_STATES.PLAYING) {
@@ -147,7 +169,7 @@ document.addEventListener('keydown', (e) => {
                                currentGameState === GAME_STATES.CLOUD_SYNC ||
                                currentGameState === GAME_STATES.IOS_INSTALL)) {
         playSound('click');
-        currentGameState = GAME_STATES.TITLE;
+        currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
         return;
     }
     
@@ -292,6 +314,20 @@ function setupCanvasEventListeners() {
         
         // Check for button clicks during gameplay
         if (currentGameState === GAME_STATES.PLAYING) {
+            // Check for hamburger menu click
+            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
+                playSound('click');
+                isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                return;
+            }
+
+            // Check for menu option clicks when menu is open
+            if (isHamburgerMenuOpen) {
+                if (handleMenuOptionClick(mouseX, mouseY)) {
+                    return;
+                }
+            }
+
             if (!isTouchDevice() && isClickOnKeyboardToggleIcon(mouseX, mouseY)) {
                 playSound('click');
                 showKeyboardControlsOverlay = !showKeyboardControlsOverlay;
@@ -376,6 +412,20 @@ function setupCanvasEventListeners() {
             }
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+            // Check for hamburger menu click
+            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
+                playSound('click');
+                isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                return;
+            }
+
+            // Check for menu option clicks when menu is open
+            if (isHamburgerMenuOpen) {
+                if (handleMenuOptionClick(mouseX, mouseY)) {
+                    return;
+                }
+            }
+
             handleLevelSelectClick(mouseX, mouseY);
             return;
         } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
@@ -413,7 +463,7 @@ function setupCanvasEventListeners() {
             // Check for back button click
             if (isClickOnBackButton(mouseX, mouseY)) {
                 playSound('click');
-                currentGameState = GAME_STATES.TITLE;
+                currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
                 return;
             }
             
@@ -422,7 +472,7 @@ function setupCanvasEventListeners() {
                 if (isClickOnIOSInstallDismissButton(mouseX, mouseY)) {
                     // User dismissed the iOS install prompt
                     acknowledgeIOSInstallNotification();
-                    currentGameState = GAME_STATES.TITLE;
+                    currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
                     return;
                 }
             }
@@ -691,6 +741,20 @@ function setupCanvasEventListeners() {
                 
                 // Check for button taps during gameplay
                 if (currentGameState === GAME_STATES.PLAYING) {
+                    // Check for hamburger menu click
+                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
+                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                        return;
+                    }
+
+                    // Check for menu option taps when menu is open
+                    if (isHamburgerMenuOpen) {
+                        if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
+                            return;
+                        }
+                    }
+
                     // Check if tap is on the solution button
                     if (showSolutionButton && window.solutionButtonBounds && 
                         canvasPos.x >= window.solutionButtonBounds.x && 
@@ -767,6 +831,20 @@ function setupCanvasEventListeners() {
                         inputFadeTimer = 2000;
                     }
                 } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
+                    // Check for hamburger menu click
+                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
+                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
+                        return;
+                    }
+
+                    // Check for menu option taps when menu is open
+                    if (isHamburgerMenuOpen) {
+                        if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
+                            return;
+                        }
+                    }
+
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
                 } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
                           currentGameState === GAME_STATES.CREDITS ||
@@ -789,7 +867,7 @@ function setupCanvasEventListeners() {
                     // Check for back button click
                     if (isClickOnBackButton(canvasPos.x, canvasPos.y)) {
                         playSound('click');
-                        currentGameState = GAME_STATES.TITLE;
+                        currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
                         return;
                     }
                     
@@ -797,7 +875,7 @@ function setupCanvasEventListeners() {
                     if (currentGameState === GAME_STATES.IOS_INSTALL && isClickOnIOSInstallDismissButton(canvasPos.x, canvasPos.y)) {
                         playSound('click');
                         acknowledgeIOSInstallNotification();
-                        currentGameState = GAME_STATES.TITLE;
+                        currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
                         return;
                     }
                     
@@ -1002,6 +1080,7 @@ let solutionReplayData = {
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
+let hamburgerMenuReturnState = GAME_STATES.TITLE;
 let hasAcknowledgedIOSInstall = true; // Start as true to prevent flash, will be updated from IndexedDB
 
 // F11 fullscreen hint variables (Windows only, session-based)
@@ -1090,29 +1169,9 @@ function fadeOutFontLoadingOverlay() {
     requestAnimationFrame(updateFade);
 }
 
-// Check if iOS install notification should be shown (for badge count only)
-function shouldShowIOSInstallNotification() {
-    return isIOSSafariNotInstalled() && !hasAcknowledgedIOSInstall;
-}
-
 // Check if iOS install menu item should be shown (always on iOS Safari, even after dismissal)
 function shouldShowIOSInstallMenuItem() {
     return isIOSSafariNotInstalled(); // Show menu item on iOS Safari regardless of dismissal
-}
-
-// Check if cloud sync notification should be shown
-function shouldShowCloudSyncNotification() {
-    return cloudSyncState === 'not_authenticated';
-}
-
-// Get total notification count for hamburger menu badge
-function getNotificationCount() {
-    let count = 0;
-    
-    if (shouldShowCloudSyncNotification()) count++;
-    if (shouldShowIOSInstallNotification()) count++;
-    
-    return count;
 }
 
 // Helper function to acknowledge iOS install notification and persist it
@@ -2984,7 +3043,7 @@ function isClickOnRedoButton(x, y) {
 function isClickOnHamburgerMenu(x, y) {
     // Hamburger menu is in top-left corner of title screen
     const menuSize = 40;
-    const margin = 15;
+    const margin = 10;
     
     return x >= margin && x <= margin + menuSize &&
            y >= margin && y <= margin + menuSize;
@@ -3033,6 +3092,7 @@ function getCurrentMenuConfig() {
 // Helper function to handle menu option clicks dynamically
 function handleMenuOptionClick(mouseX, mouseY) {
     const menuConfig = getCurrentMenuConfig();
+    const auxiliaryMenuStates = [GAME_STATES.INSTRUCTIONS, GAME_STATES.CREDITS, GAME_STATES.CLOUD_SYNC, GAME_STATES.IOS_INSTALL];
     
     for (let i = 0; i < menuConfig.options.length; i++) {
         if (isClickOnMenuOption(mouseX, mouseY, i)) {
@@ -3043,20 +3103,18 @@ function handleMenuOptionClick(mouseX, mouseY) {
             if (targetState === GAME_STATES.TITLE) {
                 // Home - always go to title screen
                 currentGameState = GAME_STATES.TITLE;
-                isHamburgerMenuOpen = false;
-                return true;
-            } else if (targetState === GAME_STATES.CLOUD_SYNC) {
-                // Cloud Sync
-                currentGameState = GAME_STATES.CLOUD_SYNC;
-                isHamburgerMenuOpen = false;
-                return true;
-            } else if (targetState === GAME_STATES.IOS_INSTALL) {
-                // iOS Install - go to install screen (don't auto-dismiss notification)
-                currentGameState = GAME_STATES.IOS_INSTALL;
+                hamburgerMenuReturnState = GAME_STATES.TITLE;
                 isHamburgerMenuOpen = false;
                 return true;
             } else {
-                // Regular navigation (Instructions, Credits)
+                // Preserve return target when navigating via hamburger menu.
+                // If already in an auxiliary menu screen, keep existing return target.
+                if (!auxiliaryMenuStates.includes(currentGameState)) {
+                    hamburgerMenuReturnState = currentGameState;
+                } else if (!hamburgerMenuReturnState) {
+                    hamburgerMenuReturnState = GAME_STATES.TITLE;
+                }
+
                 currentGameState = targetState;
                 isHamburgerMenuOpen = false;
                 return true;
@@ -4211,9 +4269,15 @@ function drawHamburgerMenuOverlay() {
 
 function drawHamburgerMenu() {
     const menuSize = 40;
-    const margin = 15;
+    const margin = 10;
     const lineHeight = 4;
     const lineSpacing = 8;
+    const shouldDimHamburger = currentGameState === GAME_STATES.SOLUTION_REPLAY ||
+                               currentGameState === GAME_STATES.LEVEL_COMPLETE;
+    const hamburgerAlpha = shouldDimHamburger ? 0.35 : 1.0;
+
+    context.save();
+    context.globalAlpha = hamburgerAlpha;
     
     // Draw hamburger icon (three horizontal lines)
     context.fillStyle = "#FFFFFF";
@@ -4224,40 +4288,7 @@ function drawHamburgerMenu() {
     context.fillRect(margin + 8, margin + 8 + lineSpacing, menuSize - 16, lineHeight);
     // Bottom line
     context.fillRect(margin + 8, margin + 8 + lineSpacing * 2, menuSize - 16, lineHeight);
-    
-    // Draw notification badge if there are any pending notifications
-    const notificationCount = getNotificationCount();
-    if (notificationCount > 0) {
-        const badgeSize = 16; // Increased from 8 to 16 for better mobile visibility
-        const badgeX = margin + menuSize + 8; // Position to the right of hamburger menu
-        const badgeY = margin + (menuSize / 2); // Center vertically with hamburger menu
-        
-        // Draw red notification dot with glow
-        context.save();
-        context.shadowColor = "#FF0000";
-        context.shadowBlur = 8; // Slightly larger glow for bigger badge
-        context.fillStyle = "#FF3333";
-        context.beginPath();
-        context.arc(badgeX, badgeY, badgeSize / 2, 0, Math.PI * 2);
-        context.fill();
-        context.restore();
-        
-        // Draw count number for all notifications (including 1)
-        if (notificationCount >= 1) {
-            const countFontSize = 12; // Increased from 8 to 12 for better mobile readability
-            context.font = `700 ${countFontSize}px Arial, system-ui, -apple-system, sans-serif`; // Slightly bolder
-            context.fillStyle = "#FFFFFF";
-            context.textAlign = "center";
-            context.textBaseline = "middle";
-            
-            // Draw number on top of the red dot
-            context.fillText(notificationCount.toString(), badgeX, badgeY);
-            
-            // Reset text alignment for other text drawing
-            context.textAlign = "left";
-            context.textBaseline = "alphabetic";
-        }
-    }
+    context.restore();
     
     // Draw menu options if menu is open
     if (isHamburgerMenuOpen) {
@@ -4839,6 +4870,10 @@ function drawGameplay() {
         }
         drawKeyboardOverlayToggleIcon();
     }
+
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
 }
 
 function getKeyboardOverlayToggleIconBounds() {
@@ -5386,8 +5421,8 @@ function drawStatusBar() {
     // Temporarily switch to Arial for level display
     const currentFont = context.font;
     context.font = isMobile ? "bold 14px Arial, system-ui, -apple-system, sans-serif" : "bold 18px Arial, system-ui, -apple-system, sans-serif";
-    drawNeonText(setDisplayText, 15, 25, setColor, setColor);
-    drawNeonText(levelNumberText, 15, 45, levelColor, levelColor);
+    drawNeonText(setDisplayText, 65, 25, setColor, setColor);
+    drawNeonText(levelNumberText, 65, 45, levelColor, levelColor);
     // Restore original font
     context.font = currentFont;
     
@@ -6120,6 +6155,10 @@ function drawLevelSelectScreen() {
     context.imageSmoothingQuality = 'high';
     context.drawImage(backIcon, exitButtonX, exitButtonY, buttonSize, buttonSize);
     context.restore();
+
+    // Draw hamburger menu overlay (dims background) then menu on top
+    drawHamburgerMenuOverlay();
+    drawHamburgerMenu();
 
     context.textAlign = "left";
 }
