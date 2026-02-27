@@ -46,9 +46,10 @@ document.addEventListener('keydown', (e) => {
     const isRedoShortcut = e.key === 'Insert' || isNumpadInsert;
     const isResetToStartShortcut = e.key === 'Home' || isNumpadHome;
     const isGoToEndShortcut = e.key === 'End' || isNumpadEnd;
+    const isPrimaryActionKey = e.key === ' ' || e.key === 'Enter' || e.code === 'NumpadEnter';
     
     // Handle game state transitions
-    if (e.key === ' ') {
+    if (isPrimaryActionKey) {
         if (currentGameState === GAME_STATES.TITLE) {
             // Check for cloud sync updates when navigating to level select
             if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
@@ -126,14 +127,6 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Toggle keyboard controls overlay with K key (desktop gameplay only)
-    if ((e.key === 'k' || e.key === 'K') && currentGameState === GAME_STATES.PLAYING && !isTouchDevice()) {
-        e.preventDefault();
-        playSound('click');
-        showKeyboardControlsOverlay = !showKeyboardControlsOverlay;
-        return;
-    }
-    
     // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
         playSound('click');
@@ -205,7 +198,7 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R', 'k', 'K'].includes(e.key);
+    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R'].includes(e.key);
     if (currentGameState === GAME_STATES.PLAYING && (isMovementOrUiKey || isUndoShortcut || isRedoShortcut || isResetToStartShortcut || isGoToEndShortcut)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
@@ -217,7 +210,6 @@ document.addEventListener('keydown', (e) => {
         if (e.key === 'Insert') keyName = 'Insert (Redo)';
         if (e.key === 'Home') keyName = 'Home (Reset)';
         if (e.key === 'End') keyName = 'End (Go To End)';
-        if (e.key === 'k' || e.key === 'K') keyName = 'K (Toggle Controls)';
         if (isNumpadEnd && e.key !== 'End') keyName = 'Numpad End (Go To End)';
         if (isNumpadHome && e.key !== 'Home') keyName = 'Numpad Home (Reset)';
         if (isNumpadInsert && e.key !== 'Insert') keyName = 'Numpad Insert (Redo)';
@@ -244,6 +236,9 @@ document.addEventListener('keydown', (e) => {
         case " ":
             e.preventDefault();
             break;
+        case "Enter":
+            e.preventDefault();
+            break;
         case "Escape":
             e.preventDefault();
             break;
@@ -260,12 +255,6 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             break;
         case "Home":
-            e.preventDefault();
-            break;
-        case "k":
-            e.preventDefault();
-            break;
-        case "K":
             e.preventDefault();
             break;
     }
@@ -326,12 +315,6 @@ function setupCanvasEventListeners() {
                 if (handleMenuOptionClick(mouseX, mouseY)) {
                     return;
                 }
-            }
-
-            if (!isTouchDevice() && isClickOnKeyboardToggleIcon(mouseX, mouseY)) {
-                playSound('click');
-                showKeyboardControlsOverlay = !showKeyboardControlsOverlay;
-                return;
             }
 
             // Check if click is on the solution button
@@ -1064,7 +1047,6 @@ const GAME_STATES = {
 let currentGameState = GAME_STATES.TITLE;
 let solutionCopiedState = false; // Track if solution was just copied
 let showSolutionButton = false; // Track if solution button should be shown during gameplay
-let showKeyboardControlsOverlay = true; // Session default: shown until user toggles it
 
 // Solution replay variables
 let solutionReplayData = {
@@ -1389,7 +1371,6 @@ const backIcon = new Image();
 const restartIcon = new Image();
 const undoIcon = new Image();
 const shareIcon = new Image();
-const keyboardIcon = new Image();
 const textureAtlas = {
   spriteSheet,
   frames: {
@@ -1581,7 +1562,7 @@ function getThemeSprites() {
 window.onload = init;
 function init() {
     let imagesLoaded = 0;
-    const numberImages = 9; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon, shareIcon, keyboardIcon
+    const numberImages = 8; // spriteSheet, footprintLogo, pushLogo, cartoonLogo, backIcon, restartIcon, undoIcon, shareIcon
     
     spriteSheet.src = "assets/images/spriteSheet.png";
     spriteSheet.onload = function () {
@@ -1641,14 +1622,6 @@ function init() {
     
     shareIcon.src = "assets/images/shareIcon.png";
     shareIcon.onload = function () {
-        imagesLoaded++;
-        if (imagesLoaded == numberImages) {
-            loadAudioAndCreateCanvas();
-        }
-    }
-
-    keyboardIcon.src = "assets/images/keyboardIcon.png";
-    keyboardIcon.onload = function () {
         imagesLoaded++;
         if (imagesLoaded == numberImages) {
             loadAudioAndCreateCanvas();
@@ -4864,105 +4837,9 @@ function drawGameplay() {
         drawNormalGameplay();
     }
 
-    if (currentGameState === GAME_STATES.PLAYING && !isTouchDevice()) {
-        if (showKeyboardControlsOverlay) {
-            drawKeyboardControlsOverlay();
-        }
-        drawKeyboardOverlayToggleIcon();
-    }
-
     // Draw hamburger menu overlay (dims background) then menu on top
     drawHamburgerMenuOverlay();
     drawHamburgerMenu();
-}
-
-function getKeyboardOverlayToggleIconBounds() {
-    const overlayPaddingX = 14;
-    const overlayPaddingY = 10;
-    const rowHeight = 20;
-    const titleHeight = 0;
-    const overlayWidth = 300;
-    const bottomIconHeight = 56;
-    const bottomIconSpacing = 8;
-    const overlayHeight = overlayPaddingY * 2 + titleHeight + rowHeight * 6 + bottomIconSpacing + bottomIconHeight;
-    const x = canvas.width - 12 - overlayPaddingX - Math.round((keyboardIcon.naturalWidth / keyboardIcon.naturalHeight) * bottomIconHeight);
-    const y = canvas.height - 12 - overlayPaddingY - bottomIconHeight;
-    const width = Math.round((keyboardIcon.naturalWidth / keyboardIcon.naturalHeight) * bottomIconHeight);
-    const height = bottomIconHeight;
-
-    return { x, y, width, height };
-}
-
-function isClickOnKeyboardToggleIcon(x, y) {
-    if (!keyboardIcon.complete || keyboardIcon.naturalWidth === 0) {
-        return false;
-    }
-
-    const bounds = getKeyboardOverlayToggleIconBounds();
-    return x >= bounds.x && x <= bounds.x + bounds.width &&
-           y >= bounds.y && y <= bounds.y + bounds.height;
-}
-
-function drawKeyboardOverlayToggleIcon() {
-    if (!keyboardIcon.complete || keyboardIcon.naturalWidth === 0) {
-        return;
-    }
-
-    const bounds = getKeyboardOverlayToggleIconBounds();
-    context.save();
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(keyboardIcon, bounds.x, bounds.y, bounds.width, bounds.height);
-    context.restore();
-}
-
-function drawKeyboardControlsOverlay() {
-    const overlayPaddingX = 14;
-    const overlayPaddingY = 10;
-    const rowHeight = 20;
-    const titleHeight = 0;
-    const overlayWidth = 300;
-    const bottomIconHeight = 56;
-    const bottomIconSpacing = 8;
-    const overlayHeight = overlayPaddingY * 2 + titleHeight + rowHeight * 6 + bottomIconSpacing + bottomIconHeight;
-    const minY = STATUS_BAR_HEIGHT + 10;
-    const x = Math.max(10, canvas.width - overlayWidth - 12);
-    const y = Math.max(minY, canvas.height - overlayHeight - 12);
-
-    context.save();
-
-    context.fillStyle = "rgba(0, 0, 0, 0.7)";
-    context.fillRect(x, y, overlayWidth, overlayHeight);
-
-    context.strokeStyle = "#84D348";
-    context.lineWidth = 2;
-    context.strokeRect(x, y, overlayWidth, overlayHeight);
-
-    context.textAlign = "left";
-    context.textBaseline = "middle";
-    context.font = "12px Arial, system-ui, -apple-system, sans-serif";
-    context.fillStyle = "#ffffff";
-    const lineStartY = y + overlayPaddingY + titleHeight + rowHeight / 2;
-    const leftX = x + overlayPaddingX;
-    const rightX = x + overlayWidth - overlayPaddingX;
-    const controls = [
-        { label: "Back", keys: "ESC" },
-        { label: "Undo", keys: "U, Backspace, Del" },
-        { label: "Redo", keys: "Insert" },
-        { label: "Reset", keys: "Home, R" },
-        { label: "Go To End", keys: "End" },
-        { label: "Toggle this legend", keys: "K or Click" }
-    ];
-
-    for (let i = 0; i < controls.length; i++) {
-        const lineY = lineStartY + rowHeight * i;
-        context.textAlign = "left";
-        context.fillText(controls[i].label, leftX, lineY);
-        context.textAlign = "right";
-        context.fillText(controls[i].keys, rightX, lineY);
-    }
-
-    context.restore();
 }
 
 function drawOverviewMode() {

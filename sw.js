@@ -12,7 +12,6 @@ const urlsToCache = [
   './assets/images/restartIcon.png',
   './assets/images/undoIcon.png',
   './assets/images/shareIcon.png',
-  './assets/images/keyboardIcon.png',
   './assets/sounds/click.mp3',
   './assets/sounds/share.mp3',
   './assets/sounds/undo.mp3',
