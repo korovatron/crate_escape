@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.12';
+const APP_VERSION = '1.1.13';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2994,43 +2994,7 @@ function isClickOnUndoButton(x, y) {
     const buttonSpacing = isVeryNarrowMobilePortrait ? 2 : 6;
     
     // Match drawStatusBar cluster center logic so hitbox aligns with rendered button
-    let clusterCenterX = canvas.width / 2;
-    if (isVeryNarrowMobilePortrait) {
-        const iconSize = isMobile ? 30 : 40;
-        const iconSpacing = 8;
-        const numberPadding = isMobilePortrait ? 4 : 12;
-        const centerButtonsWidth = (buttonSize * 2) + buttonSpacing;
-
-        const rightMargin = 10;
-        const rightButtonSpacing = 8;
-        const exitButtonX = canvas.width - buttonSize - rightMargin;
-        const restartButtonX = exitButtonX - buttonSize - rightButtonSpacing;
-
-        const pushText = pushCount.toString();
-        const previousFont = context.font;
-        context.font = isMobilePortrait
-            ? "bold 18px Arial, system-ui, -apple-system, sans-serif"
-            : (isMobile
-                ? "bold 20px Arial, system-ui, -apple-system, sans-serif"
-                : "bold 24px Arial, system-ui, -apple-system, sans-serif");
-        const pushTextWidth = context.measureText(pushText).width;
-        context.font = previousFont;
-
-        clusterCenterX += 40;
-
-        const estimatedRightEdge = clusterCenterX +
-            (centerButtonsWidth / 2) +
-            (iconSpacing / 2) +
-            iconSize +
-            numberPadding +
-            pushTextWidth;
-
-        const minGapBeforeRightButtons = 12;
-        const maxRightEdge = restartButtonX - minGapBeforeRightButtons;
-        if (estimatedRightEdge > maxRightEdge) {
-            clusterCenterX -= (estimatedRightEdge - maxRightEdge);
-        }
-    }
+    const clusterCenterX = canvas.width / 2;
 
     // Use same calculations as drawStatusBar - UNDO button is left of center cluster
     const undoButtonX = clusterCenterX - buttonSize - buttonSpacing / 2;
@@ -3050,43 +3014,7 @@ function isClickOnRedoButton(x, y) {
     const buttonSpacing = isVeryNarrowMobilePortrait ? 2 : 6;
 
     // Match drawStatusBar cluster center logic so hitbox aligns with rendered button
-    let clusterCenterX = canvas.width / 2;
-    if (isVeryNarrowMobilePortrait) {
-        const iconSize = isMobile ? 30 : 40;
-        const iconSpacing = 8;
-        const numberPadding = isMobilePortrait ? 4 : 12;
-        const centerButtonsWidth = (buttonSize * 2) + buttonSpacing;
-
-        const rightMargin = 10;
-        const rightButtonSpacing = 8;
-        const exitButtonX = canvas.width - buttonSize - rightMargin;
-        const restartButtonX = exitButtonX - buttonSize - rightButtonSpacing;
-
-        const pushText = pushCount.toString();
-        const previousFont = context.font;
-        context.font = isMobilePortrait
-            ? "bold 18px Arial, system-ui, -apple-system, sans-serif"
-            : (isMobile
-                ? "bold 20px Arial, system-ui, -apple-system, sans-serif"
-                : "bold 24px Arial, system-ui, -apple-system, sans-serif");
-        const pushTextWidth = context.measureText(pushText).width;
-        context.font = previousFont;
-
-        clusterCenterX += 40;
-
-        const estimatedRightEdge = clusterCenterX +
-            (centerButtonsWidth / 2) +
-            (iconSpacing / 2) +
-            iconSize +
-            numberPadding +
-            pushTextWidth;
-
-        const minGapBeforeRightButtons = 12;
-        const maxRightEdge = restartButtonX - minGapBeforeRightButtons;
-        if (estimatedRightEdge > maxRightEdge) {
-            clusterCenterX -= (estimatedRightEdge - maxRightEdge);
-        }
-    }
+    const clusterCenterX = canvas.width / 2;
 
     // Use same calculations as drawStatusBar - REDO button is to the right of UNDO
     const redoButtonX = clusterCenterX + buttonSpacing / 2;
@@ -5384,7 +5312,7 @@ function drawStatusBar() {
     // Temporarily switch to Arial for level display
     const currentFont = context.font;
     const levelLabelFont = isVeryNarrowMobilePortrait
-        ? "bold 12px Arial, system-ui, -apple-system, sans-serif"
+        ? "bold 11px Arial, system-ui, -apple-system, sans-serif"
         : (isMobile
             ? "bold 14px Arial, system-ui, -apple-system, sans-serif"
             : "bold 18px Arial, system-ui, -apple-system, sans-serif");
@@ -5418,26 +5346,7 @@ function drawStatusBar() {
     const centerButtonsWidth = (buttonSize * 2) + centerButtonSpacing;
 
     // Base center point for the move/push/undo/redo cluster
-    let clusterCenterX = canvas.width / 2;
-
-    // Very narrow mobile portrait: shift cluster right to reduce overlap with left labels,
-    // while preserving a visible gap before right-aligned restart/exit buttons.
-    if (isVeryNarrowMobilePortrait) {
-        clusterCenterX += 40;
-
-        const estimatedRightEdge = clusterCenterX +
-            (centerButtonsWidth / 2) +
-            (iconSpacing / 2) +
-            iconSize +
-            numberPadding +
-            pushTextWidth;
-
-        const minGapBeforeRightButtons = 12;
-        const maxRightEdge = restartButtonX - minGapBeforeRightButtons;
-        if (estimatedRightEdge > maxRightEdge) {
-            clusterCenterX -= (estimatedRightEdge - maxRightEdge);
-        }
-    }
+    const clusterCenterX = canvas.width / 2;
     
     // Position icons with undo/redo button space in center
     const footprintIconX = clusterCenterX - centerButtonsWidth / 2 - iconSize - iconSpacing / 2;
