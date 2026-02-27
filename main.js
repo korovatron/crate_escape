@@ -168,7 +168,8 @@ document.addEventListener('keydown', (e) => {
     
     // Handle level selection navigation
     if (currentGameState === GAME_STATES.LEVEL_SELECT) {
-        handleLevelSelectInput(e.key);
+        const levelSelectKey = (e.key === 'Enter' || e.code === 'NumpadEnter') ? ' ' : e.key;
+        handleLevelSelectInput(levelSelectKey);
         return;
     }
     
@@ -6345,34 +6346,11 @@ function handleLevelSelectInput(key) {
             // Unified navigation: next page/set
             handleLevelSelectRight();
             break;
-        case 'ArrowUp':
-            // Keep up/down for level selection within current page
-            if (selectedLevel > 1) {
-                selectedLevel--;
-            } else {
-                // Wrap to max level on current page
-                const maxLevel = getLevelCount(selectedSet);
-                const startLevel = currentLevelPage * levelsPerPage + 1;
-                const endLevel = Math.min(startLevel + levelsPerPage - 1, maxLevel);
-                selectedLevel = endLevel;
-            }
-            break;
-        case 'ArrowDown':
-            // Keep up/down for level selection within current page
+        case ' ': {
+            // Start the first level shown on the current page
             const maxLevel = getLevelCount(selectedSet);
-            const startLevel = currentLevelPage * levelsPerPage + 1;
-            const endLevel = Math.min(startLevel + levelsPerPage - 1, maxLevel);
-            
-            if (selectedLevel < endLevel) {
-                selectedLevel++;
-            } else {
-                // Wrap to first level on current page
-                selectedLevel = startLevel;
-            }
-            break;
-        case ' ':
-            // Start level 1 if no level is selected, otherwise start selected level
-            const levelToStart = selectedLevel > 0 ? selectedLevel : 1;
+            const firstLevelOnCurrentPage = Math.min((currentLevelPage * levelsPerPage) + 1, maxLevel);
+            const levelToStart = firstLevelOnCurrentPage;
             currentSet = selectedSet;
             currentLevelNumber = levelToStart;
             loadLevel(currentSet, currentLevelNumber);
@@ -6395,6 +6373,7 @@ function handleLevelSelectInput(key) {
             lastInputTime = Date.now();
             inputFadeTimer = 2000;
             break;
+        }
         case 'Escape':
             // Back button behavior: level select goes to title
             playSound('click');
@@ -6459,28 +6438,6 @@ function handleLevelSelectRight() {
         currentLevelPage = 0; // Go to first page of new set
         selectedLevel = 0; // No level selected when changing sets
         calculateGridLayout(); // Recalculate for new set
-    }
-}
-
-function handleLevelSelectUp() {
-    playSound('click');
-    if (selectedLevel > 1) {
-        selectedLevel--;
-    } else {
-        // Wrap to max level
-        const maxLevel = getLevelCount(selectedSet);
-        selectedLevel = maxLevel;
-    }
-}
-
-function handleLevelSelectDown() {
-    playSound('click');
-    const maxLevel = getLevelCount(selectedSet);
-    if (selectedLevel < maxLevel) {
-        selectedLevel++;
-    } else {
-        // Wrap to level 1
-        selectedLevel = 1;
     }
 }
 
