@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.8';
+const APP_VERSION = '1.1.9';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2922,7 +2922,7 @@ function isClickOnOverviewButton(x, y) {
     const showOverviewButton = levelNeedsPanning || overviewMode; // Show when needed OR when active
     if (!showOverviewButton) return false;
     
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
     const rightMargin = 10;
     
@@ -2957,7 +2957,7 @@ function toggleOverviewMode() {
 }
 
 function isClickOnTryAgainButton(x, y) {
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
     const buttonSpacing = 8;
     const rightMargin = 10;
@@ -2973,7 +2973,7 @@ function isClickOnTryAgainButton(x, y) {
 }
 
 function isClickOnExitButton(x, y) {
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
     const rightMargin = 10;
     
@@ -2986,7 +2986,7 @@ function isClickOnExitButton(x, y) {
 }
 
 function isClickOnUndoButton(x, y) {
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
     const buttonSpacing = 6;
     
@@ -3001,7 +3001,7 @@ function isClickOnUndoButton(x, y) {
 }
 
 function isClickOnRedoButton(x, y) {
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45; // Match drawStatusBar sizing
     const buttonSpacing = 6;
 
@@ -3103,7 +3103,7 @@ function handleMenuOptionClick(mouseX, mouseY) {
 
 function isClickOnBackButton(x, y) {
     // Same positioning as game/level select back button
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const buttonSize = isMobile ? 35 : 45;
     const rightMargin = 10;
     
@@ -3137,7 +3137,7 @@ function isClickOnSignInButton(x, y) {
     const buttonX = (canvas.width - buttonWidth) / 2;
     
     // Calculate button Y position (should match drawCloudSyncScreen logic)
-    const isMobile = canvas.width < 600;
+    const isMobile = canvas.width < 640;
     const textSize = isMobile ? 16 : 20;
     const lineHeight = textSize * 1.5;
     let buttonY;
@@ -5305,9 +5305,6 @@ function drawStatusBar() {
     context.font = currentFont;
     
     // Center area: Move count, UNDO button, Push count
-    // Use true canvas center, not adjusted for button area
-    const canvasCenterX = canvas.width / 2;
-    
     const iconSize = isMobile ? 30 : 40; // Match original icon size
     const iconSpacing = 8; // Original small gap between the two icons
     
@@ -5332,10 +5329,33 @@ function drawStatusBar() {
     // Original layout but spread out to make room for undo/redo buttons in center
     const centerButtonSpacing = 6;
     const centerButtonsWidth = (buttonSize * 2) + centerButtonSpacing;
+
+    // Base center point for the move/push/undo/redo cluster
+    let clusterCenterX = canvas.width / 2;
+
+    // Very narrow mobile portrait: shift cluster right to reduce overlap with left labels,
+    // while preserving a visible gap before right-aligned restart/exit buttons.
+    const isVeryNarrowMobilePortrait = isMobilePortrait && canvas.width <= 500;
+    if (isVeryNarrowMobilePortrait) {
+        clusterCenterX += 40;
+
+        const estimatedRightEdge = clusterCenterX +
+            (centerButtonsWidth / 2) +
+            (iconSpacing / 2) +
+            iconSize +
+            numberPadding +
+            pushTextWidth;
+
+        const minGapBeforeRightButtons = 12;
+        const maxRightEdge = restartButtonX - minGapBeforeRightButtons;
+        if (estimatedRightEdge > maxRightEdge) {
+            clusterCenterX -= (estimatedRightEdge - maxRightEdge);
+        }
+    }
     
     // Position icons with undo/redo button space in center
-    const footprintIconX = canvasCenterX - centerButtonsWidth / 2 - iconSize - iconSpacing / 2;
-    const boxIconX = canvasCenterX + centerButtonsWidth / 2 + iconSpacing / 2;
+    const footprintIconX = clusterCenterX - centerButtonsWidth / 2 - iconSize - iconSpacing / 2;
+    const boxIconX = clusterCenterX + centerButtonsWidth / 2 + iconSpacing / 2;
     const iconY = 30; // Original vertical position
     
     // Position numbers relative to the icons (original logic)
@@ -5343,8 +5363,8 @@ function drawStatusBar() {
     const pushCountX = boxIconX + iconSize + numberPadding + pushTextWidth / 2;
     
     // Position undo and redo buttons in the center
-    const undoButtonX = canvasCenterX - buttonSize - centerButtonSpacing / 2;
-    const redoButtonX = canvasCenterX + centerButtonSpacing / 2;
+    const undoButtonX = clusterCenterX - buttonSize - centerButtonSpacing / 2;
+    const redoButtonX = clusterCenterX + centerButtonSpacing / 2;
     const undoButtonY = exitButtonY; // Same vertical position as other buttons
     const redoButtonY = exitButtonY; // Same vertical position as other buttons
     
