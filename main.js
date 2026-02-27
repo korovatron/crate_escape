@@ -42,8 +42,10 @@ document.addEventListener('keydown', (e) => {
     const isNumpadEnd = e.code === 'Numpad1';
     const isNumpadHome = e.code === 'Numpad7';
     const isNumpadInsert = e.code === 'Numpad0';
-    const isUndoShortcut = e.key === 'u' || e.key === 'U' || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'End' || isNumpadEnd;
-    const isRedoShortcut = e.key === 'Insert' || e.key === 'Home' || isNumpadHome || isNumpadInsert;
+    const isUndoShortcut = e.key === 'u' || e.key === 'U' || e.key === 'Backspace' || e.key === 'Delete';
+    const isRedoShortcut = e.key === 'Insert' || isNumpadInsert;
+    const isResetToStartShortcut = e.key === 'Home' || isNumpadHome;
+    const isGoToEndShortcut = e.key === 'End' || isNumpadEnd;
     
     // Handle game state transitions
     if (e.key === ' ') {
@@ -67,24 +69,38 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Handle level try again with R key
+    // Handle soft reset with R key (same behavior as Home)
     if ((e.key === 'r' || e.key === 'R') && currentGameState === GAME_STATES.PLAYING) {
-        playSound('restart');
-        restartCurrentLevel();
+        e.preventDefault();
+        resetHistoryToStart();
         return;
     }
     
-    // Handle undo with U / Backspace / Delete / End keys (+ Numpad End regardless of Num Lock)
+    // Handle undo with U / Backspace / Delete keys
     if (isUndoShortcut && currentGameState === GAME_STATES.PLAYING) {
         e.preventDefault();
         undoLastMove();
         return;
     }
 
-    // Handle redo with Insert / Home keys (+ Numpad Home/Insert regardless of Num Lock)
+    // Handle redo with Insert key (+ Numpad Insert regardless of Num Lock)
     if (isRedoShortcut && currentGameState === GAME_STATES.PLAYING) {
         e.preventDefault();
         redoLastMove();
+        return;
+    }
+
+    // Reset to start without losing history (HOME / Numpad Home)
+    if (isResetToStartShortcut && currentGameState === GAME_STATES.PLAYING) {
+        e.preventDefault();
+        resetHistoryToStart();
+        return;
+    }
+
+    // Jump to latest move in history (END / Numpad End)
+    if (isGoToEndShortcut && currentGameState === GAME_STATES.PLAYING) {
+        e.preventDefault();
+        jumpToHistoryEnd();
         return;
     }
 
@@ -167,20 +183,20 @@ document.addEventListener('keydown', (e) => {
     
     // Visual feedback for keyboard input (only during gameplay)
     const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R', 'k', 'K'].includes(e.key);
-    if (currentGameState === GAME_STATES.PLAYING && (isMovementOrUiKey || isUndoShortcut || isRedoShortcut)) {
+    if (currentGameState === GAME_STATES.PLAYING && (isMovementOrUiKey || isUndoShortcut || isRedoShortcut || isResetToStartShortcut || isGoToEndShortcut)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
         if (e.key === 'Escape') keyName = 'Escape (Exit)';
-        if (e.key === 'r' || e.key === 'R') keyName = 'R (Try Again)';
+        if (e.key === 'r' || e.key === 'R') keyName = 'R (Reset)';
         if (e.key === 'u' || e.key === 'U') keyName = 'U (Undo)';
         if (e.key === 'Backspace') keyName = 'Backspace (Undo)';
         if (e.key === 'Delete') keyName = 'Delete (Undo)';
-        if (e.key === 'End') keyName = 'End (Undo)';
         if (e.key === 'Insert') keyName = 'Insert (Redo)';
-        if (e.key === 'Home') keyName = 'Home (Redo)';
+        if (e.key === 'Home') keyName = 'Home (Reset)';
+        if (e.key === 'End') keyName = 'End (Go To End)';
         if (e.key === 'k' || e.key === 'K') keyName = 'K (Toggle Controls)';
-        if (isNumpadEnd && e.key !== 'End') keyName = 'Numpad End (Undo)';
-        if (isNumpadHome && e.key !== 'Home') keyName = 'Numpad Home (Redo)';
+        if (isNumpadEnd && e.key !== 'End') keyName = 'Numpad End (Go To End)';
+        if (isNumpadHome && e.key !== 'Home') keyName = 'Numpad Home (Reset)';
         if (isNumpadInsert && e.key !== 'Insert') keyName = 'Numpad Insert (Redo)';
         
         lastInputType = `Keyboard: ${keyName}`;
@@ -304,8 +320,7 @@ function setupCanvasEventListeners() {
                 return;
             }
             if (isClickOnTryAgainButton(mouseX, mouseY)) {
-                playSound('restart');
-                restartCurrentLevel();
+                resetHistoryToStart();
                 return;
             }
             if (isClickOnUndoButton(mouseX, mouseY)) {
@@ -698,8 +713,7 @@ function setupCanvasEventListeners() {
                         return;
                     }
                     if (isClickOnTryAgainButton(canvasPos.x, canvasPos.y)) {
-                        playSound('restart');
-                        restartCurrentLevel();
+                        resetHistoryToStart();
                         return;
                     }
                     if (isClickOnUndoButton(canvasPos.x, canvasPos.y)) {
@@ -1185,8 +1199,10 @@ let pushCount = 0; // Track successful box pushes
 let attemptCount = 1; // Start at 1 since first play is attempt 1
 
 // Undo system variables
-let moveHistory = []; // Array to store game state snapshots
-let redoHistory = []; // Array to store redo snapshots
+let moveHistory = []; // Timeline of game state snapshots (index 0 = initial state)
+let redoHistory = []; // Legacy variable (kept for compatibility)
+let historyPointer = 0; // Current position in moveHistory timeline
+let topHistoryPointer = 0; // Furthest recorded position in timeline
 let pendingUndoState = null; // State to apply after undo animation completes
 let pendingRedoState = null; // State to apply after redo animation completes
 let isReverseAnimation = false; // Flag to indicate reverse animation for undo
@@ -1770,6 +1786,8 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     // Reset undo system for level load/restart
     moveHistory = [];
     redoHistory = [];
+    historyPointer = 0;
+    topHistoryPointer = 0;
     pendingUndoState = null;
     pendingRedoState = null;
     isReverseAnimation = false;
@@ -1801,6 +1819,9 @@ function loadLevel(setName, levelNumber, isRestart = false) {
         x: currentLevel.playerStart.x,
         y: currentLevel.playerStart.y
     };
+
+    // Initialize timeline history with starting board state
+    initializeHistoryTimeline();
     
     // Initialize camera position
     if (levelNeedsPanning) {
@@ -1881,30 +1902,93 @@ function createCurrentGameStateSnapshot() {
     };
 }
 
-function saveGameState() {
-    const gameState = createCurrentGameStateSnapshot();
+function areSnapshotsEqual(snapshotA, snapshotB) {
+    if (!snapshotA || !snapshotB) return false;
+    if (snapshotA.playerPos.x !== snapshotB.playerPos.x || snapshotA.playerPos.y !== snapshotB.playerPos.y) return false;
+    if (snapshotA.moveCount !== snapshotB.moveCount || snapshotA.pushCount !== snapshotB.pushCount) return false;
+    if (!snapshotA.boxes || !snapshotB.boxes || snapshotA.boxes.length !== snapshotB.boxes.length) return false;
 
-    // New forward moves invalidate redo history
+    for (let index = 0; index < snapshotA.boxes.length; index++) {
+        if (snapshotA.boxes[index].x !== snapshotB.boxes[index].x || snapshotA.boxes[index].y !== snapshotB.boxes[index].y) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function applyGameStateSnapshot(snapshot) {
+    if (!snapshot || !currentLevel) return;
+
+    playerPos.x = snapshot.playerPos.x;
+    playerPos.y = snapshot.playerPos.y;
+
+    for (let index = 0; index < currentLevel.boxes.length; index++) {
+        currentLevel.boxes[index].x = snapshot.boxes[index].x;
+        currentLevel.boxes[index].y = snapshot.boxes[index].y;
+    }
+
+    moveCount = snapshot.moveCount;
+    pushCount = snapshot.pushCount;
+    isPlayerMoving = false;
+    moveAnimationProgress = 0;
+    moveStartPos = { x: playerPos.x, y: playerPos.y };
+    moveTargetPos = { x: playerPos.x, y: playerPos.y };
+    movingBox = null;
+    pendingUndoState = null;
+    pendingRedoState = null;
+    isReverseAnimation = false;
+    playerAnimationState = getIdleAnimationState();
+    playerAnimationFrame = 0;
+    playerAnimationTimer = 0;
+    updateCameraPosition();
+}
+
+function initializeHistoryTimeline() {
+    const initialState = createCurrentGameStateSnapshot();
+    moveHistory = [initialState];
     redoHistory = [];
-    
-    // Add to history (unlimited undo)
-    moveHistory.push(gameState);
+    historyPointer = 0;
+    topHistoryPointer = 0;
+}
+
+function commitCurrentStateToHistory() {
+    const currentState = createCurrentGameStateSnapshot();
+    const nextPointer = historyPointer + 1;
+    const existingNextState = moveHistory[nextPointer];
+
+    if (existingNextState && areSnapshotsEqual(existingNextState, currentState)) {
+        historyPointer = nextPointer;
+        topHistoryPointer = Math.max(topHistoryPointer, historyPointer);
+        return;
+    }
+
+    moveHistory = moveHistory.slice(0, nextPointer);
+    moveHistory.push(currentState);
+    historyPointer = nextPointer;
+    topHistoryPointer = historyPointer;
+}
+
+function saveGameState() {
+    if (historyPointer < topHistoryPointer) {
+        moveHistory = moveHistory.slice(0, historyPointer + 1);
+        topHistoryPointer = historyPointer;
+    }
+    redoHistory = [];
 }
 
 function undoLastMove() {
     // Check if undo is available
-    if (moveHistory.length === 0 || isPlayerMoving) {
+    if (historyPointer === 0 || isPlayerMoving) {
         return; // No history or player is currently moving
     }
     
     // Play undo sound
     playSound('undo');
 
-    // Save current state so we can redo
-    redoHistory.push(createCurrentGameStateSnapshot());
-    
-    // Get the most recent saved state
-    const previousState = moveHistory.pop();
+    const currentState = createCurrentGameStateSnapshot();
+    const previousState = moveHistory[historyPointer - 1];
+    historyPointer--;
     
     // Calculate what needs to be animated in reverse
     const currentPlayerPos = { x: playerPos.x, y: playerPos.y };
@@ -1933,7 +2017,7 @@ function undoLastMove() {
     isReverseAnimation = true; // Enable reverse animation mode
     
     // Set up reverse movement animation
-    moveStartPos = { x: currentPlayerPos.x, y: currentPlayerPos.y };
+    moveStartPos = { x: currentState.playerPos.x, y: currentState.playerPos.y };
     moveTargetPos = { x: targetPlayerPos.x, y: targetPlayerPos.y };
     
     // Calculate ORIGINAL movement direction (what direction they moved to get here)
@@ -1990,17 +2074,15 @@ function undoLastMove() {
 
 function redoLastMove() {
     // Check if redo is available
-    if (redoHistory.length === 0 || isPlayerMoving) {
+    if (historyPointer >= topHistoryPointer || isPlayerMoving) {
         return;
     }
 
     playSound('undo');
 
-    // Save current state to undo history before applying redo
     const currentState = createCurrentGameStateSnapshot();
-    moveHistory.push(currentState);
-
-    const redoState = redoHistory.pop();
+    const redoState = moveHistory[historyPointer + 1];
+    historyPointer++;
 
     // Find any box that moved between current and redo state
     let movedBoxIndex = null;
@@ -2066,15 +2148,37 @@ function redoLastMove() {
     inputFadeTimer = 2000;
 }
 
+function resetHistoryToStart() {
+    if (isPlayerMoving || moveHistory.length === 0) {
+        return;
+    }
+
+    historyPointer = 0;
+    applyGameStateSnapshot(moveHistory[0]);
+    playSound('undo');
+    lastInputType = "Reset";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
+}
+
+function jumpToHistoryEnd() {
+    if (isPlayerMoving || moveHistory.length === 0 || historyPointer >= topHistoryPointer) {
+        return;
+    }
+
+    historyPointer = topHistoryPointer;
+    applyGameStateSnapshot(moveHistory[topHistoryPointer]);
+    playSound('undo');
+    lastInputType = "Go To End";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
+}
+
 // Solution generation function
 function generateSolutionString() {
-    if (moveHistory.length === 0) return "";
-    
-    // Create current game state to complete the move sequence
-    const currentState = createCurrentGameStateSnapshot();
-    
-    // Create the full move sequence by adding current state to history
-    const fullHistory = [...moveHistory, currentState];
+    if (historyPointer === 0 || moveHistory.length === 0) return "";
+
+    const fullHistory = moveHistory.slice(0, historyPointer + 1);
     let solutionMoves = "";
     
     for (let i = 1; i < fullHistory.length; i++) {
@@ -2367,6 +2471,7 @@ function updatePlayerMovement(deltaTime) {
         // Movement complete
         moveAnimationProgress = 1.0;
         isPlayerMoving = false;
+        const isHistoryTraversalMove = !!pendingUndoState || !!pendingRedoState;
         
         // Check if this was an undo animation
         if (pendingUndoState) {
@@ -2409,6 +2514,10 @@ function updatePlayerMovement(deltaTime) {
             currentLevel.boxes[movingBox.index].x = movingBox.targetPos.x;
             currentLevel.boxes[movingBox.index].y = movingBox.targetPos.y;
             movingBox = null;
+        }
+
+        if (!isHistoryTraversalMove && currentGameState === GAME_STATES.PLAYING) {
+            commitCurrentStateToHistory();
         }
         
         // Check if level is complete after movement
@@ -4232,9 +4341,11 @@ function drawInstructionsScreen() {
         "• Use arrow keys or swipe to move",
         "• You can only push crates, not pull them",
         "• Use the undo and redo buttons to step backward/forward through moves",
-        "• Keyboard controls: Arrow keys (move), R (restart), ESC (back)",
-        "• Undo keys: U, Backspace, Delete, End (including Numpad End)",
-        "• Redo keys: Insert, Home (including Numpad Insert/Home)",
+        "• Keyboard controls: Arrow keys (move), R/Home (reset), ESC (back)",
+        "• Undo keys: U, Backspace, Delete",
+        "• Redo key: Insert (including Numpad Insert)",
+        "• Reset to start: Home, R (including Numpad Home)",
+        "• Jump to latest move: End (including Numpad End)",
     ];
     
     // Calculate available space and adjust text size to fit
@@ -4717,7 +4828,7 @@ function drawKeyboardControlsOverlay() {
     const overlayWidth = 300;
     const bottomIconHeight = 56;
     const bottomIconSpacing = 8;
-    const overlayHeight = overlayPaddingY * 2 + titleHeight + rowHeight * 5 + bottomIconSpacing + bottomIconHeight;
+    const overlayHeight = overlayPaddingY * 2 + titleHeight + rowHeight * 6 + bottomIconSpacing + bottomIconHeight;
     const minY = STATUS_BAR_HEIGHT + 10;
     const x = Math.max(10, canvas.width - overlayWidth - 12);
     const y = Math.max(minY, canvas.height - overlayHeight - 12);
@@ -4740,9 +4851,10 @@ function drawKeyboardControlsOverlay() {
     const rightX = x + overlayWidth - overlayPaddingX;
     const controls = [
         { label: "Back", keys: "ESC" },
-        { label: "Undo", keys: "U, Backspace, Del, End" },
-        { label: "Redo", keys: "Insert, Home" },
-        { label: "Restart Level", keys: "R" },
+        { label: "Undo", keys: "U, Backspace, Del" },
+        { label: "Redo", keys: "Insert" },
+        { label: "Reset", keys: "Home, R" },
+        { label: "Go To End", keys: "End" },
         { label: "Toggle this overlay", keys: "K" }
     ];
 
@@ -5293,7 +5405,7 @@ function drawStatusBar() {
     context.imageSmoothingQuality = 'high';
     
     // Dim the undo button if there's nothing to undo
-    if (moveHistory.length === 0) {
+    if (historyPointer === 0) {
         context.globalAlpha = 0.3; // Make it 30% opacity when disabled
     }
     
@@ -5306,7 +5418,7 @@ function drawStatusBar() {
     context.imageSmoothingQuality = 'high';
 
     // Dim the redo button if there's nothing to redo
-    if (redoHistory.length === 0) {
+    if (historyPointer >= topHistoryPointer) {
         context.globalAlpha = 0.3; // Make it 30% opacity when disabled
     }
 
