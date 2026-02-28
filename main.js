@@ -2020,7 +2020,7 @@ function saveGameState() {
 function undoLastMove() {
     // Check if undo is available
     if (historyPointer === 0 || isPlayerMoving) {
-        return; // No history or player is currently moving
+        return false; // No history or player is currently moving
     }
     
     // Play undo sound
@@ -2110,6 +2110,8 @@ function undoLastMove() {
     lastInputType = "Undo";
     lastInputTime = Date.now();
     inputFadeTimer = 2000;
+
+    return true;
 }
 
 function redoLastMove() {
@@ -2562,7 +2564,10 @@ function updatePlayerMovement(deltaTime) {
             movingBox = null;
         }
 
-        if (!isHistoryTraversalMove && currentGameState === GAME_STATES.PLAYING) {
+        const shouldCommitToHistory = currentGameState === GAME_STATES.PLAYING ||
+            (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive);
+
+        if (!isHistoryTraversalMove && shouldCommitToHistory) {
             commitCurrentStateToHistory();
         }
         
@@ -7203,11 +7208,11 @@ function stepSolutionReplayBackward() {
     solutionReplayData.simulatedContinuousDirection = null;
     solutionReplayData.shouldClearContinuousAfterMove = false;
     
-    // Use the existing undo system - it's already perfect!
-    undoLastMove();
-    
-    // Update our move counter to match
-    solutionReplayData.currentMoveIndex--;
+    // Use undo system and only update replay index when undo actually starts
+    const undoStarted = undoLastMove();
+    if (undoStarted) {
+        solutionReplayData.currentMoveIndex--;
+    }
 }
 
 function rewindSolutionReplayToStart() {
