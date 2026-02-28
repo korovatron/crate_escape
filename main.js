@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.30';
+const APP_VERSION = '1.1.31';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1377,6 +1377,32 @@ async function loadLegalModalContent(type) {
         };
     }
 
+    if (type === 'ios_install') {
+        return {
+            title: 'Install App',
+            contentHtml: `
+                <p><strong>Why install Crate Escape?</strong></p>
+                <ul>
+                    <li>Full-screen experience without browser UI</li>
+                    <li>Play offline anytime, anywhere</li>
+                    <li>Faster loading and better performance</li>
+                    <li>Appears on your home screen like a native app</li>
+                    <li>No address bar or browser controls</li>
+                </ul>
+                <p><strong>How to install:</strong></p>
+                <ol>
+                    <li>Tap the Share button (⬆️) in Safari</li>
+                    <li>Scroll down and tap Add to Home Screen</li>
+                    <li>Tap Add to confirm installation</li>
+                    <li>Find the app icon on your home screen</li>
+                </ol>
+                <div class="legal-modal-actions">
+                    <button id="iosInstallDismissModalButton" class="import-level-button" type="button">Not Interested</button>
+                </div>
+            `
+        };
+    }
+
     const legalConfig = {
         privacy: {
             title: 'Privacy Policy',
@@ -1439,7 +1465,8 @@ async function openLegalModal(type) {
         terms: 'Terms of Service',
         instructions: 'Instructions',
         credits: 'Credits',
-        cloud_sync: 'Cloud Sync'
+        cloud_sync: 'Cloud Sync',
+        ios_install: 'Install App'
     };
 
     title.textContent = titleLookup[type] || 'Legal';
@@ -1464,6 +1491,15 @@ async function openLegalModal(type) {
             playSound('click');
             await signOutFromCloud();
             await openLegalModal('cloud_sync');
+        });
+    }
+
+    if (type === 'ios_install') {
+        const dismissButton = document.getElementById('iosInstallDismissModalButton');
+        dismissButton?.addEventListener('click', () => {
+            playSound('click');
+            acknowledgeIOSInstallNotification();
+            closeLegalModal();
         });
     }
 }
@@ -3989,7 +4025,7 @@ function getCurrentMenuConfig() {
     // Add iOS Install option if user is on iOS Safari (regardless of dismissal)
     if (shouldShowIOSInstallMenuItem()) {
         baseOptions.splice(2, 0, "📱 Install App"); // Insert before Cloud Sync
-        baseGameStates.splice(2, 0, GAME_STATES.IOS_INSTALL);
+        baseGameStates.splice(2, 0, 'open_ios_install_modal');
     }
     
     // Custom level import
@@ -4049,6 +4085,12 @@ function handleMenuOptionClick(mouseX, mouseY) {
 
             if (targetState === 'open_cloud_sync_modal') {
                 openLegalModal('cloud_sync');
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+
+            if (targetState === 'open_ios_install_modal') {
+                openLegalModal('ios_install');
                 isHamburgerMenuOpen = false;
                 return true;
             }
