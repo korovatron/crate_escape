@@ -23,6 +23,15 @@
       padding: 0.4rem 0.7rem;
       border-radius: 4px;
     }
+    @media (max-width: 600px) and (orientation: portrait) {
+      .back-link {
+        font-size: 1.25rem;
+        line-height: 1.3;
+        font-weight: 600;
+        padding: 0.7rem 1rem;
+        min-height: 44px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -33,15 +42,17 @@
   <p>Welcome to The Crate Escape! We respect your privacy and are committed to protecting your personal data. This policy explains what information we collect, how we use it, and your rights as a player.</p>
 
   <h2>What We Collect</h2>
+  <p>Google account data collection is optional and only applies if you choose Google Sign-In for cloud sync.</p>
   <p>When you sign in using Google OAuth, we receive the following information:</p>
   <ul>
     <li>Your email address</li>
     <li>Your Google profile picture</li>
     <li>Your Google display name</li>
   </ul>
-  <p>This data is stored securely in a Google Firestore database. Parts of this data (such as display name or email) may be shown to you in cloud sync/account status screens inside the game.</p>
+  <p>This data is stored securely in a Google Firestore database when cloud sync is enabled. Parts of this data (such as display name or email) may be shown to you in cloud sync/account status screens inside the game.</p>
 
   <h2>Why We Store It</h2>
+  <p>The purposes below apply only when you choose optional cloud sign-in:</p>
   <p>We use this data solely to:</p>
   <ul>
     <li>Save your game progress</li>
@@ -74,5 +85,7 @@
   <h2>Contact Us</h2>
   <p>Questions? Concerns? Want your data deleted? Reach out at:</p>
   <p>Email: <a href="mailto:unimatrix@korovatron.co.uk">unimatrix@korovatron.co.uk</a></p>
+
+  <a class="back-link" href="../index.html">← Back to Game</a>
 </body>
 </html>

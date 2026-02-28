@@ -23,6 +23,15 @@
       padding: 0.4rem 0.7rem;
       border-radius: 4px;
     }
+    @media (max-width: 600px) and (orientation: portrait) {
+      .back-link {
+        font-size: 1.25rem;
+        line-height: 1.3;
+        font-weight: 600;
+        padding: 0.7rem 1rem;
+        min-height: 44px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -41,7 +50,8 @@
   <p>We do not store passwords or access your full Google account.</p>
 
   <h2>Game Progress & Data</h2>
-  <p>Your progress is stored securely in Google Firestore.</p>
+  <p>If you use optional Google Sign-In, your cloud progress is stored securely in Google Firestore.</p>
+  <p>If you do not sign in, gameplay can continue without cloud account data.</p>
   <p>We do not use your data for marketing or profiling. We use service providers such as Google (OAuth, Analytics, and Firebase/Firestore) to operate the game.</p>
   <p>You can request deletion of your account and data anytime by emailing <a href="mailto:unimatrix@korovatron.co.uk">unimatrix@korovatron.co.uk</a>.</p>
 
@@ -63,5 +73,7 @@
   <h2>Contact</h2>
   <p>For support, questions, or data requests, reach out to:</p>
   <p>Email: <a href="mailto:unimatrix@korovatron.co.uk">unimatrix@korovatron.co.uk</a></p>
+
+  <a class="back-link" href="../index.html">← Back to Game</a>
 </body>
 </html>
