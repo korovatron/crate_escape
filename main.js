@@ -195,15 +195,23 @@ document.addEventListener('keydown', (e) => {
         
         switch (e.key) {
             case "ArrowLeft":
+            case "a":
+            case "A":
                 moveDirection = { x: -1, y: 0 };
                 break;
             case "ArrowRight":
+            case "d":
+            case "D":
                 moveDirection = { x: 1, y: 0 };
                 break;
             case "ArrowUp":
+            case "w":
+            case "W":
                 moveDirection = { x: 0, y: -1 };
                 break;
             case "ArrowDown":
+            case "s":
+            case "S":
                 moveDirection = { x: 0, y: 1 };
                 break;
         }
@@ -215,7 +223,7 @@ document.addEventListener('keydown', (e) => {
     }
     
     // Visual feedback for keyboard input (only during gameplay)
-    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Escape', 'r', 'R'].includes(e.key);
+    const isMovementOrUiKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'w', 'W', 'a', 'A', 's', 'S', 'd', 'D', ' ', 'Escape', 'r', 'R'].includes(e.key);
     if (currentGameState === GAME_STATES.PLAYING && (isMovementOrUiKey || isUndoShortcut || isRedoShortcut || isResetToStartShortcut || isGoToEndShortcut)) {
         let keyName = e.key;
         if (e.key === ' ') keyName = 'Space';
@@ -1286,10 +1294,10 @@ async function loadLegalModalContent(type) {
             ]
             : [
                 'Push all crates onto their goal positions',
-                'Use arrow keys to move',
+                'Use arrow keys or WASD to move',
                 'You can only push crates, not pull them',
                 'Use the undo and redo buttons to step backward/forward through moves',
-                'Keyboard controls: Arrow keys (move), R/Home (reset), ESC (back)',
+                'Keyboard controls: Arrow keys/WASD (move), R/Home (reset), ESC (back)',
                 'Undo keys: U, Backspace, Delete',
                 'Redo key: Insert (including Numpad Insert)',
                 'Reset to start: Home, R (including Numpad Home)',
@@ -3580,6 +3588,8 @@ function isContinuousInputActive() {
     // Check if any movement keys are currently pressed
     const keyPressed = isKeyDown('ArrowLeft') || isKeyDown('ArrowRight') || 
                       isKeyDown('ArrowUp') || isKeyDown('ArrowDown') ||
+                      isKeyDown('w') || isKeyDown('W') || isKeyDown('a') || isKeyDown('A') ||
+                      isKeyDown('s') || isKeyDown('S') || isKeyDown('d') || isKeyDown('D') ||
                       (isTouchActive && (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0));
     
     return keyPressed;
@@ -3601,13 +3611,13 @@ function checkForContinuedInput() {
     let moveDirection = { x: 0, y: 0 };
     
     // Check for held keys
-    if (isKeyDown('ArrowLeft')) {
+    if (isKeyDown('ArrowLeft') || isKeyDown('a') || isKeyDown('A')) {
         moveDirection = { x: -1, y: 0 };
-    } else if (isKeyDown('ArrowRight')) {
+    } else if (isKeyDown('ArrowRight') || isKeyDown('d') || isKeyDown('D')) {
         moveDirection = { x: 1, y: 0 };
-    } else if (isKeyDown('ArrowUp')) {
+    } else if (isKeyDown('ArrowUp') || isKeyDown('w') || isKeyDown('W')) {
         moveDirection = { x: 0, y: -1 };
-    } else if (isKeyDown('ArrowDown')) {
+    } else if (isKeyDown('ArrowDown') || isKeyDown('s') || isKeyDown('S')) {
         moveDirection = { x: 0, y: 1 };
     }
     
