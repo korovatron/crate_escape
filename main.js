@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.29';
+const APP_VERSION = '1.1.30';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1198,6 +1198,11 @@ function isIOSSafariNotInstalled() {
     const isNotInstalled = !window.navigator.standalone && !window.matchMedia('(display-mode: standalone)').matches;
     
     return isIOS && isSafari && isNotInstalled;
+}
+
+function isIOSPlatform() {
+    return (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) ||
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
 // Windows platform detection for F11 fullscreen hint
@@ -4937,7 +4942,8 @@ function drawTitleScreen() {
     context.fillStyle = "#d6ffe9";
     context.textAlign = "center";
     context.textBaseline = "middle"; // Center text vertically
-    const textCenterY = buttonY + buttonHeight / 2 + buttonTextSize * 0.1; // Slight adjustment for visual centering
+    const textVerticalOffset = isIOSPlatform() ? buttonTextSize * 0.05 : buttonTextSize * 0.1;
+    const textCenterY = buttonY + buttonHeight / 2 + textVerticalOffset; // Slight adjustment for visual centering
     context.fillText(buttonText, canvas.width / 2, textCenterY);
     context.textBaseline = "alphabetic"; // Reset to default
     context.restore();
