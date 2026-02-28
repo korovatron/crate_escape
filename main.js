@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.34';
+const APP_VERSION = '1.1.35';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -91,11 +91,7 @@ document.addEventListener('keydown', (e) => {
     // Escape closes the menu first.
     if (isHamburgerMenuOpen && (currentGameState === GAME_STATES.TITLE ||
                                 currentGameState === GAME_STATES.LEVEL_SELECT ||
-                                currentGameState === GAME_STATES.PLAYING ||
-                                currentGameState === GAME_STATES.INSTRUCTIONS ||
-                                currentGameState === GAME_STATES.CREDITS ||
-                                currentGameState === GAME_STATES.CLOUD_SYNC ||
-                                currentGameState === GAME_STATES.IOS_INSTALL)) {
+                                currentGameState === GAME_STATES.PLAYING)) {
         if (e.key === 'Escape') {
             e.preventDefault();
             playSound('click');
@@ -170,16 +166,6 @@ document.addEventListener('keydown', (e) => {
         } else if (e.key === 'ArrowLeft') {
             stepSolutionReplayBackward();
         }
-        return;
-    }
-    
-    // Handle exit with Escape key for hamburger menu screens
-    if (e.key === 'Escape' && (currentGameState === GAME_STATES.INSTRUCTIONS || 
-                               currentGameState === GAME_STATES.CREDITS ||
-                               currentGameState === GAME_STATES.CLOUD_SYNC ||
-                               currentGameState === GAME_STATES.IOS_INSTALL)) {
-        playSound('click');
-        currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
         return;
     }
     
@@ -442,69 +428,6 @@ function setupCanvasEventListeners() {
 
             handleLevelSelectClick(mouseX, mouseY);
             return;
-        } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
-                  currentGameState === GAME_STATES.CREDITS ||
-                  currentGameState === GAME_STATES.CLOUD_SYNC) {
-            // Check for hamburger menu click
-            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
-                playSound('click');
-                isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                return;
-            }
-            
-            // Check for menu option clicks when menu is open
-            if (isHamburgerMenuOpen) {
-                if (handleMenuOptionClick(mouseX, mouseY)) {
-                    return;
-                }
-            }
-
-            // Credits external link click
-            if (currentGameState === GAME_STATES.CREDITS) {
-                if (isClickOnCreditsKenneyLink(mouseX, mouseY)) {
-                    playSound('click');
-                    openCreditsKenneyLink();
-                    return;
-                }
-
-                if (isClickOnCreditsKorovatronLink(mouseX, mouseY)) {
-                    playSound('click');
-                    openCreditsKorovatronLink();
-                    return;
-                }
-            }
-            
-            // Check for cloud sync button clicks
-            if (currentGameState === GAME_STATES.CLOUD_SYNC) {
-                // Sign-in button (when not authenticated or in error state)
-                if ((cloudSyncState === 'not_authenticated' || cloudSyncState === 'error') && isClickOnSignInButton(mouseX, mouseY)) {
-                    startGoogleSignIn();
-                    return;
-                }
-                
-                // Sign-out button (when authenticated)
-                if (isClickOnSignOutButton(mouseX, mouseY)) {
-                    signOutFromCloud();
-                    return;
-                }
-            }
-            
-            // Check for back button click
-            if (isClickOnBackButton(mouseX, mouseY)) {
-                playSound('click');
-                currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
-                return;
-            }
-            
-            // Check for iOS install specific buttons
-            if (currentGameState === GAME_STATES.IOS_INSTALL) {
-                if (isClickOnIOSInstallDismissButton(mouseX, mouseY)) {
-                    // User dismissed the iOS install prompt
-                    acknowledgeIOSInstallNotification();
-                    currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
-                    return;
-                }
-            }
         } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
             // Handle solution replay control clicks
             if (window.solutionReplayBackButtonBounds && 
@@ -912,70 +835,6 @@ function setupCanvasEventListeners() {
                     }
 
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
-                } else if (currentGameState === GAME_STATES.INSTRUCTIONS || 
-                          currentGameState === GAME_STATES.CREDITS ||
-                          currentGameState === GAME_STATES.CLOUD_SYNC ||
-                          currentGameState === GAME_STATES.IOS_INSTALL) {
-                    // Check for hamburger menu click
-                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                        return;
-                    }
-                    
-                    // Check for menu option clicks when menu is open
-                    if (isHamburgerMenuOpen) {
-                        if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
-                            return;
-                        }
-                    }
-
-                    // Credits external link tap
-                    if (currentGameState === GAME_STATES.CREDITS) {
-                        if (isClickOnCreditsKenneyLink(canvasPos.x, canvasPos.y)) {
-                            playSound('click');
-                            openCreditsKenneyLink();
-                            return;
-                        }
-
-                        if (isClickOnCreditsKorovatronLink(canvasPos.x, canvasPos.y)) {
-                            playSound('click');
-                            openCreditsKorovatronLink();
-                            return;
-                        }
-                    }
-                    
-                    // Check for back button click
-                    if (isClickOnBackButton(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
-                        return;
-                    }
-                    
-                    // Check for iOS install screen dismiss button
-                    if (currentGameState === GAME_STATES.IOS_INSTALL && isClickOnIOSInstallDismissButton(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        acknowledgeIOSInstallNotification();
-                        currentGameState = hamburgerMenuReturnState || GAME_STATES.TITLE;
-                        return;
-                    }
-                    
-                    // Check for cloud sync button clicks
-                    if (currentGameState === GAME_STATES.CLOUD_SYNC) {
-                        // Sign-in button (when not authenticated or in error state)
-                        if ((cloudSyncState === 'not_authenticated' || cloudSyncState === 'error') && isClickOnSignInButton(canvasPos.x, canvasPos.y)) {
-                            playSound('click');
-                            startGoogleSignIn();
-                            return;
-                        }
-                        
-                        // Sign-out button (when authenticated)
-                        if (isClickOnSignOutButton(canvasPos.x, canvasPos.y)) {
-                            playSound('click');
-                            signOutFromCloud();
-                            return;
-                        }
-                    }
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
                     // Check if tap is on the share button
                     if (window.shareCompletionButtonBounds && 
@@ -4070,7 +3929,7 @@ function getCurrentMenuConfig() {
 // Helper function to handle menu option clicks dynamically
 function handleMenuOptionClick(mouseX, mouseY) {
     const menuConfig = getCurrentMenuConfig();
-    const auxiliaryMenuStates = [GAME_STATES.INSTRUCTIONS, GAME_STATES.CREDITS, GAME_STATES.CLOUD_SYNC, GAME_STATES.IOS_INSTALL];
+    const auxiliaryMenuStates = [];
     
     for (let i = 0; i < menuConfig.options.length; i++) {
         if (isClickOnMenuOption(mouseX, mouseY, i)) {
@@ -4893,14 +4752,6 @@ function draw() {
     } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
         drawGameplay(); // Draw the completed level in background
         drawLevelCompleteOverlay();
-    } else if (currentGameState === GAME_STATES.INSTRUCTIONS) {
-        drawInstructionsScreen();
-    } else if (currentGameState === GAME_STATES.CREDITS) {
-        drawCreditsScreen();
-    } else if (currentGameState === GAME_STATES.CLOUD_SYNC) {
-        drawCloudSyncScreen();
-    } else if (currentGameState === GAME_STATES.IOS_INSTALL) {
-        drawIOSInstallScreen();
     }
     
     // Draw font loading overlay on top of everything if needed
@@ -5392,15 +5243,24 @@ function drawHamburgerMenu() {
         
         for (let i = 0; i < options.length; i++) {
             const textY = menuY + (i * optionHeight) + (optionHeight / 2) + 6;
+            const isHoveringOption = !isUsingTouch && isClickOnMenuOption(mouseX, mouseY, i);
             
-            // Highlight current screen
-            if (gameStates[i] === currentGameState) {
+            // Highlight current screen, except Home when already on title
+            const isHomeOption = gameStates[i] === GAME_STATES.TITLE;
+            const shouldHighlight = gameStates[i] === currentGameState && !(isHomeOption && currentGameState === GAME_STATES.TITLE);
+
+            if (shouldHighlight) {
                 // Highlight background for current screen
                 context.fillStyle = "rgba(0, 255, 255, 0.3)"; // Brighter cyan highlight
                 context.fillRect(menuX, menuY + (i * optionHeight), optionWidth, optionHeight);
                 
                 // Current screen text color
                 context.fillStyle = "#00FFFF"; // Bright cyan
+            } else if (isHoveringOption) {
+                // Hover highlight (desktop/mouse only) using modal blue
+                context.fillStyle = "#0077aa";
+                context.fillRect(menuX, menuY + (i * optionHeight), optionWidth, optionHeight);
+                context.fillStyle = "#FFFFFF";
             } else {
                 // Normal text color
                 context.fillStyle = "#FFFFFF"; // White
@@ -5409,7 +5269,7 @@ function drawHamburgerMenu() {
             context.fillText(options[i], menuX + 10, textY);
             
             // Add authentication status indicator for Cloud Sync option
-            const isCloudSyncOption = gameStates[i] === 'open_cloud_sync_modal' || gameStates[i] === GAME_STATES.CLOUD_SYNC;
+            const isCloudSyncOption = gameStates[i] === 'open_cloud_sync_modal';
             if (isCloudSyncOption) {
                 const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
                 const isLoadingSync = cloudSyncState === 'checking' || cloudSyncState === 'signing_in';
@@ -7312,7 +7172,7 @@ function drawLevelSelectScreen() {
     
     // Title - moved slightly lower to avoid conflict with back button
     context.font = `bold ${titleFontSize}px Arial, system-ui, -apple-system, sans-serif`;
-    context.fillStyle = "#00ffff";
+    context.fillStyle = "#00ccff";
     context.textAlign = "center";
     context.fillText("SELECT LEVEL", centerX, headerHeight * 0.35);
     
