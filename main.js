@@ -1954,9 +1954,9 @@ function fadeOutFontLoadingOverlay() {
     requestAnimationFrame(updateFade);
 }
 
-// Check if iOS install menu item should be shown (always on iOS Safari, even after dismissal)
+// Check if iOS install menu item should be shown
 function shouldShowIOSInstallMenuItem() {
-    return isIOSSafariNotInstalled(); // Show menu item on iOS Safari regardless of dismissal
+    return isIOSSafariNotInstalled() && !hasAcknowledgedIOSInstall;
 }
 
 // Helper function to acknowledge iOS install notification and persist it
