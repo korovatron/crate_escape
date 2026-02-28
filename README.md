@@ -1,6 +1,14 @@
 # Crate Escape
 
+[![Play Live](https://img.shields.io/badge/Play-Live-success?style=for-the-badge)](https://www.korovatron.co.uk/crate_escape/)
+
+![Crate Escape gameplay screenshot](assets/images/screenshots/4.png)
+
 Crate Escape is a Sokoban-style puzzle game built for web and installable play. Push crates onto goal tiles across classic level collections, track your progress, and share your solutions.
+
+## Live Play
+
+[Play Crate Escape](https://www.korovatron.co.uk/crate_escape/)
 
 ## Features
 
