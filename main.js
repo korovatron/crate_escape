@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.26';
+const APP_VERSION = '1.1.27';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1284,6 +1284,10 @@ function openImportLevelModal() {
     const { overlay, textarea } = getImportLevelElements();
     if (!overlay || !textarea) {
         return;
+    }
+
+    if (launchedFromCustomLevelLink && Array.isArray(customLevelRows) && customLevelRows.length > 0) {
+        textarea.value = customLevelRows.join('\n');
     }
 
     overlay.style.display = 'flex';
