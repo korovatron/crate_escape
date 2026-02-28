@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.22';
+const APP_VERSION = '1.1.23';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -47,6 +47,14 @@ document.addEventListener('keydown', (e) => {
     const isResetToStartShortcut = e.key === 'Home' || isNumpadHome;
     const isGoToEndShortcut = e.key === 'End' || isNumpadEnd;
     const isPrimaryActionKey = e.key === ' ' || e.key === 'Enter' || e.code === 'NumpadEnter';
+
+    if (isImportLevelModalOpen()) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeImportLevelModal();
+        }
+        return;
+    }
     
     // Handle game state transitions
     if (isPrimaryActionKey) {
@@ -65,7 +73,11 @@ document.addEventListener('keydown', (e) => {
             inputFadeTimer = 2000;
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
-            advanceToNextLevel();
+            if (isCustomLevelActive) {
+                restartCurrentLevel();
+            } else {
+                advanceToNextLevel();
+            }
             return;
         }
     }
@@ -589,16 +601,38 @@ function setupCanvasEventListeners() {
                 });
                 return; // Don't advance level
             }
-            
-            // Check if click is on the next level button
-            if (window.nextLevelButtonBounds && 
-                mouseX >= window.nextLevelButtonBounds.x && 
-                mouseX <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
-                mouseY >= window.nextLevelButtonBounds.y && 
-                mouseY <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
-                
-                advanceToNextLevel();
-                return;
+
+            if (isCustomLevelActive) {
+                if (window.replayLevelButtonBounds &&
+                    mouseX >= window.replayLevelButtonBounds.x &&
+                    mouseX <= window.replayLevelButtonBounds.x + window.replayLevelButtonBounds.width &&
+                    mouseY >= window.replayLevelButtonBounds.y &&
+                    mouseY <= window.replayLevelButtonBounds.y + window.replayLevelButtonBounds.height) {
+                    playSound('click');
+                    restartCurrentLevel();
+                    return;
+                }
+
+                if (window.exitCustomLevelButtonBounds &&
+                    mouseX >= window.exitCustomLevelButtonBounds.x &&
+                    mouseX <= window.exitCustomLevelButtonBounds.x + window.exitCustomLevelButtonBounds.width &&
+                    mouseY >= window.exitCustomLevelButtonBounds.y &&
+                    mouseY <= window.exitCustomLevelButtonBounds.y + window.exitCustomLevelButtonBounds.height) {
+                    playSound('click');
+                    exitCustomLevelToLevelSelect();
+                    return;
+                }
+            } else {
+                // Check if click is on the next level button
+                if (window.nextLevelButtonBounds &&
+                    mouseX >= window.nextLevelButtonBounds.x &&
+                    mouseX <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
+                    mouseY >= window.nextLevelButtonBounds.y &&
+                    mouseY <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
+
+                    advanceToNextLevel();
+                    return;
+                }
             }
             
             // No longer advance to next level on any click - must click the button
@@ -954,16 +988,38 @@ function setupCanvasEventListeners() {
                         });
                         return; // Don't advance level
                     }
-                    
-                    // Check if tap is on the next level button
-                    if (window.nextLevelButtonBounds && 
-                        canvasPos.x >= window.nextLevelButtonBounds.x && 
-                        canvasPos.x <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
-                        canvasPos.y >= window.nextLevelButtonBounds.y && 
-                        canvasPos.y <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
-                        
-                        advanceToNextLevel();
-                        return;
+
+                    if (isCustomLevelActive) {
+                        if (window.replayLevelButtonBounds &&
+                            canvasPos.x >= window.replayLevelButtonBounds.x &&
+                            canvasPos.x <= window.replayLevelButtonBounds.x + window.replayLevelButtonBounds.width &&
+                            canvasPos.y >= window.replayLevelButtonBounds.y &&
+                            canvasPos.y <= window.replayLevelButtonBounds.y + window.replayLevelButtonBounds.height) {
+                            playSound('click');
+                            restartCurrentLevel();
+                            return;
+                        }
+
+                        if (window.exitCustomLevelButtonBounds &&
+                            canvasPos.x >= window.exitCustomLevelButtonBounds.x &&
+                            canvasPos.x <= window.exitCustomLevelButtonBounds.x + window.exitCustomLevelButtonBounds.width &&
+                            canvasPos.y >= window.exitCustomLevelButtonBounds.y &&
+                            canvasPos.y <= window.exitCustomLevelButtonBounds.y + window.exitCustomLevelButtonBounds.height) {
+                            playSound('click');
+                            exitCustomLevelToLevelSelect();
+                            return;
+                        }
+                    } else {
+                        // Check if tap is on the next level button
+                        if (window.nextLevelButtonBounds &&
+                            canvasPos.x >= window.nextLevelButtonBounds.x &&
+                            canvasPos.x <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
+                            canvasPos.y >= window.nextLevelButtonBounds.y &&
+                            canvasPos.y <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
+
+                            advanceToNextLevel();
+                            return;
+                        }
                     }
                     
                     // No longer advance to next level on any tap - must tap the button
@@ -1151,6 +1207,239 @@ function isTouchDevice() {
     return supportsTouchEvents || hasTouchPoints || hasCoarsePointer;
 }
 
+function isDesktopImportEnabled() {
+    return true;
+}
+
+function getImportLevelElements() {
+    return {
+        overlay: document.getElementById('importLevelOverlay'),
+        textarea: document.getElementById('importLevelTextarea'),
+        error: document.getElementById('importLevelError'),
+        pasteButton: document.getElementById('importLevelPasteButton'),
+        playButton: document.getElementById('importLevelPlayButton'),
+        cancelButton: document.getElementById('importLevelCancelButton')
+    };
+}
+
+function isImportLevelModalOpen() {
+    const { overlay } = getImportLevelElements();
+    return Boolean(overlay && overlay.style.display === 'flex');
+}
+
+function setImportLevelError(message) {
+    const { error } = getImportLevelElements();
+    if (error) {
+        error.textContent = message || '';
+    }
+}
+
+function openImportLevelModal() {
+    const { overlay, textarea } = getImportLevelElements();
+    if (!overlay || !textarea) {
+        return;
+    }
+
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+    setImportLevelError('');
+
+    window.setTimeout(() => {
+        textarea.focus();
+        textarea.select();
+    }, 0);
+}
+
+function closeImportLevelModal() {
+    const { overlay } = getImportLevelElements();
+    if (!overlay) {
+        return;
+    }
+
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden', 'true');
+    setImportLevelError('');
+}
+
+function parseImportedLevelText(rawText) {
+    const normalizedText = (rawText || '').replace(/\r/g, '');
+    let rows = normalizedText
+        .split('\n')
+        .map(line => line.replace(/\t/g, '    '))
+        .filter(line => !line.trim().startsWith(';'));
+
+    while (rows.length > 0 && rows[0].trim() === '') {
+        rows.shift();
+    }
+    while (rows.length > 0 && rows[rows.length - 1].trim() === '') {
+        rows.pop();
+    }
+
+    if (rows.length === 0) {
+        return { isValid: false, error: 'Paste a level first.' };
+    }
+
+    const normalizeImportChar = (char) => {
+        switch (char) {
+            case '-':
+            case '_':
+                return ' ';
+            case 'p':
+                return '@';
+            case 'P':
+                return '+';
+            case 'b':
+                return '$';
+            case 'B':
+                return '*';
+            case 'o':
+            case 'O':
+                return '.';
+            default:
+                return char;
+        }
+    };
+
+    const rowsNormalized = rows.map(row => Array.from(row).map(normalizeImportChar).join(''));
+
+    const allowedCharsPattern = /^[ #@$.+*]*$/;
+    for (let rowIndex = 0; rowIndex < rowsNormalized.length; rowIndex++) {
+        if (!allowedCharsPattern.test(rowsNormalized[rowIndex])) {
+            return {
+                isValid: false,
+                error: `Invalid symbol on line ${rowIndex + 1}. Supported: # @ $ . + * space, plus aliases - _ p P b B o O.`
+            };
+        }
+    }
+
+    let playerCount = 0;
+    let boxCount = 0;
+    let goalCount = 0;
+    let wallCount = 0;
+
+    for (const row of rowsNormalized) {
+        for (const char of row) {
+            if (char === '@' || char === '+') playerCount++;
+            if (char === '$' || char === '*') boxCount++;
+            if (char === '.' || char === '+' || char === '*') goalCount++;
+            if (char === '#') wallCount++;
+        }
+    }
+
+    if (playerCount !== 1) {
+        return { isValid: false, error: 'Level must contain exactly one player (@ or +).' };
+    }
+
+    if (boxCount === 0) {
+        return { isValid: false, error: 'Level must contain at least one box ($ or *).' };
+    }
+
+    if (goalCount === 0) {
+        return { isValid: false, error: 'Level must contain at least one goal (. or + or *).' };
+    }
+
+    if (boxCount !== goalCount) {
+        return { isValid: false, error: 'Number of boxes must match number of goals.' };
+    }
+
+    if (wallCount === 0) {
+        return { isValid: false, error: 'Level must contain walls (#).' };
+    }
+
+    if (typeof LevelManager === 'undefined' || typeof LevelManager.parseLevel !== 'function') {
+        return { isValid: false, error: 'Level parser is unavailable.' };
+    }
+
+    const parsed = LevelManager.parseLevel(rowsNormalized);
+    if (!parsed || !parsed.width || !parsed.height) {
+        return { isValid: false, error: 'Could not parse this level.' };
+    }
+
+    return { isValid: true, rows: rowsNormalized };
+}
+
+function exitCustomLevelToLevelSelect() {
+    isCustomLevelActive = false;
+    customLevelRows = [];
+    showSolutionButton = false;
+    currentGameState = GAME_STATES.LEVEL_SELECT;
+    initializeLevelSelect();
+}
+
+async function pasteClipboardIntoImportModal() {
+    const { textarea } = getImportLevelElements();
+    if (!textarea || !navigator.clipboard || !navigator.clipboard.readText) {
+        return;
+    }
+
+    try {
+        const clipboardText = await navigator.clipboard.readText();
+        if (clipboardText) {
+            textarea.value = clipboardText;
+            setImportLevelError('');
+        }
+    } catch (error) {
+        setImportLevelError('Clipboard read failed. Paste with Ctrl+V.');
+    }
+}
+
+function playImportedLevelFromModal() {
+    const { textarea } = getImportLevelElements();
+    if (!textarea) {
+        return;
+    }
+
+    const parsedResult = parseImportedLevelText(textarea.value);
+    if (!parsedResult.isValid) {
+        setImportLevelError(parsedResult.error);
+        return;
+    }
+
+    customLevelRows = parsedResult.rows;
+    isCustomLevelActive = true;
+    currentSet = CUSTOM_SET_NAME;
+    currentLevelNumber = CUSTOM_LEVEL_NUMBER;
+    showSolutionButton = false;
+    solutionCopiedState = false;
+
+    const loaded = loadCustomLevel(false);
+    if (!loaded) {
+        setImportLevelError('Failed to load custom level.');
+        return;
+    }
+
+    currentGameState = GAME_STATES.PLAYING;
+    isHamburgerMenuOpen = false;
+    closeImportLevelModal();
+}
+
+function initializeImportLevelModal() {
+    const { overlay, pasteButton, playButton, cancelButton } = getImportLevelElements();
+    if (!overlay || overlay.dataset.bound === 'true') {
+        return;
+    }
+
+    pasteButton?.addEventListener('click', () => {
+        pasteClipboardIntoImportModal();
+    });
+
+    playButton?.addEventListener('click', () => {
+        playImportedLevelFromModal();
+    });
+
+    cancelButton?.addEventListener('click', () => {
+        closeImportLevelModal();
+    });
+
+    overlay.addEventListener('mousedown', (event) => {
+        if (event.target === overlay) {
+            closeImportLevelModal();
+        }
+    });
+
+    overlay.dataset.bound = 'true';
+}
+
 // Font loading management
 function initializeFontLoadingOverlay() {
     // Wait for fonts to be ready with timeout and minimum duration
@@ -1271,6 +1560,11 @@ let inputFadeTimer = 0;
 let currentLevel = null;
 let currentSet = Object.keys(SOKOBAN_LEVELS)[0]; // Start with first set from levels.js
 let currentLevelNumber = 1; // Start with level 1
+const CUSTOM_SET_NAME = 'Custom';
+const CUSTOM_LEVEL_NUMBER = 1;
+let isCustomLevelActive = false;
+let customLevelRows = [];
+let customThemeIndex = 0;
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
@@ -1580,8 +1874,10 @@ function getThemeSprites() {
     
     // Get current level number - use currentLevelNumber, not currentLevel!
     const level = (typeof currentLevelNumber === 'number' && currentLevelNumber > 0) ? currentLevelNumber : 1;
-    
-    const themeIndex = (level - 1) % 8;
+
+    const themeIndex = isCustomLevelActive
+        ? ((typeof customThemeIndex === 'number' && customThemeIndex >= 0) ? customThemeIndex % 8 : 0)
+        : (level - 1) % 8;
     const theme = themeData[themeIndex];
     
     // Absolute fallback if anything is wrong
@@ -1755,6 +2051,7 @@ async function loadAudioAndCreateCanvas() {
 function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
+    initializeImportLevelModal();
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
@@ -1855,19 +2152,13 @@ function gameLoad() {
     loadLevel(currentSet, currentLevelNumber);
 }
 
-// Function to load a specific level
-function loadLevel(setName, levelNumber, isRestart = false) {
-    currentLevel = LevelManager.getParsedLevel(setName, levelNumber);
-    
-    if (!currentLevel) {
-        console.error(`Failed to load level ${levelNumber} from set ${setName}`);
-        return false;
-    }
-    
+function applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart = false, skipProgressPersistence = false) {
+    currentLevel = parsedLevel;
+
     // Reset move count for level load/restart
     moveCount = 0;
     pushCount = 0;
-    
+
     // Reset undo system for level load/restart
     moveHistory = [];
     redoHistory = [];
@@ -1876,29 +2167,31 @@ function loadLevel(setName, levelNumber, isRestart = false) {
     pendingUndoState = null;
     pendingRedoState = null;
     isReverseAnimation = false;
-    
+
     // Only reset attempt count for new levels, not restarts
     if (!isRestart) {
         attemptCount = 1;
-        // Mark level as attempted when first loaded (not on restart)
-        markLevelAttempted(setName, levelNumber);
-        // Save as last played level
-        saveLastPlayedLevel(setName, levelNumber);
+        if (!skipProgressPersistence) {
+            // Mark level as attempted when first loaded (not on restart)
+            markLevelAttempted(setName, levelNumber);
+            // Save as last played level
+            saveLastPlayedLevel(setName, levelNumber);
+        }
     }
-    
+
     // Reset overview mode for new levels (not restarts)
     if (!isRestart) {
         overviewMode = false; // Ensure we start in normal mode
     }
-    
+
     // Calculate optimal tile size for this level and screen
     tileSize = calculateOptimalTileSize();
-    
+
     // Check if level needs panning (level is larger than screen with minimum tile size)
     const levelPixelWidth = currentLevel.width * tileSize;
     const levelPixelHeight = currentLevel.height * tileSize;
     levelNeedsPanning = levelPixelWidth > canvas.width || levelPixelHeight > canvas.height;
-    
+
     // Initialize player position from level data
     playerPos = {
         x: currentLevel.playerStart.x,
@@ -1907,13 +2200,13 @@ function loadLevel(setName, levelNumber, isRestart = false) {
 
     // Initialize timeline history with starting board state
     initializeHistoryTimeline();
-    
+
     // Initialize camera position
     if (levelNeedsPanning) {
         const halfScreenWidth = canvas.width / 2;
         const playableHeight = canvas.height - STATUS_BAR_HEIGHT;
         const halfPlayableHeight = playableHeight / 2;
-        
+
         // Handle X axis (horizontal)
         if (levelPixelWidth > canvas.width) {
             // Level is wider than screen - center player in middle of screen
@@ -1923,7 +2216,7 @@ function loadLevel(setName, levelNumber, isRestart = false) {
             // Level fits horizontally - center it (use negative offset for centering)
             cameraX = Math.round(-(canvas.width - levelPixelWidth) / 2);
         }
-        
+
         // Handle Y axis (vertical) - account for status bar
         if (levelPixelHeight > playableHeight) {
             // Level is taller than playable area - center player in middle of visible game area
@@ -1941,38 +2234,67 @@ function loadLevel(setName, levelNumber, isRestart = false) {
         cameraX = 0;
         cameraY = 0;
     }
-    
+
     // Reset movement state
     isPlayerMoving = false;
     moveAnimationProgress = 0;
     moveTargetPos = { x: playerPos.x, y: playerPos.y };
     movingBox = null;
-    
+
     // Reset animation state
     playerFacingDirection = 'down';
     playerAnimationState = getIdleAnimationState();
     playerAnimationFrame = 0;
     playerAnimationTimer = 0;
-    
+
     console.log(`Loaded level ${levelNumber} from ${setName}`);
     console.log(`Level size: ${currentLevel.width}x${currentLevel.height}`);
     console.log(`Using tile size: ${tileSize}px`);
     console.log(`Player starts at: (${playerPos.x}, ${playerPos.y})`);
     console.log(`Boxes: ${currentLevel.boxes.length}, Goals: ${currentLevel.goals.length}`);
-    
+
     // Calculate level centering offsets - use Math.floor to ensure integer pixel positions
     levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
     levelOffsetY = Math.floor((canvas.height - STATUS_BAR_HEIGHT - currentLevel.height * tileSize) / 2) + STATUS_BAR_HEIGHT;
-    
+
     // Upload progress to cloud if user is authenticated and this is a new level load (not restart)
-    if (!isRestart && window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
+    if (!isRestart && !skipProgressPersistence && window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
         // Don't await this to avoid blocking level loading
         uploadGameProgress().catch(error => {
             console.error('Failed to upload progress after level load:', error);
         });
     }
-    
+
     return true;
+}
+
+function loadCustomLevel(isRestart = false) {
+    if (!customLevelRows || customLevelRows.length === 0 || typeof LevelManager === 'undefined') {
+        return false;
+    }
+
+    customThemeIndex = Math.floor(Math.random() * 8);
+
+    const parsedLevel = LevelManager.parseLevel(customLevelRows);
+    if (!parsedLevel) {
+        return false;
+    }
+
+    return applyLoadedLevel(parsedLevel, CUSTOM_SET_NAME, CUSTOM_LEVEL_NUMBER, isRestart, true);
+}
+
+// Function to load a specific level
+function loadLevel(setName, levelNumber, isRestart = false) {
+    isCustomLevelActive = false;
+
+    const parsedLevel = LevelManager.getParsedLevel(setName, levelNumber);
+    
+    if (!parsedLevel) {
+        console.error(`Failed to load level ${levelNumber} from set ${setName}`);
+        return false;
+    }
+
+    return applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart, false);
 }
 // #endregion
 
@@ -2977,7 +3299,9 @@ function checkLevelCompletion() {
         trackLevelCompleteEvent(currentSet, currentLevelNumber);
         
         // Mark level as completed for progress tracking
-        markLevelCompleted(currentSet, currentLevelNumber);
+        if (!isCustomLevelActive) {
+            markLevelCompleted(currentSet, currentLevelNumber);
+        }
     }
 }
 
@@ -3015,6 +3339,11 @@ function getNextLevel() {
 }
 
 function advanceToNextLevel() {
+    if (isCustomLevelActive) {
+        restartCurrentLevel();
+        return;
+    }
+
     playSound('click');
     const nextLevel = getNextLevel();
     
@@ -3050,9 +3379,13 @@ function advanceToNextLevel() {
 function restartCurrentLevel() {
     // Increment attempt count
     attemptCount++;
-    
+
+    const didLoad = isCustomLevelActive
+        ? loadCustomLevel(true)
+        : loadLevel(currentSet, currentLevelNumber, true);
+
     // Reload the current level with restart flag
-    if (loadLevel(currentSet, currentLevelNumber, true)) {
+    if (didLoad) {
         currentGameState = GAME_STATES.PLAYING;
         console.log(`Restarted level ${currentLevelNumber} from ${currentSet} (Attempt ${attemptCount})`);
     } else {
@@ -3216,6 +3549,10 @@ function getCurrentMenuConfig() {
     baseOptions.push("Credits");
     baseGameStates.push(GAME_STATES.CREDITS);
 
+    // Custom level import
+    baseOptions.push("Import Level");
+    baseGameStates.push('open_import_level');
+
     // Add legal links at the bottom
     baseOptions.push("Privacy Policy", "Terms of Service");
     baseGameStates.push('open_privacy_policy', 'open_terms_of_service');
@@ -3241,6 +3578,12 @@ function handleMenuOptionClick(mouseX, mouseY) {
 
             if (targetState === 'open_terms_of_service') {
                 openTermsOfServiceLink();
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+
+            if (targetState === 'open_import_level') {
+                openImportLevelModal();
                 isHamburgerMenuOpen = false;
                 return true;
             }
@@ -5638,8 +5981,8 @@ function drawStatusBar() {
     const availableTextWidth = canvas.width - 30 - reservedButtonSpace; // 15px left + 15px right padding
     
     // New layout: Set name and level number on separate lines, moves/pushes with centered undo
-    const setNameText = currentSet;
-    const levelNumberText = `Level ${currentLevelNumber}`;
+    const setNameText = isCustomLevelActive ? 'Custom' : currentSet;
+    const levelNumberText = isCustomLevelActive ? 'Level' : `Level ${currentLevelNumber}`;
 
     const getShortSetDisplayName = (setName) => {
         if (!setName) return '';
@@ -5917,6 +6260,8 @@ function drawLevelCompleteOverlay() {
     const buttonHeight = isMobile ? 30 : 35;
     const shareButtonSize = isMobile ? 35 : 45; // Same size as status bar buttons
     const nextButtonWidth = isMobile ? 120 : 140;
+    const replayButtonWidth = isMobile ? 90 : 110;
+    const exitButtonWidth = isMobile ? 90 : 110;
     const buttonSpacing = isMobile ? 15 : 20;
     
     // Calculate total height of share button including text below
@@ -5924,12 +6269,14 @@ function drawLevelCompleteOverlay() {
     const shareTextHeight = isMobile ? 10 : 12; // Font size of SHARE/COPIED text
     const shareTotalHeight = shareButtonSize + shareTextSpacing + shareTextHeight;
     
-    // Calculate positions to center both buttons - align share icon+text with Next Level button
-    const totalWidth = shareButtonSize + buttonSpacing + nextButtonWidth;
+    // Calculate positions to center buttons
+    const totalWidth = isCustomLevelActive
+        ? shareButtonSize + buttonSpacing + replayButtonWidth + buttonSpacing + exitButtonWidth
+        : shareButtonSize + buttonSpacing + nextButtonWidth;
     const startX = centerX - totalWidth / 2;
     
     const shareButtonX = startX;
-    const nextButtonX = startX + shareButtonSize + buttonSpacing;
+    const actionButtonX = startX + shareButtonSize + buttonSpacing;
     
     // Align the centers of both button elements (share icon+text vs next level button)
     const nextButtonCenterY = centerY + 25 + buttonHeight / 2; // Center of Next Level button
@@ -5944,12 +6291,31 @@ function drawLevelCompleteOverlay() {
         height: shareButtonSize
     };
     
-    window.nextLevelButtonBounds = {
-        x: nextButtonX,
-        y: buttonY,
-        width: nextButtonWidth,
-        height: buttonHeight
-    };
+    window.replayLevelButtonBounds = null;
+    window.exitCustomLevelButtonBounds = null;
+
+    if (isCustomLevelActive) {
+        window.nextLevelButtonBounds = null;
+        window.replayLevelButtonBounds = {
+            x: actionButtonX,
+            y: buttonY,
+            width: replayButtonWidth,
+            height: buttonHeight
+        };
+        window.exitCustomLevelButtonBounds = {
+            x: actionButtonX + replayButtonWidth + buttonSpacing,
+            y: buttonY,
+            width: exitButtonWidth,
+            height: buttonHeight
+        };
+    } else {
+        window.nextLevelButtonBounds = {
+            x: actionButtonX,
+            y: buttonY,
+            width: nextButtonWidth,
+            height: buttonHeight
+        };
+    }
     
     // Save canvas context state
     context.save();
@@ -5968,24 +6334,50 @@ function drawLevelCompleteOverlay() {
     context.textAlign = "center";
     context.fillText(shareText, shareButtonX + shareButtonSize / 2, shareTextY);
     
-    // Draw Next Level button background with glow
-    context.shadowColor = "#00ff00";
-    context.shadowBlur = 15;
-    context.fillStyle = "rgba(0, 255, 0, 0.2)";
-    context.fillRect(nextButtonX, buttonY, nextButtonWidth, buttonHeight);
-    
-    // Draw Next Level button border
-    context.strokeStyle = "#00ff00";
-    context.lineWidth = 2;
-    context.strokeRect(nextButtonX, buttonY, nextButtonWidth, buttonHeight);
-    context.shadowBlur = 0;
-    
-    // Draw Next Level button text
     const buttonFontSize = isMobile ? 12 : 14;
     context.font = `bold ${buttonFontSize}px Arial, system-ui, -apple-system, sans-serif`;
-    context.fillStyle = "#00ff00";
     context.textAlign = "center";
-    context.fillText("NEXT LEVEL", nextButtonX + nextButtonWidth / 2, buttonY + buttonHeight / 2 + 5);
+
+    if (isCustomLevelActive) {
+        // Replay button
+        context.shadowColor = "#00ff88";
+        context.shadowBlur = 15;
+        context.fillStyle = "rgba(0, 255, 136, 0.2)";
+        context.fillRect(window.replayLevelButtonBounds.x, buttonY, replayButtonWidth, buttonHeight);
+        context.strokeStyle = "#00ff88";
+        context.lineWidth = 2;
+        context.strokeRect(window.replayLevelButtonBounds.x, buttonY, replayButtonWidth, buttonHeight);
+
+        // Exit button
+        context.shadowColor = "#ffdd00";
+        context.shadowBlur = 15;
+        context.fillStyle = "rgba(255, 221, 0, 0.2)";
+        context.fillRect(window.exitCustomLevelButtonBounds.x, buttonY, exitButtonWidth, buttonHeight);
+        context.strokeStyle = "#ffdd00";
+        context.lineWidth = 2;
+        context.strokeRect(window.exitCustomLevelButtonBounds.x, buttonY, exitButtonWidth, buttonHeight);
+        context.shadowBlur = 0;
+
+        context.fillStyle = "#00ff88";
+        context.fillText("REPLAY", window.replayLevelButtonBounds.x + replayButtonWidth / 2, buttonY + buttonHeight / 2 + 5);
+
+        context.fillStyle = "#ffdd00";
+        context.fillText("EXIT", window.exitCustomLevelButtonBounds.x + exitButtonWidth / 2, buttonY + buttonHeight / 2 + 5);
+    } else {
+        // Draw Next Level button
+        context.shadowColor = "#00ff00";
+        context.shadowBlur = 15;
+        context.fillStyle = "rgba(0, 255, 0, 0.2)";
+        context.fillRect(actionButtonX, buttonY, nextButtonWidth, buttonHeight);
+
+        context.strokeStyle = "#00ff00";
+        context.lineWidth = 2;
+        context.strokeRect(actionButtonX, buttonY, nextButtonWidth, buttonHeight);
+        context.shadowBlur = 0;
+
+        context.fillStyle = "#00ff00";
+        context.fillText("NEXT LEVEL", actionButtonX + nextButtonWidth / 2, buttonY + buttonHeight / 2 + 5);
+    }
     
     // Restore canvas context state
     context.restore();
