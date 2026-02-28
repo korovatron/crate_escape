@@ -2217,6 +2217,98 @@ function jumpToHistoryEnd() {
 }
 
 // Solution generation function
+function getMoveCharFromDelta(dx, dy, isPush = false) {
+    let moveChar = '';
+
+    if (dx === -1) moveChar = 'l';
+    else if (dx === 1) moveChar = 'r';
+    else if (dy === -1) moveChar = 'u';
+    else if (dy === 1) moveChar = 'd';
+
+    if (!moveChar) return '';
+    return isPush ? moveChar.toUpperCase() : moveChar;
+}
+
+function didBoxMoveBetweenSnapshots(previousSnapshot, currentSnapshot) {
+    if (!previousSnapshot || !currentSnapshot || !previousSnapshot.boxes || !currentSnapshot.boxes) {
+        return false;
+    }
+
+    const boxCount = Math.min(previousSnapshot.boxes.length, currentSnapshot.boxes.length);
+    for (let i = 0; i < boxCount; i++) {
+        if (previousSnapshot.boxes[i].x !== currentSnapshot.boxes[i].x ||
+            previousSnapshot.boxes[i].y !== currentSnapshot.boxes[i].y) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function normalizeSolutionNotation(solutionString, setName = currentSet, levelNumber = currentLevelNumber) {
+    if (!solutionString || !setName || !levelNumber || typeof LevelManager === 'undefined') {
+        return solutionString || '';
+    }
+
+    const parsedLevel = LevelManager.getParsedLevel(setName, levelNumber);
+    if (!parsedLevel) {
+        return solutionString;
+    }
+
+    const wallSet = new Set(parsedLevel.walls.map(wall => `${wall.x},${wall.y}`));
+    const boxes = parsedLevel.boxes.map(box => ({ x: box.x, y: box.y }));
+    const boxSet = new Set(boxes.map(box => `${box.x},${box.y}`));
+    let simulatedPlayerPos = { x: parsedLevel.playerStart.x, y: parsedLevel.playerStart.y };
+
+    const normalizedMoves = [];
+
+    for (const rawChar of solutionString) {
+        const direction = getDirectionFromChar(rawChar);
+
+        // Preserve unknown characters as-is
+        if (!direction) {
+            normalizedMoves.push(rawChar);
+            continue;
+        }
+
+        const nextX = simulatedPlayerPos.x + direction.x;
+        const nextY = simulatedPlayerPos.y + direction.y;
+        const nextKey = `${nextX},${nextY}`;
+        const afterBoxX = nextX + direction.x;
+        const afterBoxY = nextY + direction.y;
+        const afterBoxKey = `${afterBoxX},${afterBoxY}`;
+
+        let isPush = false;
+
+        if (boxSet.has(nextKey)) {
+            // Attempt push
+            if (!wallSet.has(afterBoxKey) && !boxSet.has(afterBoxKey)) {
+                boxSet.delete(nextKey);
+                boxSet.add(afterBoxKey);
+
+                const movedBoxIndex = boxes.findIndex(box => box.x === nextX && box.y === nextY);
+                if (movedBoxIndex !== -1) {
+                    boxes[movedBoxIndex].x = afterBoxX;
+                    boxes[movedBoxIndex].y = afterBoxY;
+                }
+
+                simulatedPlayerPos = { x: nextX, y: nextY };
+                isPush = true;
+            }
+            // Invalid push, keep the original move in lowercase for stability
+        } else if (!wallSet.has(nextKey)) {
+            // Normal walk
+            simulatedPlayerPos = { x: nextX, y: nextY };
+        }
+        // Invalid walk into wall, keep lowercase move for stability
+
+        const moveChar = getMoveCharFromDelta(direction.x, direction.y, isPush);
+        normalizedMoves.push(moveChar || rawChar);
+    }
+
+    return normalizedMoves.join('');
+}
+
 function generateSolutionString() {
     if (historyPointer === 0 || moveHistory.length === 0) return "";
 
@@ -2228,11 +2320,9 @@ function generateSolutionString() {
         const currPos = fullHistory[i].playerPos;
         const dx = currPos.x - prevPos.x;
         const dy = currPos.y - prevPos.y;
-        
-        if (dx === -1) solutionMoves += 'l';
-        else if (dx === 1) solutionMoves += 'r';
-        else if (dy === -1) solutionMoves += 'u';
-        else if (dy === 1) solutionMoves += 'd';
+
+        const isPushMove = didBoxMoveBetweenSnapshots(fullHistory[i - 1], fullHistory[i]);
+        solutionMoves += getMoveCharFromDelta(dx, dy, isPushMove);
     }
     
     return solutionMoves;
@@ -2287,6 +2377,8 @@ async function copySavedSolutionToClipboard(levelProgressData) {
             console.warn("No saved solution to copy");
             return false;
         }
+
+        const normalizedSolution = normalizeSolutionNotation(levelProgressData.solution, currentSet, currentLevelNumber);
         
         // Format the saved solution output
         const solutionText = [
@@ -2295,7 +2387,7 @@ async function copySavedSolutionToClipboard(levelProgressData) {
             `Level: ${currentLevelNumber}`,
             `Moves: ${levelProgressData.bestMoves || '?'}`,
             `Pushes: ${levelProgressData.bestPushes || '?'}`,
-            `Solution: ${levelProgressData.solution}`
+            `Solution: ${normalizedSolution}`
         ].join('\n');
         
         // Copy to clipboard using modern API
