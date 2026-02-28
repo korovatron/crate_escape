@@ -1221,11 +1221,11 @@ function getImportLevelElements() {
         overlay: document.getElementById('importLevelOverlay'),
         textarea: document.getElementById('importLevelTextarea'),
         error: document.getElementById('importLevelError'),
+        closeButton: document.getElementById('importLevelCloseButton'),
         pasteButton: document.getElementById('importLevelPasteButton'),
         playButton: document.getElementById('importLevelPlayButton'),
         linkButton: document.getElementById('importLevelLinkButton'),
-        clearButton: document.getElementById('importLevelClearButton'),
-        cancelButton: document.getElementById('importLevelCancelButton')
+        clearButton: document.getElementById('importLevelClearButton')
     };
 }
 
@@ -1587,10 +1587,14 @@ function playImportedLevelFromModal() {
 }
 
 function initializeImportLevelModal() {
-    const { overlay, textarea, pasteButton, playButton, linkButton, clearButton, cancelButton } = getImportLevelElements();
+    const { overlay, textarea, closeButton, pasteButton, playButton, linkButton, clearButton } = getImportLevelElements();
     if (!overlay || overlay.dataset.bound === 'true') {
         return;
     }
+
+    closeButton?.addEventListener('click', () => {
+        closeImportLevelModal();
+    });
 
     textarea?.addEventListener('input', () => {
         scheduleSaveCustomLevelEditorText(textarea.value);
@@ -1614,16 +1618,6 @@ function initializeImportLevelModal() {
             scheduleSaveCustomLevelEditorText('');
             setImportLevelError('');
             textarea.focus();
-        }
-    });
-
-    cancelButton?.addEventListener('click', () => {
-        closeImportLevelModal();
-    });
-
-    overlay.addEventListener('mousedown', (event) => {
-        if (event.target === overlay) {
-            closeImportLevelModal();
         }
     });
 
