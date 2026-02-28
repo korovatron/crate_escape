@@ -3189,7 +3189,7 @@ function isClickOnMenuOption(x, y, optionIndex) {
     const menuX = 15;
     const menuY = 70; // Below hamburger menu
     const optionHeight = 40;
-    const optionWidth = 150;
+    const optionWidth = 200;
     
     const optionY = menuY + (optionIndex * optionHeight);
     
@@ -3199,8 +3199,14 @@ function isClickOnMenuOption(x, y, optionIndex) {
 
 // Helper function to get current menu configuration
 function getCurrentMenuConfig() {
-    const baseOptions = ["Home", "Instructions", "Cloud Sync"];
-    const baseGameStates = [GAME_STATES.TITLE, GAME_STATES.INSTRUCTIONS, GAME_STATES.CLOUD_SYNC];
+    const baseOptions = ["Home", "Instructions", "Cloud Sync", "Privacy Policy", "Terms of Service"];
+    const baseGameStates = [
+        GAME_STATES.TITLE,
+        GAME_STATES.INSTRUCTIONS,
+        GAME_STATES.CLOUD_SYNC,
+        'open_privacy_policy',
+        'open_terms_of_service'
+    ];
     
     // Add iOS Install option if user is on iOS Safari (regardless of dismissal)
     if (shouldShowIOSInstallMenuItem()) {
@@ -3224,6 +3230,18 @@ function handleMenuOptionClick(mouseX, mouseY) {
         if (isClickOnMenuOption(mouseX, mouseY, i)) {
             playSound('click');
             const targetState = menuConfig.gameStates[i];
+
+            if (targetState === 'open_privacy_policy') {
+                openPrivacyPolicyLink();
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+
+            if (targetState === 'open_terms_of_service') {
+                openTermsOfServiceLink();
+                isHamburgerMenuOpen = false;
+                return true;
+            }
             
             // Handle special cases
             if (targetState === GAME_STATES.TITLE) {
@@ -3316,6 +3334,14 @@ function openCreditsKorovatronLink() {
     if (popupWindow) {
         popupWindow.opener = null;
     }
+}
+
+function openPrivacyPolicyLink() {
+    window.location.href = './policies/privacy_policy.html';
+}
+
+function openTermsOfServiceLink() {
+    window.location.href = './policies/terms_of_service.html';
 }
 
 function isClickOnSignInButton(x, y) {
@@ -4464,7 +4490,7 @@ function drawHamburgerMenu() {
         const menuX = 15;
         const menuY = 70;
         const optionHeight = 40;
-        const optionWidth = 150;
+        const optionWidth = 200;
         
         // Use the same menu configuration as the click handler to ensure consistency
         const menuConfig = getCurrentMenuConfig();
