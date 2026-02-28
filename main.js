@@ -5564,17 +5564,6 @@ function drawStatusBar() {
     context.drawImage(restartIcon, restartButtonX, restartButtonY, buttonSize, buttonSize);
     context.restore();
     
-    // Draw attempt count in center of restart button
-    context.save();
-    context.font = isMobile ? "bold 12px Arial, system-ui, -apple-system, sans-serif" : "bold 16px Arial, system-ui, -apple-system, sans-serif";
-    context.fillStyle = "#FF9E0A"; // Orange color
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    const restartCenterX = restartButtonX + buttonSize / 2;
-    const restartCenterY = restartButtonY + buttonSize / 2;
-    context.fillText(attemptCount.toString(), restartCenterX, restartCenterY);
-    context.restore();
-    
     // Draw OVERVIEW button (leftmost when shown)
     if (showOverviewButton) {
         // Different appearance based on overview mode state (semi-transparent overlay)
