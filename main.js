@@ -48,10 +48,14 @@ document.addEventListener('keydown', (e) => {
     const isGoToEndShortcut = e.key === 'End' || isNumpadEnd;
     const isPrimaryActionKey = e.key === ' ' || e.key === 'Enter' || e.code === 'NumpadEnter';
 
-    if (isImportLevelModalOpen()) {
+    if (isAnyBlockingModalOpen()) {
         if (e.key === 'Escape') {
             e.preventDefault();
-            closeImportLevelModal();
+            if (isImportLevelModalOpen()) {
+                closeImportLevelModal();
+            } else if (isLegalModalOpen()) {
+                closeLegalModal();
+            }
         }
         return;
     }
@@ -312,7 +316,7 @@ function setupCanvasEventListeners() {
         }
 
         // Prevent click-through to canvas/game while modal is open
-        if (isImportLevelModalOpen()) {
+        if (isAnyBlockingModalOpen()) {
             return;
         }
         
@@ -1234,9 +1238,122 @@ function getImportLevelElements() {
     };
 }
 
+function getLegalModalElements() {
+    return {
+        overlay: document.getElementById('legalModalOverlay'),
+        closeButton: document.getElementById('legalModalCloseButton'),
+        title: document.getElementById('legalModalTitle'),
+        content: document.getElementById('legalModalContent')
+    };
+}
+
 function isImportLevelModalOpen() {
     const { overlay } = getImportLevelElements();
     return Boolean(overlay && overlay.style.display === 'flex');
+}
+
+function isLegalModalOpen() {
+    const { overlay } = getLegalModalElements();
+    return Boolean(overlay && overlay.style.display === 'flex');
+}
+
+function isAnyBlockingModalOpen() {
+    return isImportLevelModalOpen() || isLegalModalOpen();
+}
+
+const LEGAL_MODAL_CACHE = {
+    privacy: null,
+    terms: null
+};
+
+function closeLegalModal() {
+    const { overlay } = getLegalModalElements();
+    if (!overlay) {
+        return;
+    }
+
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden', 'true');
+}
+
+async function loadLegalModalContent(type) {
+    const legalConfig = {
+        privacy: {
+            title: 'Privacy Policy',
+            path: './policies/privacy_policy.html'
+        },
+        terms: {
+            title: 'Terms of Service',
+            path: './policies/terms_of_service.html'
+        }
+    };
+
+    const config = legalConfig[type];
+    if (!config) {
+        return { title: 'Legal', contentHtml: '<p>Unknown legal document.</p>' };
+    }
+
+    if (LEGAL_MODAL_CACHE[type]) {
+        return { title: config.title, contentHtml: LEGAL_MODAL_CACHE[type] };
+    }
+
+    try {
+        const response = await fetch(config.path, { cache: 'no-cache' });
+        if (!response.ok) {
+            throw new Error(`Failed to load ${config.path}`);
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        doc.querySelectorAll('script, .back-button, .back-link').forEach(element => element.remove());
+
+        const contentRoot = document.createElement('div');
+        Array.from(doc.body.children).forEach(child => {
+            contentRoot.appendChild(child.cloneNode(true));
+        });
+
+        const contentHtml = contentRoot.innerHTML || '<p>No content available.</p>';
+        LEGAL_MODAL_CACHE[type] = contentHtml;
+        return { title: config.title, contentHtml };
+    } catch (error) {
+        return {
+            title: config.title,
+            contentHtml: `<p>Could not load this document right now.</p><p><a href="${config.path}" target="_blank" rel="noopener noreferrer">Open in a new tab</a></p>`
+        };
+    }
+}
+
+async function openLegalModal(type) {
+    const { overlay, title, content } = getLegalModalElements();
+    if (!overlay || !title || !content) {
+        return;
+    }
+
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+
+    title.textContent = type === 'privacy' ? 'Privacy Policy' : 'Terms of Service';
+    content.innerHTML = '<p>Loading…</p>';
+
+    const loaded = await loadLegalModalContent(type);
+    title.textContent = loaded.title;
+    content.innerHTML = loaded.contentHtml;
+    content.scrollTop = 0;
+}
+
+function initializeLegalModal() {
+    const { overlay, closeButton } = getLegalModalElements();
+    if (!overlay || overlay.dataset.bound === 'true') {
+        return;
+    }
+
+    closeButton?.addEventListener('click', () => {
+        closeLegalModal();
+    });
+
+    overlay.dataset.bound = 'true';
 }
 
 function setImportLevelError(message) {
@@ -2245,6 +2362,7 @@ function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
     initializeImportLevelModal();
+    initializeLegalModal();
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
@@ -3886,11 +4004,11 @@ function openCreditsKorovatronLink() {
 }
 
 function openPrivacyPolicyLink() {
-    window.location.href = './policies/privacy_policy.html';
+    openLegalModal('privacy');
 }
 
 function openTermsOfServiceLink() {
-    window.location.href = './policies/terms_of_service.html';
+    openLegalModal('terms');
 }
 
 function isClickOnSignInButton(x, y) {
