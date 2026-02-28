@@ -428,6 +428,13 @@ function setupCanvasEventListeners() {
                     return;
                 }
             }
+
+            // Credits external link click
+            if (currentGameState === GAME_STATES.CREDITS && isClickOnCreditsKenneyLink(mouseX, mouseY)) {
+                playSound('click');
+                openCreditsKenneyLink();
+                return;
+            }
             
             // Check for cloud sync button clicks
             if (currentGameState === GAME_STATES.CLOUD_SYNC) {
@@ -595,6 +602,21 @@ function setupCanvasEventListeners() {
         clickCoordinates = `(${mouseX}, ${mouseY})`;
         lastInputTime = Date.now();
         inputFadeTimer = 2000;
+    });
+
+    document.addEventListener("mousemove", function (e) {
+        if (!canvas) {
+            return;
+        }
+
+        // Keep default cursor behavior when touch input is active
+        if (isUsingTouch) {
+            canvas.style.cursor = 'default';
+            return;
+        }
+
+        getMouseClickPosition(canvas, e);
+        updateCreditsLinkCursor(mouseX, mouseY);
     });
     
     // Window resize events
@@ -846,6 +868,13 @@ function setupCanvasEventListeners() {
                         if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
                             return;
                         }
+                    }
+
+                    // Credits external link tap
+                    if (currentGameState === GAME_STATES.CREDITS && isClickOnCreditsKenneyLink(canvasPos.x, canvasPos.y)) {
+                        playSound('click');
+                        openCreditsKenneyLink();
+                        return;
                     }
                     
                     // Check for back button click
@@ -3230,6 +3259,32 @@ function isClickOnIOSInstallDismissButton(x, y) {
            y >= button.y && y <= button.y + button.height;
 }
 
+function isClickOnCreditsKenneyLink(x, y) {
+    if (currentGameState !== GAME_STATES.CREDITS || !window.creditsKenneyLinkBounds) {
+        return false;
+    }
+
+    const bounds = window.creditsKenneyLinkBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
+function updateCreditsLinkCursor(x, y) {
+    if (!canvas) {
+        return;
+    }
+
+    const isHoveringKenneyLink = isClickOnCreditsKenneyLink(x, y);
+    canvas.style.cursor = isHoveringKenneyLink ? 'pointer' : 'default';
+}
+
+function openCreditsKenneyLink() {
+    const popupWindow = window.open('https://kenney.nl/', '_blank', 'noopener,noreferrer');
+    if (popupWindow) {
+        popupWindow.opener = null;
+    }
+}
+
 function isClickOnSignInButton(x, y) {
     // Check if we're on cloud sync screen and in the right state
     if (currentGameState !== GAME_STATES.CLOUD_SYNC) return false;
@@ -4543,11 +4598,14 @@ function drawCreditsScreen() {
     const credits = [
         "Game Design & Programming: Neil Kendall",
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
-        "Spritesheet: Kenney",
-        "Level Designs: David W Skinner & Ward De Langhe",
+        "Sokoban Skin: Kenney",
+        "Level Design: David W Skinner & Ward De Langhe",
         `Version: ${APP_VERSION}`,
         "Created 2025-2026"
     ];
+
+    // Reset interactive bounds; populated when the link row is drawn
+    window.creditsKenneyLinkBounds = null;
     
     // Calculate available space and adjust text size to fit
     const startY = 150;
@@ -4591,6 +4649,66 @@ function drawCreditsScreen() {
             context.fillStyle = "#FFFFFF"; // Brighter white for emphasis
             yPos = drawWrappedText(context, credits[i], canvas.width / 2, yPos, maxContentWidth, largeLineHeight);
             yPos += largeLineHeight * 0.8; // Gap after first line
+        } else if (i === 2) {
+            // Kenney source line with clickable URL rendered immediately to the right
+            const sourceText = credits[i];
+            const linkText = "https://kenney.nl/";
+            const linkGap = Math.max(10, textSize * 0.35);
+            const minLinkTextSize = isMobile ? 13 : 15;
+
+            let rowTextSize = textSize;
+            let rowLineHeight = lineHeight;
+            context.font = `400 ${rowTextSize}px Arial, system-ui, -apple-system, sans-serif`;
+
+            let sourceWidth = context.measureText(sourceText).width;
+            let linkWidth = context.measureText(linkText).width;
+            let combinedWidth = sourceWidth + linkGap + linkWidth;
+
+            if (combinedWidth > maxContentWidth) {
+                const shrinkFactor = maxContentWidth / combinedWidth;
+                rowTextSize = Math.max(minLinkTextSize, textSize * shrinkFactor);
+                rowLineHeight = rowTextSize * (lineHeight / textSize);
+                context.font = `400 ${rowTextSize}px Arial, system-ui, -apple-system, sans-serif`;
+                sourceWidth = context.measureText(sourceText).width;
+                linkWidth = context.measureText(linkText).width;
+                combinedWidth = sourceWidth + linkGap + linkWidth;
+            }
+
+            const rowStartX = (canvas.width - combinedWidth) / 2;
+            const linkX = rowStartX + sourceWidth + linkGap;
+            const isHoveringLink = !isUsingTouch &&
+                mouseX >= linkX && mouseX <= linkX + linkWidth &&
+                mouseY >= yPos - rowTextSize && mouseY <= yPos - rowTextSize + rowLineHeight;
+            const linkColor = isHoveringLink ? "#99DDFF" : "#66CCFF";
+            const underlineThickness = isHoveringLink
+                ? Math.max(2, rowTextSize * 0.08)
+                : Math.max(1, rowTextSize * 0.06);
+
+            context.textAlign = "left";
+            context.fillStyle = "#CCCCCC";
+            context.fillText(sourceText, rowStartX, yPos);
+
+            context.fillStyle = linkColor;
+            context.fillText(linkText, linkX, yPos);
+
+            const underlineY = yPos + Math.max(2, rowTextSize * 0.14);
+            context.strokeStyle = linkColor;
+            context.lineWidth = underlineThickness;
+            context.beginPath();
+            context.moveTo(linkX, underlineY);
+            context.lineTo(linkX + linkWidth, underlineY);
+            context.stroke();
+
+            window.creditsKenneyLinkBounds = {
+                x: linkX,
+                y: yPos - rowTextSize,
+                width: linkWidth,
+                height: rowLineHeight
+            };
+
+            context.textAlign = "center";
+            yPos += rowLineHeight;
+            yPos += lineHeight * 0.6;
         } else {
             // Rest of the credits - normal size
             context.font = `400 ${textSize}px Arial, system-ui, -apple-system, sans-serif`;
