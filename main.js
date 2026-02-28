@@ -5399,37 +5399,41 @@ function drawStatusBar() {
     // New layout: Set name and level number on separate lines, moves/pushes with centered undo
     const setNameText = currentSet;
     const levelNumberText = `Level ${currentLevelNumber}`;
-    
+
+    const getShortSetDisplayName = (setName) => {
+        if (!setName) return '';
+
+        const aliasMap = {
+            Microban: 'MB',
+            Sasquatch: 'SQ',
+            Magic_Pearls: 'MP'
+        };
+
+        const parts = setName.split('_').filter(Boolean);
+        if (parts.length === 0) return setName;
+
+        const lastPart = parts[parts.length - 1];
+        const hasRomanSuffix = /^[IVXLCDM]+$/i.test(lastPart);
+        const baseParts = hasRomanSuffix ? parts.slice(0, -1) : parts;
+        const romanSuffix = hasRomanSuffix ? `_${lastPart}` : '';
+        const baseKey = baseParts.join('_');
+
+        const shortBase = aliasMap[baseKey] || baseParts.map(part => part.charAt(0)).join('').toUpperCase();
+        return `${shortBase}${romanSuffix}`;
+    };
+
+    const shortSetDisplayText = getShortSetDisplayName(setNameText);
+
     // Use bright yellow for both set name and level number
-    const setDisplayText = setNameText; // Remove overview indicator
     const setColor = "#ffff00"; // Bright yellow
     const levelColor = "#ffff00"; // Bright yellow
-    
+
     // Left side: Set name (top) and level number (bottom)
     // Temporarily switch to Arial for level display
-    const currentFont = context.font;
     const levelLabelFont = isMobile
         ? "bold 14px Arial, system-ui, -apple-system, sans-serif"
         : "bold 18px Arial, system-ui, -apple-system, sans-serif";
     const levelLabelX = 65;
-
-    if (!isVeryNarrowMobilePortrait) {
-        context.font = levelLabelFont;
-        drawNeonText(setDisplayText, levelLabelX, 25, setColor, setColor);
-        drawNeonText(levelNumberText, levelLabelX, 45, levelColor, levelColor);
-    } else {
-        // On very narrow portrait screens, keep the header row clear and show
-        // subtle inline level metadata just below the yellow separator.
-        const inlineMetaText = `${setDisplayText} • ${levelNumberText}`;
-        context.save();
-        context.globalAlpha = 0.55;
-        context.font = "bold 16px Arial, system-ui, -apple-system, sans-serif";
-        context.textAlign = "left";
-        drawNeonText(inlineMetaText, 12, STATUS_BAR_HEIGHT + 18, setColor, setColor);
-        context.restore();
-    }
-    // Restore original font
-    context.font = currentFont;
     
     // Center area: Move count, UNDO button, Push count
     const iconSize = isMobile ? 30 : 40; // Match original icon size
@@ -5464,6 +5468,35 @@ function drawStatusBar() {
     // Position numbers relative to the icons (original logic)
     const moveCountX = footprintIconX - numberPadding - moveTextWidth / 2;
     const pushCountX = boxIconX + iconSize + numberPadding + pushTextWidth / 2;
+
+    // Draw level metadata in the same header position for all screen sizes,
+    // using a compact fallback when horizontal space is tight.
+    const currentFont = context.font;
+    const currentAlign = context.textAlign;
+    context.font = levelLabelFont;
+    context.textAlign = "left";
+
+    const shortLevelNumberText = `LV ${currentLevelNumber}`;
+    const maxLabelWidth = Math.max(60, moveCountX - levelLabelX - 14);
+
+    const longLabelWidth = Math.max(
+        context.measureText(setNameText).width,
+        context.measureText(levelNumberText).width
+    );
+    const shortLabelWidth = Math.max(
+        context.measureText(shortSetDisplayText).width,
+        context.measureText(shortLevelNumberText).width
+    );
+
+    const useShortLabels = longLabelWidth > maxLabelWidth && shortLabelWidth <= maxLabelWidth;
+    const activeSetLabel = useShortLabels ? shortSetDisplayText : setNameText;
+    const activeLevelLabel = useShortLabels ? shortLevelNumberText : levelNumberText;
+
+    drawNeonText(activeSetLabel, levelLabelX, 25, setColor, setColor);
+    drawNeonText(activeLevelLabel, levelLabelX, 45, levelColor, levelColor);
+
+    context.font = currentFont;
+    context.textAlign = currentAlign;
     
     // Position undo and redo buttons in the center
     const undoButtonX = clusterCenterX - buttonSize - centerButtonSpacing / 2;
