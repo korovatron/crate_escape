@@ -3199,13 +3199,11 @@ function isClickOnMenuOption(x, y, optionIndex) {
 
 // Helper function to get current menu configuration
 function getCurrentMenuConfig() {
-    const baseOptions = ["Home", "Instructions", "Cloud Sync", "Privacy Policy", "Terms of Service"];
+    const baseOptions = ["Home", "Instructions", "Cloud Sync"];
     const baseGameStates = [
         GAME_STATES.TITLE,
         GAME_STATES.INSTRUCTIONS,
-        GAME_STATES.CLOUD_SYNC,
-        'open_privacy_policy',
-        'open_terms_of_service'
+        GAME_STATES.CLOUD_SYNC
     ];
     
     // Add iOS Install option if user is on iOS Safari (regardless of dismissal)
@@ -3217,6 +3215,10 @@ function getCurrentMenuConfig() {
     // Add Credits at the end
     baseOptions.push("Credits");
     baseGameStates.push(GAME_STATES.CREDITS);
+
+    // Add legal links at the bottom
+    baseOptions.push("Privacy Policy", "Terms of Service");
+    baseGameStates.push('open_privacy_policy', 'open_terms_of_service');
     
     return { options: baseOptions, gameStates: baseGameStates };
 }
