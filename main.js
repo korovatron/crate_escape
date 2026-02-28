@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.25';
+const APP_VERSION = '1.1.26';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -3697,13 +3697,13 @@ function getCurrentMenuConfig() {
         baseGameStates.splice(2, 0, GAME_STATES.IOS_INSTALL);
     }
     
-    // Add Credits at the end
-    baseOptions.push("Credits");
-    baseGameStates.push(GAME_STATES.CREDITS);
-
     // Custom level import
     baseOptions.push("Import Level");
     baseGameStates.push('open_import_level');
+
+    // Add Credits after import
+    baseOptions.push("Credits");
+    baseGameStates.push(GAME_STATES.CREDITS);
 
     // Add legal links at the bottom
     baseOptions.push("Privacy Policy", "Terms of Service");
