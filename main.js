@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.28';
+const APP_VERSION = '1.1.29';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -4924,23 +4924,23 @@ function drawTitleScreen() {
         height: buttonHeight
     };
     
-    // Draw button background with glow effect
+    // Draw button background with modal PLAY LEVEL style treatment
     context.save();
-    context.shadowColor = "#88CC88"; // Green shadow
-    context.shadowBlur = 15 * pulse;
-    context.fillStyle = `rgba(34, 139, 34, ${0.8 + pulse * 0.2})`; // Forest green with pulsing alpha
+    context.shadowColor = `rgba(0, 255, 136, ${0.25 + pulse * 0.2})`;
+    context.shadowBlur = 10 * pulse;
+    context.fillStyle = "#102318";
     context.beginPath();
-    context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10);
+    context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 6);
     context.fill();
     
     // Draw button border
-    context.strokeStyle = `rgba(136, 204, 136, ${pulse})`;
+    context.strokeStyle = `rgba(0, 255, 136, ${0.7 + pulse * 0.3})`;
     context.lineWidth = 2;
     context.stroke();
     
     // Draw button text
-    context.shadowBlur = 8 * pulse;
-    context.fillStyle = "#FFFFFF";
+    context.shadowBlur = 0;
+    context.fillStyle = "#d6ffe9";
     context.textAlign = "center";
     context.textBaseline = "middle"; // Center text vertically
     const textCenterY = buttonY + buttonHeight / 2 + buttonTextSize * 0.1; // Slight adjustment for visual centering
