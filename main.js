@@ -1277,6 +1277,106 @@ function closeLegalModal() {
 }
 
 async function loadLegalModalContent(type) {
+    if (type === 'instructions') {
+        const instructions = isTouchDevice()
+            ? [
+                'Push all crates onto their goal positions',
+                'Swipe to move',
+                'You can only push crates, not pull them'
+            ]
+            : [
+                'Push all crates onto their goal positions',
+                'Use arrow keys to move',
+                'You can only push crates, not pull them',
+                'Use the undo and redo buttons to step backward/forward through moves',
+                'Keyboard controls: Arrow keys (move), R/Home (reset), ESC (back)',
+                'Undo keys: U, Backspace, Delete',
+                'Redo key: Insert (including Numpad Insert)',
+                'Reset to start: Home, R (including Numpad Home)',
+                'Jump to latest move: End (including Numpad End)'
+            ];
+
+        const listMarkup = instructions.map(item => `<li>${item}</li>`).join('');
+        return {
+            title: 'Instructions',
+            contentHtml: `<ul>${listMarkup}</ul>`
+        };
+    }
+
+    if (type === 'credits') {
+        return {
+            title: 'Credits',
+            contentHtml: `
+                <p><strong>Game Design & Programming:</strong> Neil Kendall</p>
+                <p><strong>Sokoban Puzzle Game Concept:</strong> Hiroyuki Imabayashi</p>
+                <p><strong>Sokoban Skin:</strong> <a href="https://kenney.nl/" target="_blank" rel="noopener noreferrer">Kenney</a></p>
+                <p><strong>Level Design:</strong> David W Skinner & Ward De Langhe</p>
+                <p><strong>Version:</strong> ${APP_VERSION}</p>
+                <p><strong>Copyright © 2025-2026</strong> Neil Kendall</p>
+                <p><strong>More @</strong> <a href="https://www.korovatron.co.uk/" target="_blank" rel="noopener noreferrer">www.korovatron.co.uk</a></p>
+            `
+        };
+    }
+
+    if (type === 'cloud_sync') {
+        if (window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
+            const displayName = window.firebaseAuth.currentUser?.displayName || window.firebaseAuth.currentUser?.email || 'Signed-in player';
+            return {
+                title: 'Cloud Sync',
+                contentHtml: `
+                    <p><strong style="color:#88CC88;">✓ Signed in and syncing</strong></p>
+                    <p>Welcome, ${displayName}</p>
+                    <p>Your progress is automatically backed up to the cloud.</p>
+                    <div class="legal-modal-actions">
+                        <button id="cloudSyncSignOutModalButton" class="import-level-button" type="button">Sign Out</button>
+                    </div>
+                `
+            };
+        }
+
+        if (window.firebaseAuth === undefined || cloudSyncState === 'checking') {
+            return {
+                title: 'Cloud Sync',
+                contentHtml: '<p><strong style="color:#FFCC00;">Loading cloud services…</strong></p>'
+            };
+        }
+
+        if (cloudSyncState === 'signing_in') {
+            return {
+                title: 'Cloud Sync',
+                contentHtml: '<p><strong style="color:#4285F4;">Signing in with Google…</strong></p><p>Please complete the popup sign-in flow.</p>'
+            };
+        }
+
+        if (cloudSyncState === 'error') {
+            return {
+                title: 'Cloud Sync',
+                contentHtml: `
+                    <p><strong style="color:#ff9f9f;">Cloud sign-in failed.</strong></p>
+                    <p>Please try again.</p>
+                    <div class="legal-modal-actions">
+                        <button id="cloudSyncSignInModalButton" class="import-level-button primary" type="button">Sign In</button>
+                    </div>
+                `
+            };
+        }
+
+        return {
+            title: 'Cloud Sync',
+            contentHtml: `
+                <p>Sign in to sync your progress:</p>
+                <ul>
+                    <li>Never lose your progress</li>
+                    <li>Play on multiple devices</li>
+                    <li>Automatic cloud backup</li>
+                </ul>
+                <div class="legal-modal-actions">
+                    <button id="cloudSyncSignInModalButton" class="import-level-button primary" type="button">Sign In With Google</button>
+                </div>
+            `
+        };
+    }
+
     const legalConfig = {
         privacy: {
             title: 'Privacy Policy',
@@ -1334,13 +1434,38 @@ async function openLegalModal(type) {
     overlay.style.display = 'flex';
     overlay.setAttribute('aria-hidden', 'false');
 
-    title.textContent = type === 'privacy' ? 'Privacy Policy' : 'Terms of Service';
+    const titleLookup = {
+        privacy: 'Privacy Policy',
+        terms: 'Terms of Service',
+        instructions: 'Instructions',
+        credits: 'Credits',
+        cloud_sync: 'Cloud Sync'
+    };
+
+    title.textContent = titleLookup[type] || 'Legal';
     content.innerHTML = '<p>Loading…</p>';
 
     const loaded = await loadLegalModalContent(type);
     title.textContent = loaded.title;
     content.innerHTML = loaded.contentHtml;
     content.scrollTop = 0;
+
+    if (type === 'cloud_sync') {
+        const signInButton = document.getElementById('cloudSyncSignInModalButton');
+        const signOutButton = document.getElementById('cloudSyncSignOutModalButton');
+
+        signInButton?.addEventListener('click', async () => {
+            playSound('click');
+            await startGoogleSignIn();
+            await openLegalModal('cloud_sync');
+        });
+
+        signOutButton?.addEventListener('click', async () => {
+            playSound('click');
+            await signOutFromCloud();
+            await openLegalModal('cloud_sync');
+        });
+    }
 }
 
 function initializeLegalModal() {
@@ -3857,8 +3982,8 @@ function getCurrentMenuConfig() {
     const baseOptions = ["Home", "Instructions", "Cloud Sync"];
     const baseGameStates = [
         GAME_STATES.TITLE,
-        GAME_STATES.INSTRUCTIONS,
-        GAME_STATES.CLOUD_SYNC
+        'open_instructions_modal',
+        'open_cloud_sync_modal'
     ];
     
     // Add iOS Install option if user is on iOS Safari (regardless of dismissal)
@@ -3873,7 +3998,7 @@ function getCurrentMenuConfig() {
 
     // Add Credits after import
     baseOptions.push("Credits");
-    baseGameStates.push(GAME_STATES.CREDITS);
+    baseGameStates.push('open_credits_modal');
 
     // Add legal links at the bottom
     baseOptions.push("Privacy Policy", "Terms of Service");
@@ -3906,6 +4031,24 @@ function handleMenuOptionClick(mouseX, mouseY) {
 
             if (targetState === 'open_import_level') {
                 openImportLevelModal();
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+
+            if (targetState === 'open_instructions_modal') {
+                openLegalModal('instructions');
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+
+            if (targetState === 'open_credits_modal') {
+                openLegalModal('credits');
+                isHamburgerMenuOpen = false;
+                return true;
+            }
+
+            if (targetState === 'open_cloud_sync_modal') {
+                openLegalModal('cloud_sync');
                 isHamburgerMenuOpen = false;
                 return true;
             }
@@ -5200,10 +5343,12 @@ function drawHamburgerMenu() {
             context.fillText(options[i], menuX + 10, textY);
             
             // Add authentication status indicator for Cloud Sync option
-            if (gameStates[i] === GAME_STATES.CLOUD_SYNC) { // Check by game state instead of index
+            const isCloudSyncOption = gameStates[i] === 'open_cloud_sync_modal' || gameStates[i] === GAME_STATES.CLOUD_SYNC;
+            if (isCloudSyncOption) {
                 const isSignedIn = window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser;
-                const indicator = isSignedIn ? "✓" : "✗";
-                const indicatorColor = isSignedIn ? "#00FF00" : "#FF0000"; // Green tick or red cross
+                const isLoadingSync = cloudSyncState === 'checking' || cloudSyncState === 'signing_in';
+                const indicator = isSignedIn ? "✓" : (isLoadingSync ? "…" : "✗");
+                const indicatorColor = isSignedIn ? "#00FF00" : (isLoadingSync ? "#FFCC00" : "#FF0000");
                 
                 // Calculate position for indicator (right side of menu)
                 const indicatorX = menuX + optionWidth - 25;
