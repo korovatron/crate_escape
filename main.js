@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.23';
+const APP_VERSION = '1.1.24';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1218,6 +1218,7 @@ function getImportLevelElements() {
         error: document.getElementById('importLevelError'),
         pasteButton: document.getElementById('importLevelPasteButton'),
         playButton: document.getElementById('importLevelPlayButton'),
+        linkButton: document.getElementById('importLevelLinkButton'),
         cancelButton: document.getElementById('importLevelCancelButton')
     };
 }
@@ -1230,8 +1231,53 @@ function isImportLevelModalOpen() {
 function setImportLevelError(message) {
     const { error } = getImportLevelElements();
     if (error) {
+        error.style.color = '#ff9f9f';
         error.textContent = message || '';
     }
+}
+
+function setImportLevelSuccess(message) {
+    const { error } = getImportLevelElements();
+    if (error) {
+        error.style.color = '#9fffbf';
+        error.textContent = message || '';
+    }
+}
+
+function encodeTextToBase64Url(inputText) {
+    const bytes = new TextEncoder().encode(inputText);
+    let binary = '';
+    for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
+    }
+
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+}
+
+function decodeBase64UrlToText(encodedText) {
+    const base64 = encodedText
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const padding = base64.length % 4;
+    const padded = padding ? base64 + '='.repeat(4 - padding) : base64;
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index++) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new TextDecoder().decode(bytes);
+}
+
+function buildCustomLevelLink(levelRows) {
+    const levelText = levelRows.join('\n');
+    const encodedLevel = encodeTextToBase64Url(levelText);
+    return `${window.location.origin}${window.location.pathname}#level=${encodedLevel}`;
 }
 
 function openImportLevelModal() {
@@ -1383,6 +1429,96 @@ async function pasteClipboardIntoImportModal() {
     }
 }
 
+async function copyTextToClipboard(text) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return copied;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function copyCustomLevelLinkFromModal() {
+    const { textarea } = getImportLevelElements();
+    if (!textarea) {
+        return;
+    }
+
+    const parsedResult = parseImportedLevelText(textarea.value);
+    if (!parsedResult.isValid) {
+        setImportLevelError(parsedResult.error);
+        return;
+    }
+
+    const link = buildCustomLevelLink(parsedResult.rows);
+    const copied = await copyTextToClipboard(link);
+
+    if (!copied) {
+        setImportLevelError('Could not copy link automatically.');
+        return;
+    }
+
+    setImportLevelSuccess('Level link copied to clipboard.');
+}
+
+function tryLoadCustomLevelFromUrlHash() {
+    const hash = window.location.hash.startsWith('#')
+        ? window.location.hash.substring(1)
+        : window.location.hash;
+
+    if (!hash) {
+        return false;
+    }
+
+    const params = new URLSearchParams(hash);
+    const encodedLevel = params.get('level');
+    if (!encodedLevel) {
+        return false;
+    }
+
+    try {
+        const decodedLevel = decodeBase64UrlToText(encodedLevel);
+        const parsedResult = parseImportedLevelText(decodedLevel);
+        if (!parsedResult.isValid) {
+            console.warn('Invalid custom level in URL hash:', parsedResult.error);
+            return false;
+        }
+
+        customLevelRows = parsedResult.rows;
+        isCustomLevelActive = true;
+        currentSet = CUSTOM_SET_NAME;
+        currentLevelNumber = CUSTOM_LEVEL_NUMBER;
+        showSolutionButton = false;
+        solutionCopiedState = false;
+
+        const loaded = loadCustomLevel(false);
+        if (!loaded) {
+            return false;
+        }
+
+        currentGameState = GAME_STATES.PLAYING;
+        launchedFromCustomLevelLink = true;
+        return true;
+    } catch (error) {
+        console.warn('Failed to decode custom level from URL hash:', error);
+        return false;
+    }
+}
+
 function playImportedLevelFromModal() {
     const { textarea } = getImportLevelElements();
     if (!textarea) {
@@ -1414,7 +1550,7 @@ function playImportedLevelFromModal() {
 }
 
 function initializeImportLevelModal() {
-    const { overlay, pasteButton, playButton, cancelButton } = getImportLevelElements();
+    const { overlay, pasteButton, playButton, linkButton, cancelButton } = getImportLevelElements();
     if (!overlay || overlay.dataset.bound === 'true') {
         return;
     }
@@ -1425,6 +1561,10 @@ function initializeImportLevelModal() {
 
     playButton?.addEventListener('click', () => {
         playImportedLevelFromModal();
+    });
+
+    linkButton?.addEventListener('click', () => {
+        copyCustomLevelLinkFromModal();
     });
 
     cancelButton?.addEventListener('click', () => {
@@ -1565,6 +1705,7 @@ const CUSTOM_LEVEL_NUMBER = 1;
 let isCustomLevelActive = false;
 let customLevelRows = [];
 let customThemeIndex = 0;
+let launchedFromCustomLevelLink = false;
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
@@ -2055,6 +2196,7 @@ function createCanvas() {
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
+    tryLoadCustomLevelFromUrlHash();
     
     // Initialize font loading overlay to prevent font flicker
     initializeFontLoadingOverlay();
@@ -2079,7 +2221,7 @@ function createCanvas() {
             const lastPlayed = await loadLastPlayedLevel();
             console.log('Last played query result:', lastPlayed);
             
-            if (lastPlayed) {
+            if (lastPlayed && !launchedFromCustomLevelLink) {
                 // If player has played before, set the level selector to their last played level
                 currentSet = lastPlayed.setName;
                 currentLevelNumber = lastPlayed.levelNumber;
@@ -2087,7 +2229,7 @@ function createCanvas() {
                 hasLastPlayedLevel = true;
                 
                 console.log(`Set level selector to last played: ${currentSet} level ${currentLevelNumber}`);
-            } else {
+            } else if (!launchedFromCustomLevelLink) {
                 // First time player - ensure we start with the first set from levels.js
                 const firstSetName = Object.keys(SOKOBAN_LEVELS)[0];
                 currentSet = firstSetName;
@@ -2096,6 +2238,8 @@ function createCanvas() {
                 currentLevelPage = 0;
                 
                 console.log(`New player - starting with first set: ${currentSet}`);
+            } else {
+                console.log('Skipping last-played preload because custom level link is active');
             }
         } else {
             console.log('Database not available, using defaults');
