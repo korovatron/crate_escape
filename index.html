@@ -175,6 +175,89 @@
     .sr-only li {
       margin: 0;
     }
+
+        .import-level-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.78);
+            z-index: 9999;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        .import-level-modal {
+            width: min(760px, 96vw);
+            max-height: 92vh;
+            overflow: auto;
+            background: #0b0b0b;
+            border: 2px solid #00aaff;
+            border-radius: 10px;
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            padding: 16px;
+            color: #e6f7ff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+        }
+
+        .import-level-modal h2 {
+            margin: 0 0 10px 0;
+            color: #00ccff;
+            font-size: 1.3rem;
+        }
+
+        .import-level-modal p {
+            margin: 0 0 10px 0;
+            color: #c8d8df;
+            font-size: 0.95rem;
+            line-height: 1.35;
+        }
+
+        .import-level-textarea {
+            width: 100%;
+            min-height: 220px;
+            resize: vertical;
+            background: #111;
+            color: #fff;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.25;
+        }
+
+        .import-level-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .import-level-button {
+            border: 1px solid #00aaff;
+            background: #0f1720;
+            color: #dff7ff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .import-level-button.primary {
+            border-color: #00ff88;
+            color: #d6ffe9;
+            background: #102318;
+        }
+
+        .import-level-error {
+            margin-top: 10px;
+            color: #ff9f9f;
+            min-height: 1.2em;
+            font-size: 0.92rem;
+        }
   </style>
 </head>
 
@@ -206,6 +289,20 @@
         <p>Your browser does not support the HTML5 canvas tag. Please upgrade to a modern browser to play The Crate Escape.</p>
         <p>Alternative: Try our other puzzle games at <a href="https://www.korovatron.co.uk/">Korovatron Games</a></p>
     </canvas>
+
+        <div id="importLevelOverlay" class="import-level-overlay" aria-hidden="true">
+            <div class="import-level-modal" role="dialog" aria-modal="true" aria-labelledby="importLevelTitle">
+                <h2 id="importLevelTitle">Import Custom Level</h2>
+                <p>Paste or type a Sokoban text level below using symbols like #, @, $, ., *, + and spaces.</p>
+                <textarea id="importLevelTextarea" class="import-level-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+                <div class="import-level-actions">
+                    <button id="importLevelPasteButton" class="import-level-button" type="button">Paste Clipboard</button>
+                    <button id="importLevelPlayButton" class="import-level-button primary" type="button">Play Level</button>
+                    <button id="importLevelCancelButton" class="import-level-button" type="button">Cancel</button>
+                </div>
+                <div id="importLevelError" class="import-level-error" aria-live="polite"></div>
+            </div>
+        </div>
 
     <script src="levels.js"></script>
     <script type="module" src="firebase-config.js"></script>
