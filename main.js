@@ -1219,6 +1219,7 @@ function getImportLevelElements() {
         pasteButton: document.getElementById('importLevelPasteButton'),
         playButton: document.getElementById('importLevelPlayButton'),
         linkButton: document.getElementById('importLevelLinkButton'),
+        clearButton: document.getElementById('importLevelClearButton'),
         cancelButton: document.getElementById('importLevelCancelButton')
     };
 }
@@ -1242,6 +1243,18 @@ function setImportLevelSuccess(message) {
         error.style.color = '#9fffbf';
         error.textContent = message || '';
     }
+}
+
+function scheduleSaveCustomLevelEditorText(text) {
+    customLevelEditorDraft = typeof text === 'string' ? text : '';
+
+    if (customLevelEditorSaveTimeout) {
+        clearTimeout(customLevelEditorSaveTimeout);
+    }
+
+    customLevelEditorSaveTimeout = setTimeout(() => {
+        saveSetting(CUSTOM_LEVEL_EDITOR_DRAFT_KEY, customLevelEditorDraft);
+    }, 250);
 }
 
 function encodeTextToBase64Url(inputText) {
@@ -1287,7 +1300,12 @@ function openImportLevelModal() {
     }
 
     if (launchedFromCustomLevelLink && Array.isArray(customLevelRows) && customLevelRows.length > 0) {
-        textarea.value = customLevelRows.join('\n');
+        const linkedLevelText = customLevelRows.join('\n');
+        if (textarea.value !== linkedLevelText) {
+            textarea.value = linkedLevelText;
+        }
+    } else if (!textarea.value && customLevelEditorDraft) {
+        textarea.value = customLevelEditorDraft;
     }
 
     overlay.style.display = 'flex';
@@ -1426,6 +1444,7 @@ async function pasteClipboardIntoImportModal() {
         const clipboardText = await navigator.clipboard.readText();
         if (clipboardText) {
             textarea.value = clipboardText;
+            scheduleSaveCustomLevelEditorText(textarea.value);
             setImportLevelError('');
         }
     } catch (error) {
@@ -1507,6 +1526,7 @@ function tryLoadCustomLevelFromUrlHash() {
         }
 
         customLevelRows = parsedResult.rows;
+        customLevelEditorDraft = parsedResult.rows.join('\n');
         isCustomLevelActive = true;
         currentSet = CUSTOM_SET_NAME;
         currentLevelNumber = CUSTOM_LEVEL_NUMBER;
@@ -1544,6 +1564,7 @@ function playImportedLevelFromModal() {
     }
 
     customLevelRows = parsedResult.rows;
+    scheduleSaveCustomLevelEditorText(textarea.value);
     isCustomLevelActive = true;
     currentSet = CUSTOM_SET_NAME;
     currentLevelNumber = CUSTOM_LEVEL_NUMBER;
@@ -1562,10 +1583,14 @@ function playImportedLevelFromModal() {
 }
 
 function initializeImportLevelModal() {
-    const { overlay, pasteButton, playButton, linkButton, cancelButton } = getImportLevelElements();
+    const { overlay, textarea, pasteButton, playButton, linkButton, clearButton, cancelButton } = getImportLevelElements();
     if (!overlay || overlay.dataset.bound === 'true') {
         return;
     }
+
+    textarea?.addEventListener('input', () => {
+        scheduleSaveCustomLevelEditorText(textarea.value);
+    });
 
     pasteButton?.addEventListener('click', () => {
         pasteClipboardIntoImportModal();
@@ -1577,6 +1602,15 @@ function initializeImportLevelModal() {
 
     linkButton?.addEventListener('click', () => {
         copyCustomLevelLinkFromModal();
+    });
+
+    clearButton?.addEventListener('click', () => {
+        if (textarea) {
+            textarea.value = '';
+            scheduleSaveCustomLevelEditorText('');
+            setImportLevelError('');
+            textarea.focus();
+        }
     });
 
     cancelButton?.addEventListener('click', () => {
@@ -1714,10 +1748,13 @@ let currentSet = Object.keys(SOKOBAN_LEVELS)[0]; // Start with first set from le
 let currentLevelNumber = 1; // Start with level 1
 const CUSTOM_SET_NAME = 'Custom';
 const CUSTOM_LEVEL_NUMBER = 1;
+const CUSTOM_LEVEL_EDITOR_DRAFT_KEY = 'customLevelEditorText';
 let isCustomLevelActive = false;
 let customLevelRows = [];
 let customThemeIndex = 0;
 let launchedFromCustomLevelLink = false;
+let customLevelEditorDraft = '';
+let customLevelEditorSaveTimeout = null;
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
@@ -2228,6 +2265,14 @@ function createCanvas() {
             const savedIOSInstallState = await loadSetting('hasAcknowledgedIOSInstall', false);
             hasAcknowledgedIOSInstall = savedIOSInstallState;
             console.log('iOS install notification state loaded:', hasAcknowledgedIOSInstall);
+
+            // Load saved custom-level editor draft (local only)
+            const savedCustomEditorDraft = await loadSetting(CUSTOM_LEVEL_EDITOR_DRAFT_KEY, '');
+            if (!launchedFromCustomLevelLink && typeof savedCustomEditorDraft === 'string') {
+                customLevelEditorDraft = savedCustomEditorDraft;
+            } else if (launchedFromCustomLevelLink && customLevelEditorDraft) {
+                saveSetting(CUSTOM_LEVEL_EDITOR_DRAFT_KEY, customLevelEditorDraft);
+            }
             
             // Load last played level to set initial level selector position
             const lastPlayed = await loadLastPlayedLevel();
