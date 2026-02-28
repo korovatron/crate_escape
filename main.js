@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.32';
+const APP_VERSION = '1.1.33';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1286,28 +1286,37 @@ function closeLegalModal() {
 
 async function loadLegalModalContent(type) {
     if (type === 'instructions') {
-        const instructions = isTouchDevice()
-            ? [
-                'Push all crates onto their goal positions',
-                'Swipe to move',
-                'You can only push crates, not pull them'
-            ]
-            : [
-                'Push all crates onto their goal positions',
-                'Use arrow keys or WASD to move',
-                'You can only push crates, not pull them',
-                'Use the undo and redo buttons to step backward/forward through moves',
-                'Keyboard controls: Arrow keys/WASD (move), R/Home (reset), ESC (back)',
-                'Undo keys: U, Backspace, Delete',
-                'Redo key: Insert (including Numpad Insert)',
-                'Reset to start: Home, R (including Numpad Home)',
-                'Jump to latest move: End (including Numpad End)'
-            ];
-
-        const listMarkup = instructions.map(item => `<li>${item}</li>`).join('');
         return {
             title: 'Instructions',
-            contentHtml: `<ul>${listMarkup}</ul>`
+            contentHtml: `
+                <p><strong>Goal</strong></p>
+                <ul>
+                    <li>Push all crates onto their goal positions.</li>
+                    <li>You can push crates, but you cannot pull them.</li>
+                </ul>
+
+                <p><strong>Controls</strong></p>
+                <ul>
+                    <li>Move: Arrow keys or WASD (desktop), swipe (touch)</li>
+                    <li>Undo: U, Backspace, or Delete</li>
+                    <li>Redo: Insert (including Numpad Insert)</li>
+                    <li>Reset to start: R, Home (including Numpad Home)</li>
+                    <li>Jump to latest move: End (including Numpad End)</li>
+                    <li>Back/close: ESC</li>
+                </ul>
+
+                <p><strong>Importing custom levels</strong></p>
+                <ul>
+                    <li>Open the hamburger menu and choose <em>Import Level</em>.</li>
+                    <li>Paste a Sokoban text level (commonly called XSB format).</li>
+                    <li>Core symbols: <code>#</code> wall, <code>@</code> player, <code>$</code> crate, <code>.</code> goal, <code>+</code> player on goal, <code>*</code> crate on goal, space = floor.</li>
+                    <li>Also accepted: <code>-</code>/<code>_</code> for floor, <code>p/P</code> for player, <code>b/B</code> for crates, <code>o/O</code> for goals.</li>
+                    <li>Lines starting with <code>;</code> are treated as comments and ignored.</li>
+                    <li>You can generate a shareable level link directly from the import modal.</li>
+                </ul>
+
+                <p>More on Sokoban/XSB notation: <a href="http://sokoban.org/about_sokoban.php" target="_blank" rel="noopener noreferrer">sokoban.org/about_sokoban.php</a></p>
+            `
         };
     }
 
@@ -1319,6 +1328,7 @@ async function loadLegalModalContent(type) {
                 <p><strong>Sokoban Puzzle Game Concept:</strong> Hiroyuki Imabayashi</p>
                 <p><strong>Sokoban Skin:</strong> <a href="https://kenney.nl/" target="_blank" rel="noopener noreferrer">Kenney</a></p>
                 <p><strong>Level Design:</strong> David W Skinner & Ward De Langhe</p>
+                <p><strong>Expert advice and encouragement:</strong> Jacob Jacobi</p>
                 <p><strong>Version:</strong> ${APP_VERSION}</p>
                 <p><strong>Copyright © 2025-2026</strong> Neil Kendall</p>
                 <p><strong>More @</strong> <a href="https://www.korovatron.co.uk/" target="_blank" rel="noopener noreferrer">www.korovatron.co.uk</a></p>
@@ -5525,6 +5535,7 @@ function drawCreditsScreen() {
         "Sokoban Puzzle Game Concept: Hiroyuki Imabayashi",
         "Sokoban Skin: Kenney",
         "Level Design: David W Skinner & Ward De Langhe",
+        "Expert advice and encouragement: Jacob Jacobi",
         `Version: ${APP_VERSION}`,
         "Copyright © 2025-2026 Neil Kendall",
         "More @ www.korovatron.co.uk"
