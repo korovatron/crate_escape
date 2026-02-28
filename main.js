@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.33';
+const APP_VERSION = '1.1.34';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -51,6 +51,7 @@ document.addEventListener('keydown', (e) => {
     if (isAnyBlockingModalOpen()) {
         if (e.key === 'Escape') {
             e.preventDefault();
+            playSound('click');
             if (isImportLevelModalOpen()) {
                 closeImportLevelModal();
             } else if (isLegalModalOpen()) {
@@ -1530,6 +1531,7 @@ function initializeLegalModal() {
     }
 
     closeButton?.addEventListener('click', () => {
+        playSound('click');
         closeLegalModal();
     });
 
@@ -1895,6 +1897,7 @@ function initializeImportLevelModal() {
     }
 
     closeButton?.addEventListener('click', () => {
+        playSound('click');
         closeImportLevelModal();
     });
 
