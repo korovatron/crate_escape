@@ -430,10 +430,18 @@ function setupCanvasEventListeners() {
             }
 
             // Credits external link click
-            if (currentGameState === GAME_STATES.CREDITS && isClickOnCreditsKenneyLink(mouseX, mouseY)) {
-                playSound('click');
-                openCreditsKenneyLink();
-                return;
+            if (currentGameState === GAME_STATES.CREDITS) {
+                if (isClickOnCreditsKenneyLink(mouseX, mouseY)) {
+                    playSound('click');
+                    openCreditsKenneyLink();
+                    return;
+                }
+
+                if (isClickOnCreditsKorovatronLink(mouseX, mouseY)) {
+                    playSound('click');
+                    openCreditsKorovatronLink();
+                    return;
+                }
             }
             
             // Check for cloud sync button clicks
@@ -871,10 +879,18 @@ function setupCanvasEventListeners() {
                     }
 
                     // Credits external link tap
-                    if (currentGameState === GAME_STATES.CREDITS && isClickOnCreditsKenneyLink(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        openCreditsKenneyLink();
-                        return;
+                    if (currentGameState === GAME_STATES.CREDITS) {
+                        if (isClickOnCreditsKenneyLink(canvasPos.x, canvasPos.y)) {
+                            playSound('click');
+                            openCreditsKenneyLink();
+                            return;
+                        }
+
+                        if (isClickOnCreditsKorovatronLink(canvasPos.x, canvasPos.y)) {
+                            playSound('click');
+                            openCreditsKorovatronLink();
+                            return;
+                        }
                     }
                     
                     // Check for back button click
@@ -3269,17 +3285,34 @@ function isClickOnCreditsKenneyLink(x, y) {
            y >= bounds.y && y <= bounds.y + bounds.height;
 }
 
+function isClickOnCreditsKorovatronLink(x, y) {
+    if (currentGameState !== GAME_STATES.CREDITS || !window.creditsKorovatronLinkBounds) {
+        return false;
+    }
+
+    const bounds = window.creditsKorovatronLinkBounds;
+    return x >= bounds.x && x <= bounds.x + bounds.width &&
+           y >= bounds.y && y <= bounds.y + bounds.height;
+}
+
 function updateCreditsLinkCursor(x, y) {
     if (!canvas) {
         return;
     }
 
-    const isHoveringKenneyLink = isClickOnCreditsKenneyLink(x, y);
-    canvas.style.cursor = isHoveringKenneyLink ? 'pointer' : 'default';
+    const isHoveringCreditsLink = isClickOnCreditsKenneyLink(x, y) || isClickOnCreditsKorovatronLink(x, y);
+    canvas.style.cursor = isHoveringCreditsLink ? 'pointer' : 'default';
 }
 
 function openCreditsKenneyLink() {
     const popupWindow = window.open('https://kenney.nl/', '_blank', 'noopener,noreferrer');
+    if (popupWindow) {
+        popupWindow.opener = null;
+    }
+}
+
+function openCreditsKorovatronLink() {
+    const popupWindow = window.open('https://www.korovatron.co.uk/', '_blank', 'noopener,noreferrer');
     if (popupWindow) {
         popupWindow.opener = null;
     }
@@ -4601,11 +4634,13 @@ function drawCreditsScreen() {
         "Sokoban Skin: Kenney",
         "Level Design: David W Skinner & Ward De Langhe",
         `Version: ${APP_VERSION}`,
-        "Created 2025-2026"
+        "Copyright © 2025-2026 Neil Kendall",
+        "More @ www.korovatron.co.uk"
     ];
 
-    // Reset interactive bounds; populated when the link row is drawn
+    // Reset interactive bounds; populated when link rows are drawn
     window.creditsKenneyLinkBounds = null;
+    window.creditsKorovatronLinkBounds = null;
     
     // Calculate available space and adjust text size to fit
     const startY = 150;
@@ -4700,6 +4735,66 @@ function drawCreditsScreen() {
             context.stroke();
 
             window.creditsKenneyLinkBounds = {
+                x: linkX,
+                y: yPos - rowTextSize,
+                width: linkWidth,
+                height: rowLineHeight
+            };
+
+            context.textAlign = "center";
+            yPos += rowLineHeight;
+            yPos += lineHeight * 0.6;
+        } else if (i === 6) {
+            // Korovatron site line with clickable URL rendered immediately to the right
+            const sourceText = "More @";
+            const linkText = "www.korovatron.co.uk";
+            const linkGap = Math.max(10, textSize * 0.35);
+            const minLinkTextSize = isMobile ? 13 : 15;
+
+            let rowTextSize = textSize;
+            let rowLineHeight = lineHeight;
+            context.font = `400 ${rowTextSize}px Arial, system-ui, -apple-system, sans-serif`;
+
+            let sourceWidth = context.measureText(sourceText).width;
+            let linkWidth = context.measureText(linkText).width;
+            let combinedWidth = sourceWidth + linkGap + linkWidth;
+
+            if (combinedWidth > maxContentWidth) {
+                const shrinkFactor = maxContentWidth / combinedWidth;
+                rowTextSize = Math.max(minLinkTextSize, textSize * shrinkFactor);
+                rowLineHeight = rowTextSize * (lineHeight / textSize);
+                context.font = `400 ${rowTextSize}px Arial, system-ui, -apple-system, sans-serif`;
+                sourceWidth = context.measureText(sourceText).width;
+                linkWidth = context.measureText(linkText).width;
+                combinedWidth = sourceWidth + linkGap + linkWidth;
+            }
+
+            const rowStartX = (canvas.width - combinedWidth) / 2;
+            const linkX = rowStartX + sourceWidth + linkGap;
+            const isHoveringLink = !isUsingTouch &&
+                mouseX >= linkX && mouseX <= linkX + linkWidth &&
+                mouseY >= yPos - rowTextSize && mouseY <= yPos - rowTextSize + rowLineHeight;
+            const linkColor = isHoveringLink ? "#99DDFF" : "#66CCFF";
+            const underlineThickness = isHoveringLink
+                ? Math.max(2, rowTextSize * 0.08)
+                : Math.max(1, rowTextSize * 0.06);
+
+            context.textAlign = "left";
+            context.fillStyle = "#CCCCCC";
+            context.fillText(sourceText, rowStartX, yPos);
+
+            context.fillStyle = linkColor;
+            context.fillText(linkText, linkX, yPos);
+
+            const underlineY = yPos + Math.max(2, rowTextSize * 0.14);
+            context.strokeStyle = linkColor;
+            context.lineWidth = underlineThickness;
+            context.beginPath();
+            context.moveTo(linkX, underlineY);
+            context.lineTo(linkX + linkWidth, underlineY);
+            context.stroke();
+
+            window.creditsKorovatronLinkBounds = {
                 x: linkX,
                 y: yPos - rowTextSize,
                 width: linkWidth,
