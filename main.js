@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.35';
+const APP_VERSION = '1.1.36';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -637,6 +637,13 @@ function setupCanvasEventListeners() {
             isTouchActive = true;
             lastTouchMoveTime = 0;
             touchMoveDirection = { x: 0, y: 0 };
+
+            if (isHamburgerMenuOpen) {
+                const canvasPos = getTouchCanvasPosition(touch);
+                touchMenuHoverIndex = getHamburgerMenuHoverIndex(canvasPos.x, canvasPos.y);
+            } else {
+                touchMenuHoverIndex = null;
+            }
             
             // Clear any existing continuous movement timer
             if (touchMoveTimer) {
@@ -651,8 +658,20 @@ function setupCanvasEventListeners() {
         e.preventDefault();
         e.stopPropagation();
         
-        if (e.touches.length === 1 && isTouchActive && currentGameState === GAME_STATES.PLAYING) {
+        if (e.touches.length === 1 && isTouchActive) {
             const touch = e.touches[0];
+            const canvasPos = getTouchCanvasPosition(touch);
+
+            if (isHamburgerMenuOpen) {
+                touchMenuHoverIndex = getHamburgerMenuHoverIndex(canvasPos.x, canvasPos.y);
+            } else {
+                touchMenuHoverIndex = null;
+            }
+
+            if (currentGameState !== GAME_STATES.PLAYING || isHamburgerMenuOpen) {
+                return;
+            }
+
             const currentTime = Date.now();
             
             touchCurrentX = touch.clientX;
@@ -691,7 +710,7 @@ function setupCanvasEventListeners() {
                 }
                 
                 touchMoveTimer = setInterval(() => {
-                    if (isTouchActive && !isPlayerMoving && currentGameState === GAME_STATES.PLAYING &&
+                    if (isTouchActive && !isPlayerMoving && currentGameState === GAME_STATES.PLAYING && !isHamburgerMenuOpen &&
                         (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0)) {
                         attemptPlayerMove(touchMoveDirection);
                     }
@@ -708,6 +727,7 @@ function setupCanvasEventListeners() {
         
         // Stop continuous movement
         isTouchActive = false;
+        touchMenuHoverIndex = null;
         touchMoveDirection = { x: 0, y: 0 };
         if (touchMoveTimer) {
             clearInterval(touchMoveTimer);
@@ -1041,6 +1061,7 @@ let solutionReplayData = {
 
 // Hamburger menu variables
 let isHamburgerMenuOpen = false;
+let touchMenuHoverIndex = null;
 let hamburgerMenuReturnState = GAME_STATES.TITLE;
 let hasAcknowledgedIOSInstall = true; // Start as true to prevent flash, will be updated from IndexedDB
 
@@ -3896,6 +3917,18 @@ function isClickOnMenuOption(x, y, optionIndex) {
            y >= optionY && y <= optionY + optionHeight;
 }
 
+function getHamburgerMenuHoverIndex(x, y) {
+    const menuConfig = getCurrentMenuConfig();
+
+    for (let i = 0; i < menuConfig.options.length; i++) {
+        if (isClickOnMenuOption(x, y, i)) {
+            return i;
+        }
+    }
+
+    return null;
+}
+
 // Helper function to get current menu configuration
 function getCurrentMenuConfig() {
     const baseOptions = ["Home", "Instructions", "Cloud Sync"];
@@ -5243,7 +5276,9 @@ function drawHamburgerMenu() {
         
         for (let i = 0; i < options.length; i++) {
             const textY = menuY + (i * optionHeight) + (optionHeight / 2) + 6;
-            const isHoveringOption = !isUsingTouch && isClickOnMenuOption(mouseX, mouseY, i);
+            const isMouseHoveringOption = !isUsingTouch && isClickOnMenuOption(mouseX, mouseY, i);
+            const isTouchHoveringOption = isUsingTouch && isTouchActive && touchMenuHoverIndex === i;
+            const isHoveringOption = isMouseHoveringOption || isTouchHoveringOption;
             
             // Highlight current screen, except Home when already on title
             const isHomeOption = gameStates[i] === GAME_STATES.TITLE;
