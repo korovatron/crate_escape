@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.36';
+const APP_VERSION = '1.1.37';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -724,6 +724,8 @@ function setupCanvasEventListeners() {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
+
+        const previousTouchMenuHoverIndex = touchMenuHoverIndex;
         
         // Stop continuous movement
         isTouchActive = false;
@@ -737,6 +739,22 @@ function setupCanvasEventListeners() {
         // Handle tap for title screen transition (fallback for old swipe behavior)
         if (e.changedTouches.length === 1 && !swipeProcessed) {
             const touch = e.changedTouches[0];
+            const canvasPos = getTouchCanvasPosition(touch);
+
+            // Support touch press-and-drag release to activate hovered menu option.
+            // This should work even when drag distance/time exceeds tap thresholds.
+            if (isHamburgerMenuOpen) {
+                const releaseTouchMenuHoverIndex = getHamburgerMenuHoverIndex(canvasPos.x, canvasPos.y);
+                const activeTouchMenuHoverIndex = releaseTouchMenuHoverIndex !== null
+                    ? releaseTouchMenuHoverIndex
+                    : previousTouchMenuHoverIndex;
+
+                if (activeTouchMenuHoverIndex !== null &&
+                    handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
+                    return;
+                }
+            }
+
             touchEndX = touch.clientX;
             touchEndY = touch.clientY;
             const dx = touchEndX - touchStartX;
@@ -745,9 +763,6 @@ function setupCanvasEventListeners() {
             
             // Only handle tap for title screen transition now
             if (dt < tapTimeThreshold && Math.abs(dx) < tapMoveThreshold && Math.abs(dy) < tapMoveThreshold) {
-                // Convert touch to canvas coordinates
-                const canvasPos = getTouchCanvasPosition(touch);
-                
                 // Check for button taps during gameplay
                 if (currentGameState === GAME_STATES.PLAYING) {
                     // Check for hamburger menu click
