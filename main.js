@@ -1453,6 +1453,10 @@ async function copyTextToClipboard(text) {
 }
 
 async function copyCustomLevelLinkFromModal() {
+    if (typeof gtag === 'function') {
+        gtag('event', 'CRATE-GEN-LINK');
+    }
+
     const { textarea } = getImportLevelElements();
     if (!textarea) {
         return;
@@ -1520,6 +1524,10 @@ function tryLoadCustomLevelFromUrlHash() {
 }
 
 function playImportedLevelFromModal() {
+    if (typeof gtag === 'function') {
+        gtag('event', 'CRATE-CUST-LVL');
+    }
+
     const { textarea } = getImportLevelElements();
     if (!textarea) {
         return;
