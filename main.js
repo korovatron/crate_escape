@@ -1434,6 +1434,7 @@ async function loadLegalModalContent(type) {
         const doc = parser.parseFromString(html, 'text/html');
 
         doc.querySelectorAll('script, .back-button, .back-link').forEach(element => element.remove());
+        doc.querySelector('h1')?.remove();
 
         const contentRoot = document.createElement('div');
         Array.from(doc.body.children).forEach(child => {
