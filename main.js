@@ -310,6 +310,11 @@ function setupCanvasEventListeners() {
         if (isUsingTouch) {
             return;
         }
+
+        // Prevent click-through to canvas/game while modal is open
+        if (isImportLevelModalOpen()) {
+            return;
+        }
         
         // Get click position
         getMouseClickPosition(canvas, e);
@@ -1314,7 +1319,6 @@ function openImportLevelModal() {
 
     window.setTimeout(() => {
         textarea.focus();
-        textarea.select();
     }, 0);
 }
 
