@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.39';
+const APP_VERSION = '1.1.40';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1217,7 +1217,7 @@ async function loadLegalModalContent(type) {
                 <p><strong>Game Design & Programming:</strong> Neil Kendall</p>
                 <p><strong>Sokoban Puzzle Game Concept:</strong> Hiroyuki Imabayashi</p>
                 <p><strong>Sokoban Skin:</strong> <a href="https://kenney.nl/" target="_blank" rel="noopener noreferrer">Kenney</a></p>
-                <p><strong>Level Design:</strong> David W Skinner & Ward De Langhe</p>
+                <p><strong>Level Design:</strong> David W Skinner, Ward De Langhe & Evgeniy Grigoriev</p>
                 <p><strong>Adviser:</strong> Jacob Jacobi</p>
                 <p><strong>Version:</strong> ${APP_VERSION}</p>
                 <p><strong>Copyright © 2025-2026</strong> Neil Kendall</p>
@@ -5744,7 +5744,8 @@ function drawStatusBar() {
         const aliasMap = {
             Microban: 'MB',
             Sasquatch: 'SQ',
-            Magic_Pearls: 'MP'
+            Magic_Pearls: 'MP',
+            Grigr_2001: 'GG_01'
         };
 
         const parts = setName.split('_').filter(Boolean);
