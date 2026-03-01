@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.37';
+const APP_VERSION = '1.1.38';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -6364,16 +6364,13 @@ function drawNeonText(text, x, y, color = "#00ffff", glowColor = "#00ffff") {
 }
 
 function drawStatusBar() {
-    // Draw dark background with subtle gradient
-    const gradient = context.createLinearGradient(0, 0, 0, STATUS_BAR_HEIGHT);
-    gradient.addColorStop(0, "rgba(0, 0, 0, 0.95)");
-    gradient.addColorStop(1, "rgba(20, 20, 40, 0.95)");
-    context.fillStyle = gradient;
+    // Draw solid black background
+    context.fillStyle = "#000000";
     context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     
     // Draw neon border at bottom of status bar (more subtle)
     context.shadowColor = "#e6cc00";
-    context.shadowBlur = 8;
+    context.shadowBlur = 6;
     context.fillStyle = "#e6cc00";
     context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
     context.shadowBlur = 0;
