@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.44';
+const APP_VERSION = '1.1.45';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -5770,7 +5770,11 @@ function drawStatusBar() {
             Magic_Pearls: 'MP',
             Grigr_2001: 'GG_01',
             Grigr_2002: 'GG_02',
-            Grigr_Challenge: 'GG_CH'
+            Grigr_Challenge: 'GG_CH',
+            Grigr_Comet: 'GG_CM',
+            Grigr_Special: 'GG_SP',
+            Grigr_Star: 'GG_ST',
+            Grigr_Sun: 'GG_SU'
         };
 
         const parts = setName.split('_').filter(Boolean);
