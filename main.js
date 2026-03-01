@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.49';
+const APP_VERSION = '1.1.50';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2050,7 +2050,7 @@ function updateSolutionReplayUI() {
     lurdInput.disabled = solutionReplayData.isPlaying;
 
     playPauseButton.textContent = useCompactPlayPauseGlyph
-        ? (solutionReplayData.isPlaying ? '▮▮' : '■')
+        ? (solutionReplayData.isPlaying ? '▮▮' : '▶')
         : (solutionReplayData.isPlaying ? 'PAUSE' : 'PLAY');
     playPauseButton.setAttribute('aria-label', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
     playPauseButton.setAttribute('title', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
