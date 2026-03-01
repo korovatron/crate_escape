@@ -347,7 +347,7 @@
             min-height: 120px;
             max-height: 140px;
             overflow: hidden;
-            background: #0b0b0b;
+            background: rgba(11, 11, 11, 0.76);
             border: 2px solid #00aaff;
             border-radius: 10px;
             box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
@@ -389,7 +389,7 @@
         .solution-replay-controls {
             display: grid;
             grid-template-columns: auto 1fr auto;
-            align-items: center;
+            align-items: start;
             column-gap: 10px;
         }
 
@@ -409,7 +409,7 @@
             padding: 4px 10px;
             font-size: 0.82rem;
             cursor: pointer;
-            min-height: 30px;
+            min-height: 32px;
         }
 
         .solution-replay-share-label {
@@ -436,6 +436,11 @@
             cursor: pointer;
             font-size: 0.85rem;
             padding: 0 8px;
+        }
+
+        #solutionReplayPlayPauseButton {
+            font-size: 0.72rem;
+            padding: 0 6px;
         }
 
         .solution-replay-button.step {
@@ -504,6 +509,11 @@
                 font-size: 0.78rem;
             }
 
+            #solutionReplayPlayPauseButton {
+                font-size: 0.66rem;
+                padding: 0 5px;
+            }
+
             .solution-replay-share {
                 min-height: 28px;
                 font-size: 0.76rem;
@@ -522,6 +532,111 @@
             .solution-replay-message {
                 font-size: 0.82rem;
                 margin: 18px 34px 0 34px;
+            }
+        }
+
+        .level-complete-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.78);
+            z-index: 9997;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        .level-complete-modal {
+            position: relative;
+            width: min(760px, 96vw);
+            max-width: 760px;
+            background: rgba(11, 11, 11, 0.76);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 24px rgba(0, 255, 0, 0.35);
+            padding: 18px 18px 16px 18px;
+            color: #e6f7ff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            box-sizing: border-box;
+        }
+
+        .level-complete-title {
+            margin: 0;
+            text-align: center;
+            color: #00ff00;
+            font-size: clamp(1.35rem, 4.5vw, 2.15rem);
+            line-height: 1.1;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .level-complete-stats {
+            margin-top: 8px;
+            text-align: center;
+            color: #ffdd00;
+            font-size: clamp(0.9rem, 2.8vw, 1.05rem);
+            line-height: 1.25;
+            font-weight: 700;
+        }
+
+        .level-complete-actions {
+            margin-top: 16px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .level-complete-share-wrap {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 86px;
+        }
+
+        .level-complete-button {
+            border: 1px solid #00ff00;
+            background: #102318;
+            color: #00ff88;
+            border-radius: 6px;
+            padding: 8px 14px;
+            min-height: 34px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .level-complete-button.exit {
+            border-color: #ffdd00;
+            background: #2a230a;
+            color: #ffdd00;
+        }
+
+        .level-complete-copy-state {
+            color: #00ff88;
+            font-size: 0.74rem;
+            font-weight: 700;
+            min-height: 0.9rem;
+        }
+
+        @media (max-width: 640px) {
+            .level-complete-modal {
+                padding: 14px 12px 12px 12px;
+            }
+
+            .level-complete-actions {
+                margin-top: 12px;
+                gap: 8px;
+            }
+
+            .level-complete-button {
+                min-height: 32px;
+                padding: 7px 11px;
+                font-size: 0.85rem;
             }
         }
 
@@ -582,14 +697,14 @@ SOLUTION</button>
                 <div id="solutionReplayProgressText" class="solution-replay-progress">MOVE 0 / 0</div>
                 <div class="solution-replay-controls">
                     <div class="solution-replay-side">
-                        <button id="solutionReplayShareButton" class="solution-replay-share" type="button">SHARE</button>
+                        <button id="solutionReplayShareButton" class="solution-replay-share" type="button" aria-label="Copy solution to clipboard" title="Copy solution to clipboard">SHARE</button>
                         <div id="solutionReplayShareLabel" class="solution-replay-share-label" aria-live="polite"></div>
                     </div>
                     <div class="solution-replay-main-controls">
-                        <button id="solutionReplayRewindButton" class="solution-replay-button step" type="button">&lt;&lt;</button>
-                        <button id="solutionReplayStepBackButton" class="solution-replay-button step" type="button">◄</button>
-                        <button id="solutionReplayPlayPauseButton" class="solution-replay-button" type="button">PLAY</button>
-                        <button id="solutionReplayStepForwardButton" class="solution-replay-button step" type="button">►</button>
+                        <button id="solutionReplayRewindButton" class="solution-replay-button step" type="button" aria-label="Rewind to start" title="Rewind to start">&lt;&lt;</button>
+                        <button id="solutionReplayStepBackButton" class="solution-replay-button step" type="button" aria-label="Step backward" title="Step backward">◄</button>
+                        <button id="solutionReplayPlayPauseButton" class="solution-replay-button" type="button" aria-label="Play replay" title="Play replay">PLAY</button>
+                        <button id="solutionReplayStepForwardButton" class="solution-replay-button step" type="button" aria-label="Step forward" title="Step forward">►</button>
                     </div>
                     <div class="solution-replay-side"></div>
                 </div>
@@ -597,6 +712,22 @@ SOLUTION</button>
                 <div id="solutionReplayNoSolutionMessage" class="solution-replay-message">
                     You solved this level before the saving feature was implemented.<br>
                     Solve again to store your solution.
+                </div>
+            </div>
+        </div>
+
+        <div id="levelCompleteOverlay" class="level-complete-overlay" aria-hidden="true">
+            <div id="levelCompleteModal" class="level-complete-modal" role="dialog" aria-modal="false" aria-label="Level complete">
+                <h2 class="level-complete-title">LEVEL COMPLETE!</h2>
+                <div id="levelCompleteStats" class="level-complete-stats">COMPLETED IN 0 MOVES, 0 PUSHES</div>
+                <div class="level-complete-actions">
+                    <div class="level-complete-share-wrap">
+                        <button id="levelCompleteShareButton" class="level-complete-button" type="button" aria-label="Copy solution to clipboard" title="Copy solution to clipboard">SHARE</button>
+                        <div id="levelCompleteCopyState" class="level-complete-copy-state" aria-live="polite"></div>
+                    </div>
+                    <button id="levelCompleteNextButton" class="level-complete-button" type="button" aria-label="Go to next level" title="Go to next level">NEXT LEVEL</button>
+                    <button id="levelCompleteReplayButton" class="level-complete-button" type="button" style="display:none;" aria-label="Replay this level" title="Replay this level">REPLAY</button>
+                    <button id="levelCompleteExitButton" class="level-complete-button exit" type="button" style="display:none;" aria-label="Exit to level select" title="Exit to level select">EXIT</button>
                 </div>
             </div>
         </div>

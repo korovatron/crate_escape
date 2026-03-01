@@ -407,70 +407,6 @@ function setupCanvasEventListeners() {
         } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
-            // Check if click is on the share button
-            if (window.shareCompletionButtonBounds && 
-                mouseX >= window.shareCompletionButtonBounds.x && 
-                mouseX <= window.shareCompletionButtonBounds.x + window.shareCompletionButtonBounds.width &&
-                mouseY >= window.shareCompletionButtonBounds.y && 
-                mouseY <= window.shareCompletionButtonBounds.y + window.shareCompletionButtonBounds.height) {
-                
-                // Play share sound
-                playSound('share');
-                
-                // Copy solution to clipboard using the same function as replay controls
-                copySolutionToClipboard().then(success => {
-                    if (success) {
-                        // Set copy state and show success feedback
-                        solutionCopied = true;
-                        lastInputType = "Solution Shared!";
-                        clickCoordinates = "";
-                        lastInputTime = Date.now();
-                        inputFadeTimer = 3000;
-                    } else {
-                        // Show error feedback
-                        lastInputType = "Share Failed";
-                        clickCoordinates = "";
-                        lastInputTime = Date.now();
-                        inputFadeTimer = 3000;
-                    }
-                });
-                return; // Don't advance level
-            }
-
-            if (isCustomLevelActive) {
-                if (window.replayLevelButtonBounds &&
-                    mouseX >= window.replayLevelButtonBounds.x &&
-                    mouseX <= window.replayLevelButtonBounds.x + window.replayLevelButtonBounds.width &&
-                    mouseY >= window.replayLevelButtonBounds.y &&
-                    mouseY <= window.replayLevelButtonBounds.y + window.replayLevelButtonBounds.height) {
-                    playSound('click');
-                    restartCurrentLevel();
-                    return;
-                }
-
-                if (window.exitCustomLevelButtonBounds &&
-                    mouseX >= window.exitCustomLevelButtonBounds.x &&
-                    mouseX <= window.exitCustomLevelButtonBounds.x + window.exitCustomLevelButtonBounds.width &&
-                    mouseY >= window.exitCustomLevelButtonBounds.y &&
-                    mouseY <= window.exitCustomLevelButtonBounds.y + window.exitCustomLevelButtonBounds.height) {
-                    playSound('click');
-                    exitCustomLevelToLevelSelect();
-                    return;
-                }
-            } else {
-                // Check if click is on the next level button
-                if (window.nextLevelButtonBounds &&
-                    mouseX >= window.nextLevelButtonBounds.x &&
-                    mouseX <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
-                    mouseY >= window.nextLevelButtonBounds.y &&
-                    mouseY <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
-
-                    advanceToNextLevel();
-                    return;
-                }
-            }
-            
-            // No longer advance to next level on any click - must click the button
             return;
         }
         
@@ -740,70 +676,6 @@ function setupCanvasEventListeners() {
 
                     handleLevelSelectClick(canvasPos.x, canvasPos.y);
                 } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
-                    // Check if tap is on the share button
-                    if (window.shareCompletionButtonBounds && 
-                        canvasPos.x >= window.shareCompletionButtonBounds.x && 
-                        canvasPos.x <= window.shareCompletionButtonBounds.x + window.shareCompletionButtonBounds.width &&
-                        canvasPos.y >= window.shareCompletionButtonBounds.y && 
-                        canvasPos.y <= window.shareCompletionButtonBounds.y + window.shareCompletionButtonBounds.height) {
-                        
-                        // Play share sound
-                        playSound('share');
-                        
-                        // Copy solution to clipboard using the same function as replay controls
-                        copySolutionToClipboard().then(success => {
-                            if (success) {
-                                // Set copy state and show success feedback
-                                solutionCopied = true;
-                                lastInputType = "Solution Shared!";
-                                clickCoordinates = "";
-                                lastInputTime = Date.now();
-                                inputFadeTimer = 3000;
-                            } else {
-                                // Show error feedback
-                                lastInputType = "Share Failed";
-                                clickCoordinates = "";
-                                lastInputTime = Date.now();
-                                inputFadeTimer = 3000;
-                            }
-                        });
-                        return; // Don't advance level
-                    }
-
-                    if (isCustomLevelActive) {
-                        if (window.replayLevelButtonBounds &&
-                            canvasPos.x >= window.replayLevelButtonBounds.x &&
-                            canvasPos.x <= window.replayLevelButtonBounds.x + window.replayLevelButtonBounds.width &&
-                            canvasPos.y >= window.replayLevelButtonBounds.y &&
-                            canvasPos.y <= window.replayLevelButtonBounds.y + window.replayLevelButtonBounds.height) {
-                            playSound('click');
-                            restartCurrentLevel();
-                            return;
-                        }
-
-                        if (window.exitCustomLevelButtonBounds &&
-                            canvasPos.x >= window.exitCustomLevelButtonBounds.x &&
-                            canvasPos.x <= window.exitCustomLevelButtonBounds.x + window.exitCustomLevelButtonBounds.width &&
-                            canvasPos.y >= window.exitCustomLevelButtonBounds.y &&
-                            canvasPos.y <= window.exitCustomLevelButtonBounds.y + window.exitCustomLevelButtonBounds.height) {
-                            playSound('click');
-                            exitCustomLevelToLevelSelect();
-                            return;
-                        }
-                    } else {
-                        // Check if tap is on the next level button
-                        if (window.nextLevelButtonBounds &&
-                            canvasPos.x >= window.nextLevelButtonBounds.x &&
-                            canvasPos.x <= window.nextLevelButtonBounds.x + window.nextLevelButtonBounds.width &&
-                            canvasPos.y >= window.nextLevelButtonBounds.y &&
-                            canvasPos.y <= window.nextLevelButtonBounds.y + window.nextLevelButtonBounds.height) {
-
-                            advanceToNextLevel();
-                            return;
-                        }
-                    }
-                    
-                    // No longer advance to next level on any tap - must tap the button
                     return;
                 } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
                     return;
@@ -950,6 +822,18 @@ function getSolutionReplayElements() {
         progressText: document.getElementById('solutionReplayProgressText'),
         statsText: document.getElementById('solutionReplayStatsText'),
         noSolutionMessage: document.getElementById('solutionReplayNoSolutionMessage')
+    };
+}
+
+function getLevelCompleteElements() {
+    return {
+        overlay: document.getElementById('levelCompleteOverlay'),
+        stats: document.getElementById('levelCompleteStats'),
+        shareButton: document.getElementById('levelCompleteShareButton'),
+        copyState: document.getElementById('levelCompleteCopyState'),
+        nextButton: document.getElementById('levelCompleteNextButton'),
+        replayButton: document.getElementById('levelCompleteReplayButton'),
+        exitButton: document.getElementById('levelCompleteExitButton')
     };
 }
 
@@ -1802,7 +1686,79 @@ function updateSolutionReplayUI() {
     stepForwardButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length);
 
     playPauseButton.textContent = solutionReplayData.isPlaying ? 'PAUSE' : 'PLAY';
+    playPauseButton.setAttribute('aria-label', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
+    playPauseButton.setAttribute('title', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
     playPauseButton.classList.toggle('playing', solutionReplayData.isPlaying);
+}
+
+function initializeLevelCompleteModal() {
+    const { overlay, shareButton, nextButton, replayButton, exitButton } = getLevelCompleteElements();
+    if (!overlay || overlay.dataset.bound === 'true') {
+        return;
+    }
+
+    shareButton?.addEventListener('click', () => {
+        playSound('share');
+        copySolutionToClipboard().then(success => {
+            if (success) {
+                solutionCopied = true;
+                lastInputType = "Solution Shared!";
+                clickCoordinates = "";
+                lastInputTime = Date.now();
+                inputFadeTimer = 3000;
+            } else {
+                lastInputType = "Share Failed";
+                clickCoordinates = "";
+                lastInputTime = Date.now();
+                inputFadeTimer = 3000;
+            }
+        });
+    });
+
+    nextButton?.addEventListener('click', () => {
+        advanceToNextLevel();
+    });
+
+    replayButton?.addEventListener('click', () => {
+        playSound('click');
+        restartCurrentLevel();
+    });
+
+    exitButton?.addEventListener('click', () => {
+        playSound('click');
+        exitCustomLevelToLevelSelect();
+    });
+
+    overlay.dataset.bound = 'true';
+    updateLevelCompleteModalUI();
+}
+
+function updateLevelCompleteModalUI() {
+    const { overlay, stats, copyState, nextButton, replayButton, exitButton } = getLevelCompleteElements();
+    if (!overlay || !stats || !copyState || !nextButton || !replayButton || !exitButton) {
+        return;
+    }
+
+    const showModal = currentGameState === GAME_STATES.LEVEL_COMPLETE;
+    overlay.style.display = showModal ? 'flex' : 'none';
+    overlay.setAttribute('aria-hidden', showModal ? 'false' : 'true');
+
+    if (!showModal) {
+        return;
+    }
+
+    stats.textContent = `COMPLETED IN ${moveCount} MOVES, ${pushCount} PUSHES`;
+    copyState.textContent = solutionCopied ? 'COPIED' : '';
+
+    if (isCustomLevelActive) {
+        nextButton.style.display = 'none';
+        replayButton.style.display = 'inline-flex';
+        exitButton.style.display = 'inline-flex';
+    } else {
+        nextButton.style.display = 'inline-flex';
+        replayButton.style.display = 'none';
+        exitButton.style.display = 'none';
+    }
 }
 
 // Font loading management
@@ -2443,6 +2399,7 @@ function createCanvas() {
     initializeImportLevelModal();
     initializeLegalModal();
     initializeSolutionReplayUI();
+    initializeLevelCompleteModal();
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
@@ -4693,10 +4650,10 @@ function draw() {
         drawGameplay(); // Draw the level being replayed
     } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
         drawGameplay(); // Draw the completed level in background
-        drawLevelCompleteOverlay();
     }
 
     updateSolutionReplayUI();
+    updateLevelCompleteModalUI();
     
     // Draw font loading overlay on top of everything if needed
     if (showFontLoadingOverlay) {
@@ -7196,6 +7153,7 @@ function resizeCanvas() {
     }
 
     updateSolutionReplayUI();
+    updateLevelCompleteModalUI();
 }
 
 // Function to recalculate level layout when screen size changes
