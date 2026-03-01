@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.40';
+const APP_VERSION = '1.1.41';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1928,6 +1928,26 @@ function getLevelCount(setName) {
     return levelSet ? levelSet.length : 0;
 }
 
+function getFirstSetName() {
+    return Object.keys(SOKOBAN_LEVELS)[0];
+}
+
+function normalizeSetName(setName, fallbackSetName = getFirstSetName()) {
+    if (setName && Object.prototype.hasOwnProperty.call(SOKOBAN_LEVELS, setName)) {
+        return setName;
+    }
+    return fallbackSetName;
+}
+
+function normalizeLevelNumber(setName, levelNumber) {
+    const maxLevel = getLevelCount(setName);
+    if (maxLevel <= 0) return 1;
+
+    const parsed = Number.isFinite(levelNumber) ? levelNumber : parseInt(levelNumber, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return 1;
+    return Math.min(Math.floor(parsed), maxLevel);
+}
+
 // Input feedback variables
 let lastInputType = "";
 let lastInputTime = 0;
@@ -1936,7 +1956,7 @@ let inputFadeTimer = 0;
 
 // Game level variables
 let currentLevel = null;
-let currentSet = Object.keys(SOKOBAN_LEVELS)[0]; // Start with first set from levels.js
+let currentSet = getFirstSetName(); // Start with first set from levels.js
 let currentLevelNumber = 1; // Start with level 1
 const CUSTOM_SET_NAME = 'Custom';
 const CUSTOM_LEVEL_NUMBER = 1;
@@ -2473,15 +2493,17 @@ function createCanvas() {
             
             if (lastPlayed && !launchedFromCustomLevelLink) {
                 // If player has played before, set the level selector to their last played level
-                currentSet = lastPlayed.setName;
-                currentLevelNumber = lastPlayed.levelNumber;
-                selectedSet = lastPlayed.setName;
+                const safeSetName = normalizeSetName(lastPlayed.setName);
+                const safeLevelNumber = normalizeLevelNumber(safeSetName, lastPlayed.levelNumber);
+                currentSet = safeSetName;
+                currentLevelNumber = safeLevelNumber;
+                selectedSet = safeSetName;
                 hasLastPlayedLevel = true;
                 
                 console.log(`Set level selector to last played: ${currentSet} level ${currentLevelNumber}`);
             } else if (!launchedFromCustomLevelLink) {
                 // First time player - ensure we start with the first set from levels.js
-                const firstSetName = Object.keys(SOKOBAN_LEVELS)[0];
+                const firstSetName = getFirstSetName();
                 currentSet = firstSetName;
                 currentLevelNumber = 1;
                 selectedSet = firstSetName;
@@ -4306,8 +4328,9 @@ async function downloadGameProgress(silent = false, redirectToLevelSelect = true
         console.log('Automatically merging cloud progress with local progress...');
         
         // Restore game progress
-        currentSet = progressData.currentLevelSet || 'Classic';
-        currentLevelNumber = progressData.currentLevelNumber || 1;
+        const restoredSetName = normalizeSetName(progressData.currentLevelSet);
+        currentSet = restoredSetName;
+        currentLevelNumber = normalizeLevelNumber(restoredSetName, progressData.currentLevelNumber || 1);
         
         // Intelligent merge of cloud and local progress data
         if (progressData.detailedLevelProgress && progressDB) {
@@ -6466,6 +6489,8 @@ function initializeLevelSelect() {
 }
 
 function calculateGridLayout() {
+    selectedSet = normalizeSetName(selectedSet);
+
     const isMobile = canvas.width < 600;
     const isTablet = canvas.width >= 600 && canvas.width < 1024;
     const isDesktop = canvas.width >= 1024;
@@ -6500,8 +6525,8 @@ function calculateGridLayout() {
     
     // Adjust current page if it's out of bounds
     const maxLevel = getLevelCount(selectedSet);
-    const maxPages = Math.ceil(maxLevel / levelsPerPage);
-    currentLevelPage = Math.min(currentLevelPage, maxPages - 1);
+    const maxPages = Math.max(1, Math.ceil(maxLevel / levelsPerPage));
+    currentLevelPage = Math.max(0, Math.min(currentLevelPage, maxPages - 1));
 }
 
 function drawLevelSelectScreen() {
