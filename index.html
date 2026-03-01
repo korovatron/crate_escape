@@ -335,7 +335,7 @@
             display: none;
             align-items: flex-end;
             justify-content: center;
-            padding: 0 16px 6px 16px;
+            padding: 0 16px calc(6px + env(safe-area-inset-bottom)) 16px;
             box-sizing: border-box;
             z-index: 9998;
             pointer-events: none;
@@ -488,6 +488,10 @@
         }
 
         @media (max-width: 640px) {
+            .solution-replay-overlay {
+                padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            }
+
             .solution-replay-modal {
                 min-height: 118px;
                 max-height: 124px;
@@ -532,6 +536,12 @@
             .solution-replay-message {
                 font-size: 0.82rem;
                 margin: 18px 34px 0 34px;
+            }
+        }
+
+        @media (max-width: 640px) and (orientation: portrait) {
+            .solution-replay-overlay {
+                padding-bottom: calc(16px + env(safe-area-inset-bottom));
             }
         }
 
