@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.48';
+const APP_VERSION = '1.1.49';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2041,13 +2041,17 @@ function updateSolutionReplayUI() {
 
     const baseEnabled = !solutionReplayData.isPlaying && !isPlayerMoving;
     const canRunFromInput = parsedInput.isValid && parsedInput.normalized.length > 0;
+    const isPortrait = canvas ? canvas.height > canvas.width : window.innerHeight > window.innerWidth;
+    const useCompactPlayPauseGlyph = isMobile && isPortrait;
     rewindButton.disabled = !(baseEnabled && hasActiveReplaySequence && solutionReplayData.currentMoveIndex > 0);
     stepBackButton.disabled = !(baseEnabled && hasActiveReplaySequence && solutionReplayData.currentMoveIndex > 0);
     stepForwardButton.disabled = !(baseEnabled && hasActiveReplaySequence && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length);
     playPauseButton.disabled = !(hasActiveReplaySequence || canRunFromInput);
     lurdInput.disabled = solutionReplayData.isPlaying;
 
-    playPauseButton.textContent = solutionReplayData.isPlaying ? 'PAUSE' : 'PLAY';
+    playPauseButton.textContent = useCompactPlayPauseGlyph
+        ? (solutionReplayData.isPlaying ? '▮▮' : '■')
+        : (solutionReplayData.isPlaying ? 'PAUSE' : 'PLAY');
     playPauseButton.setAttribute('aria-label', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
     playPauseButton.setAttribute('title', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
     playPauseButton.classList.toggle('playing', solutionReplayData.isPlaying);
