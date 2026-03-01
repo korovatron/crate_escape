@@ -334,30 +334,6 @@ function setupCanvasEventListeners() {
                 }
             }
 
-            // Check if click is on the solution button
-            if (showSolutionButton && window.solutionButtonBounds && 
-                mouseX >= window.solutionButtonBounds.x && 
-                mouseX <= window.solutionButtonBounds.x + window.solutionButtonBounds.width &&
-                mouseY >= window.solutionButtonBounds.y && 
-                mouseY <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
-                
-                playSound('click');
-                // Go directly to solution replay mode
-                const levelKey = `${currentSet}_${currentLevelNumber}`;
-                const levelProgressData = levelProgress.get(levelKey);
-                
-                if (levelProgressData && levelProgressData.solution) {
-                    // Has solution - start replay
-                    startSolutionReplay(levelProgressData.solution);
-                } else {
-                    // No solution stored - still go to replay mode but will show message
-                    currentGameState = GAME_STATES.SOLUTION_REPLAY;
-                    solutionReplayData.isActive = true;
-                    solutionReplayData.solution = ''; // Empty solution will show message
-                }
-                return;
-            }
-            
             if (isClickOnOverviewButton(mouseX, mouseY)) {
                 toggleOverviewMode();
                 return;
@@ -429,89 +405,7 @@ function setupCanvasEventListeners() {
             handleLevelSelectClick(mouseX, mouseY);
             return;
         } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
-            // Handle solution replay control clicks
-            if (window.solutionReplayBackButtonBounds && 
-                mouseX >= window.solutionReplayBackButtonBounds.x && 
-                mouseX <= window.solutionReplayBackButtonBounds.x + window.solutionReplayBackButtonBounds.width &&
-                mouseY >= window.solutionReplayBackButtonBounds.y && 
-                mouseY <= window.solutionReplayBackButtonBounds.y + window.solutionReplayBackButtonBounds.height) {
-                playSound('click');
-                exitSolutionReplay();
-                return;
-            }
-            
-            // Handle share button click
-            if (window.solutionReplayShareButtonBounds && 
-                mouseX >= window.solutionReplayShareButtonBounds.x && 
-                mouseX <= window.solutionReplayShareButtonBounds.x + window.solutionReplayShareButtonBounds.width &&
-                mouseY >= window.solutionReplayShareButtonBounds.y && 
-                mouseY <= window.solutionReplayShareButtonBounds.y + window.solutionReplayShareButtonBounds.height) {
-                
-                // Play share sound
-                playSound('share');
-                
-                // Copy current solution to clipboard
-                const levelKey = `${currentSet}_${currentLevelNumber}`;
-                const levelProgressData = levelProgress.get(levelKey);
-                if (levelProgressData && levelProgressData.solution) {
-                    copySavedSolutionToClipboard(levelProgressData).then(success => {
-                        if (success) {
-                            solutionCopiedState = true;
-                            // Reset the copied state after 3 seconds
-                            setTimeout(() => {
-                                solutionCopiedState = false;
-                            }, 3000);
-                        }
-                    });
-                }
-                return;
-            }
-            
-            if (window.solutionReplayPlayPauseButtonBounds && 
-                mouseX >= window.solutionReplayPlayPauseButtonBounds.x && 
-                mouseX <= window.solutionReplayPlayPauseButtonBounds.x + window.solutionReplayPlayPauseButtonBounds.width &&
-                mouseY >= window.solutionReplayPlayPauseButtonBounds.y && 
-                mouseY <= window.solutionReplayPlayPauseButtonBounds.y + window.solutionReplayPlayPauseButtonBounds.height) {
-                playSound('click');
-                toggleSolutionReplayPlayback();
-                return;
-            }
-            
-            // Rewind to start button - only works when paused, not animating, and not at beginning
-            if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0 && 
-                window.solutionReplayRewindButtonBounds && 
-                mouseX >= window.solutionReplayRewindButtonBounds.x && 
-                mouseX <= window.solutionReplayRewindButtonBounds.x + window.solutionReplayRewindButtonBounds.width &&
-                mouseY >= window.solutionReplayRewindButtonBounds.y && 
-                mouseY <= window.solutionReplayRewindButtonBounds.y + window.solutionReplayRewindButtonBounds.height) {
-                playSound('click');
-                rewindSolutionReplayToStart();
-                return;
-            }
-            
-            // Step backward button - only works when paused, not animating, and not at beginning
-            if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0 && 
-                window.solutionReplayStepBackButtonBounds && 
-                mouseX >= window.solutionReplayStepBackButtonBounds.x && 
-                mouseX <= window.solutionReplayStepBackButtonBounds.x + window.solutionReplayStepBackButtonBounds.width &&
-                mouseY >= window.solutionReplayStepBackButtonBounds.y && 
-                mouseY <= window.solutionReplayStepBackButtonBounds.y + window.solutionReplayStepBackButtonBounds.height) {
-                playSound('click');
-                stepSolutionReplayBackward();
-                return;
-            }
-            
-            // Step forward button - only works when paused, not animating, and not at end
-            if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length && 
-                window.solutionReplayStepForwardButtonBounds && 
-                mouseX >= window.solutionReplayStepForwardButtonBounds.x && 
-                mouseX <= window.solutionReplayStepForwardButtonBounds.x + window.solutionReplayStepForwardButtonBounds.width &&
-                mouseY >= window.solutionReplayStepForwardButtonBounds.y && 
-                mouseY <= window.solutionReplayStepForwardButtonBounds.y + window.solutionReplayStepForwardButtonBounds.height) {
-                playSound('click');
-                stepSolutionReplayForward();
-                return;
-            }
+            return;
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
             // Check if click is on the share button
             if (window.shareCompletionButtonBounds && 
@@ -778,30 +672,6 @@ function setupCanvasEventListeners() {
                         }
                     }
 
-                    // Check if tap is on the solution button
-                    if (showSolutionButton && window.solutionButtonBounds && 
-                        canvasPos.x >= window.solutionButtonBounds.x && 
-                        canvasPos.x <= window.solutionButtonBounds.x + window.solutionButtonBounds.width &&
-                        canvasPos.y >= window.solutionButtonBounds.y && 
-                        canvasPos.y <= window.solutionButtonBounds.y + window.solutionButtonBounds.height) {
-                        
-                        playSound('click');
-                        // Go directly to solution replay mode
-                        const levelKey = `${currentSet}_${currentLevelNumber}`;
-                        const levelProgressData = levelProgress.get(levelKey);
-                        
-                        if (levelProgressData && levelProgressData.solution) {
-                            // Has solution - start replay
-                            startSolutionReplay(levelProgressData.solution);
-                        } else {
-                            // No solution stored - still go to replay mode but will show message
-                            currentGameState = GAME_STATES.SOLUTION_REPLAY;
-                            solutionReplayData.isActive = true;
-                            solutionReplayData.solution = ''; // Empty solution will show message
-                        }
-                        return;
-                    }
-                    
                     if (isClickOnOverviewButton(canvasPos.x, canvasPos.y)) {
                         toggleOverviewMode();
                         return;
@@ -936,87 +806,7 @@ function setupCanvasEventListeners() {
                     // No longer advance to next level on any tap - must tap the button
                     return;
                 } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
-                    // Handle solution replay control taps
-                    if (window.solutionReplayBackButtonBounds && 
-                        canvasPos.x >= window.solutionReplayBackButtonBounds.x && 
-                        canvasPos.x <= window.solutionReplayBackButtonBounds.x + window.solutionReplayBackButtonBounds.width &&
-                        canvasPos.y >= window.solutionReplayBackButtonBounds.y && 
-                        canvasPos.y <= window.solutionReplayBackButtonBounds.y + window.solutionReplayBackButtonBounds.height) {
-                        playSound('click');
-                        exitSolutionReplay();
-                        return;
-                    }
-                    
-                    // Handle share button tap
-                    if (window.solutionReplayShareButtonBounds && 
-                        canvasPos.x >= window.solutionReplayShareButtonBounds.x && 
-                        canvasPos.x <= window.solutionReplayShareButtonBounds.x + window.solutionReplayShareButtonBounds.width &&
-                        canvasPos.y >= window.solutionReplayShareButtonBounds.y && 
-                        canvasPos.y <= window.solutionReplayShareButtonBounds.y + window.solutionReplayShareButtonBounds.height) {
-                        
-                        playSound('share');
-                        // Copy current solution to clipboard
-                        const levelKey = `${currentSet}_${currentLevelNumber}`;
-                        const levelProgressData = levelProgress.get(levelKey);
-                        if (levelProgressData && levelProgressData.solution) {
-                            copySavedSolutionToClipboard(levelProgressData).then(success => {
-                                if (success) {
-                                    solutionCopiedState = true;
-                                    // Reset the copied state after 3 seconds
-                                    setTimeout(() => {
-                                        solutionCopiedState = false;
-                                    }, 3000);
-                                }
-                            });
-                        }
-                        return;
-                    }
-                    
-                    if (window.solutionReplayPlayPauseButtonBounds && 
-                        canvasPos.x >= window.solutionReplayPlayPauseButtonBounds.x && 
-                        canvasPos.x <= window.solutionReplayPlayPauseButtonBounds.x + window.solutionReplayPlayPauseButtonBounds.width &&
-                        canvasPos.y >= window.solutionReplayPlayPauseButtonBounds.y && 
-                        canvasPos.y <= window.solutionReplayPlayPauseButtonBounds.y + window.solutionReplayPlayPauseButtonBounds.height) {
-                        playSound('click');
-                        toggleSolutionReplayPlayback();
-                        return;
-                    }
-                    
-                    // Rewind to start button - only works when paused, not animating, and not at beginning
-                    if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0 && 
-                        window.solutionReplayRewindButtonBounds && 
-                        canvasPos.x >= window.solutionReplayRewindButtonBounds.x && 
-                        canvasPos.x <= window.solutionReplayRewindButtonBounds.x + window.solutionReplayRewindButtonBounds.width &&
-                        canvasPos.y >= window.solutionReplayRewindButtonBounds.y && 
-                        canvasPos.y <= window.solutionReplayRewindButtonBounds.y + window.solutionReplayRewindButtonBounds.height) {
-                        playSound('click');
-                        rewindSolutionReplayToStart();
-                        return;
-                    }
-                    
-                    // Step backward button - only works when paused, not animating, and not at beginning
-                    if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0 && 
-                        window.solutionReplayStepBackButtonBounds && 
-                        canvasPos.x >= window.solutionReplayStepBackButtonBounds.x && 
-                        canvasPos.x <= window.solutionReplayStepBackButtonBounds.x + window.solutionReplayStepBackButtonBounds.width &&
-                        canvasPos.y >= window.solutionReplayStepBackButtonBounds.y && 
-                        canvasPos.y <= window.solutionReplayStepBackButtonBounds.y + window.solutionReplayStepBackButtonBounds.height) {
-                        playSound('click');
-                        stepSolutionReplayBackward();
-                        return;
-                    }
-                    
-                    // Step forward button - only works when paused, not animating, and not at end
-                    if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length && 
-                        window.solutionReplayStepForwardButtonBounds && 
-                        canvasPos.x >= window.solutionReplayStepForwardButtonBounds.x && 
-                        canvasPos.x <= window.solutionReplayStepForwardButtonBounds.x + window.solutionReplayStepForwardButtonBounds.width &&
-                        canvasPos.y >= window.solutionReplayStepForwardButtonBounds.y && 
-                        canvasPos.y <= window.solutionReplayStepForwardButtonBounds.y + window.solutionReplayStepForwardButtonBounds.height) {
-                        playSound('click');
-                        stepSolutionReplayForward();
-                        return;
-                    }
+                    return;
                 }
                 
                 // Show tap feedback
@@ -1143,6 +933,50 @@ function getLegalModalElements() {
         title: document.getElementById('legalModalTitle'),
         content: document.getElementById('legalModalContent')
     };
+}
+
+function getSolutionReplayElements() {
+    return {
+        triggerButton: document.getElementById('solutionTriggerButton'),
+        overlay: document.getElementById('solutionReplayOverlay'),
+        modal: document.getElementById('solutionReplayModal'),
+        closeButton: document.getElementById('solutionReplayCloseButton'),
+        shareButton: document.getElementById('solutionReplayShareButton'),
+        shareLabel: document.getElementById('solutionReplayShareLabel'),
+        rewindButton: document.getElementById('solutionReplayRewindButton'),
+        stepBackButton: document.getElementById('solutionReplayStepBackButton'),
+        playPauseButton: document.getElementById('solutionReplayPlayPauseButton'),
+        stepForwardButton: document.getElementById('solutionReplayStepForwardButton'),
+        progressText: document.getElementById('solutionReplayProgressText'),
+        statsText: document.getElementById('solutionReplayStatsText'),
+        noSolutionMessage: document.getElementById('solutionReplayNoSolutionMessage')
+    };
+}
+
+function openCurrentLevelSolutionReplay() {
+    playSound('click');
+
+    const levelKey = `${currentSet}_${currentLevelNumber}`;
+    const levelProgressData = levelProgress.get(levelKey);
+
+    if (levelProgressData && levelProgressData.solution) {
+        startSolutionReplay(levelProgressData.solution);
+    } else {
+        currentGameState = GAME_STATES.SOLUTION_REPLAY;
+        solutionReplayData.isActive = true;
+        solutionReplayData.solution = '';
+        solutionReplayData.currentMoveIndex = 0;
+        solutionReplayData.isPlaying = false;
+        solutionReplayData.simulatedContinuousDirection = null;
+        solutionReplayData.shouldClearContinuousAfterMove = false;
+    }
+}
+
+function setReplayShareCopiedState() {
+    solutionCopiedState = true;
+    setTimeout(() => {
+        solutionCopiedState = false;
+    }, 3000);
 }
 
 function isImportLevelModalOpen() {
@@ -1818,6 +1652,159 @@ function initializeImportLevelModal() {
     overlay.dataset.bound = 'true';
 }
 
+function initializeSolutionReplayUI() {
+    const {
+        triggerButton,
+        overlay,
+        closeButton,
+        shareButton,
+        rewindButton,
+        stepBackButton,
+        playPauseButton,
+        stepForwardButton
+    } = getSolutionReplayElements();
+
+    if (!triggerButton || !overlay || overlay.dataset.bound === 'true') {
+        return;
+    }
+
+    triggerButton.addEventListener('click', () => {
+        openCurrentLevelSolutionReplay();
+    });
+
+    closeButton?.addEventListener('click', () => {
+        playSound('click');
+        exitSolutionReplay();
+    });
+
+    shareButton?.addEventListener('click', () => {
+        playSound('share');
+        const levelKey = `${currentSet}_${currentLevelNumber}`;
+        const levelProgressData = levelProgress.get(levelKey);
+        if (levelProgressData && levelProgressData.solution) {
+            copySavedSolutionToClipboard(levelProgressData).then(success => {
+                if (success) {
+                    setReplayShareCopiedState();
+                }
+            });
+        }
+    });
+
+    rewindButton?.addEventListener('click', () => {
+        if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0) {
+            playSound('click');
+            rewindSolutionReplayToStart();
+        }
+    });
+
+    stepBackButton?.addEventListener('click', () => {
+        if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex > 0) {
+            playSound('click');
+            stepSolutionReplayBackward();
+        }
+    });
+
+    playPauseButton?.addEventListener('click', () => {
+        playSound('click');
+        toggleSolutionReplayPlayback();
+    });
+
+    stepForwardButton?.addEventListener('click', () => {
+        if (!solutionReplayData.isPlaying && !isPlayerMoving && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length) {
+            playSound('click');
+            stepSolutionReplayForward();
+        }
+    });
+
+    overlay.dataset.bound = 'true';
+    updateSolutionReplayUI();
+}
+
+function updateSolutionReplayUI() {
+    const {
+        triggerButton,
+        overlay,
+        modal,
+        shareButton,
+        shareLabel,
+        rewindButton,
+        stepBackButton,
+        playPauseButton,
+        stepForwardButton,
+        progressText,
+        statsText,
+        noSolutionMessage
+    } = getSolutionReplayElements();
+
+    if (!triggerButton || !overlay || !modal || !shareButton || !rewindButton ||
+        !stepBackButton || !playPauseButton || !stepForwardButton || !progressText || !statsText || !noSolutionMessage) {
+        return;
+    }
+
+    const canvasRect = canvas?.getBoundingClientRect();
+    const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
+
+    if (canvasRect) {
+        const padding = isMobile ? 15 : 20;
+        const bottomPadding = isMobile ? 35 : 40;
+        const buttonWidth = isMobile ? 90 : 110;
+        const buttonHeight = isMobile ? 40 : 50;
+        const buttonY = canvasRect.top + canvas.height - buttonHeight - bottomPadding;
+
+        triggerButton.style.left = `${canvasRect.left + padding}px`;
+        triggerButton.style.top = `${buttonY}px`;
+        triggerButton.style.width = `${buttonWidth}px`;
+        triggerButton.style.height = `${buttonHeight}px`;
+        triggerButton.style.fontSize = isMobile ? '11px' : '13px';
+    }
+
+    const shouldShowTrigger = showSolutionButton && currentGameState === GAME_STATES.PLAYING;
+    triggerButton.style.display = shouldShowTrigger ? 'inline-flex' : 'none';
+    triggerButton.style.alignItems = 'center';
+    triggerButton.style.justifyContent = 'center';
+
+    const shouldShowReplayModal = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive;
+    overlay.style.display = shouldShowReplayModal ? 'flex' : 'none';
+    overlay.setAttribute('aria-hidden', shouldShowReplayModal ? 'false' : 'true');
+
+    if (!shouldShowReplayModal) {
+        return;
+    }
+
+    const hasSolution = Boolean(solutionReplayData.solution && solutionReplayData.solution.length > 0);
+    modal.classList.toggle('no-solution', !hasSolution);
+    noSolutionMessage.classList.toggle('visible', !hasSolution);
+
+    if (!hasSolution) {
+        return;
+    }
+
+    const currentMove = getCurrentReplayMoveNumber();
+    const totalMoves = solutionReplayData.solution.length;
+    progressText.textContent = `MOVE ${currentMove} / ${totalMoves}`;
+
+    const levelKey = `${currentSet}_${currentLevelNumber}`;
+    const levelProgressData = levelProgress.get(levelKey);
+    if (levelProgressData) {
+        statsText.textContent = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
+    } else {
+        statsText.textContent = '';
+    }
+
+    if (shareLabel) {
+        shareLabel.textContent = solutionCopiedState ? 'COPIED' : '';
+        shareLabel.style.color = solutionCopiedState ? '#00ff88' : '#ffdd00';
+    }
+
+    const baseEnabled = !solutionReplayData.isPlaying && !isPlayerMoving;
+    rewindButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex > 0);
+    stepBackButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex > 0);
+    stepForwardButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length);
+
+    playPauseButton.textContent = solutionReplayData.isPlaying ? 'PAUSE' : 'PLAY';
+    playPauseButton.classList.toggle('playing', solutionReplayData.isPlaying);
+}
+
 // Font loading management
 function initializeFontLoadingOverlay() {
     // Wait for fonts to be ready with timeout and minimum duration
@@ -2455,6 +2442,7 @@ function createCanvas() {
     context = canvas.getContext('2d');
     initializeImportLevelModal();
     initializeLegalModal();
+    initializeSolutionReplayUI();
     setupCanvasEventListeners(); // Set up event listeners after canvas is created
     setupBackgroundAppHandler(); // Handle PWA background/foreground transitions
     resizeCanvas();
@@ -4703,11 +4691,12 @@ function draw() {
         drawGameplay();
     } else if (currentGameState === GAME_STATES.SOLUTION_REPLAY) {
         drawGameplay(); // Draw the level being replayed
-        drawSolutionReplayControls();
     } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
         drawGameplay(); // Draw the completed level in background
         drawLevelCompleteOverlay();
     }
+
+    updateSolutionReplayUI();
     
     // Draw font loading overlay on top of everything if needed
     if (showFontLoadingOverlay) {
@@ -5558,10 +5547,6 @@ function drawNormalGameplay() {
         context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
     }
     
-    // Draw solution button if this level was previously solved
-    if (showSolutionButton && currentGameState === GAME_STATES.PLAYING) {
-        drawSolutionButton();
-    }
 }
 
 // Placeholder functions for drawing tiles - YOU CAN MODIFY THESE TO USE SPRITES
@@ -7209,6 +7194,8 @@ function resizeCanvas() {
     if (currentGameState === GAME_STATES.LEVEL_SELECT) {
         calculateGridLayout();
     }
+
+    updateSolutionReplayUI();
 }
 
 // Function to recalculate level layout when screen size changes
