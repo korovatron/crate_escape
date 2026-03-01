@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.50';
+const APP_VERSION = '1.1.51';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -818,6 +818,7 @@ function getSolutionReplayElements() {
         triggerButton: document.getElementById('solutionTriggerButton'),
         overlay: document.getElementById('solutionReplayOverlay'),
         modal: document.getElementById('solutionReplayModal'),
+        controls: document.getElementById('solutionReplayControls'),
         closeButton: document.getElementById('solutionReplayCloseButton'),
         lurdInput: document.getElementById('solutionReplayLurdInput'),
         loadSavedButton: document.getElementById('solutionReplayLoadSavedButton'),
@@ -1941,6 +1942,7 @@ function updateSolutionReplayUI() {
         triggerButton,
         overlay,
         modal,
+        controls,
         lurdInput,
         loadSavedButton,
         storedShareButton,
@@ -1954,7 +1956,7 @@ function updateSolutionReplayUI() {
         progressText
     } = getSolutionReplayElements();
 
-    if (!triggerButton || !overlay || !modal || !rewindButton ||
+    if (!triggerButton || !overlay || !modal || !controls || !rewindButton ||
         !stepBackButton || !playPauseButton || !stepForwardButton || !progressText ||
         !lurdInput || !loadSavedButton || !storedShareButton || !saveButton || !lurdTrack || !lurdStatus) {
         return;
@@ -2008,11 +2010,9 @@ function updateSolutionReplayUI() {
     }
     if (hasActiveReplaySequence) {
         lurdTrack.style.visibility = 'visible';
-        lurdTrack.style.marginBottom = '';
         renderLurdTrack(lurdTrack, displaySequence, solutionReplayData.currentMoveIndex);
     } else {
         lurdTrack.style.visibility = 'hidden';
-        lurdTrack.style.marginBottom = '0';
         lurdTrack.innerHTML = '';
         lurdTrack.scrollLeft = 0;
     }
@@ -2030,6 +2030,7 @@ function updateSolutionReplayUI() {
     }
 
     const storedSolution = getStoredSolutionForCurrentLevel();
+    controls.classList.toggle('has-saved-solution', Boolean(storedSolution));
     loadSavedButton.style.display = storedSolution ? 'inline-flex' : 'none';
     storedShareButton.style.display = storedSolution ? 'inline-flex' : 'none';
 
