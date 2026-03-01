@@ -727,7 +727,13 @@ let solutionReplayData = {
     intervalId: null,
     moveDelay: 500, // milliseconds between moves (increased for better visibility)
     simulatedContinuousDirection: null, // Track simulated continuous input for smooth animation
-    shouldClearContinuousAfterMove: false // Flag to defer clearing continuous direction until move completes
+    shouldClearContinuousAfterMove: false, // Flag to defer clearing continuous direction until move completes
+    inputDraft: '',
+    statusMessage: '',
+    hasExecutedMoves: false,
+    solvedByToolbox: false,
+    saveEligible: false,
+    inputSource: 'custom'
 };
 
 // Hamburger menu variables
@@ -813,15 +819,17 @@ function getSolutionReplayElements() {
         overlay: document.getElementById('solutionReplayOverlay'),
         modal: document.getElementById('solutionReplayModal'),
         closeButton: document.getElementById('solutionReplayCloseButton'),
-        shareButton: document.getElementById('solutionReplayShareButton'),
-        shareLabel: document.getElementById('solutionReplayShareLabel'),
+        lurdInput: document.getElementById('solutionReplayLurdInput'),
+        loadSavedButton: document.getElementById('solutionReplayLoadSavedButton'),
+        storedShareButton: document.getElementById('solutionReplayStoredShareButton'),
+        saveButton: document.getElementById('solutionReplaySaveButton'),
+        lurdTrack: document.getElementById('solutionReplayLurdTrack'),
+        lurdStatus: document.getElementById('solutionReplayLurdStatus'),
         rewindButton: document.getElementById('solutionReplayRewindButton'),
         stepBackButton: document.getElementById('solutionReplayStepBackButton'),
         playPauseButton: document.getElementById('solutionReplayPlayPauseButton'),
         stepForwardButton: document.getElementById('solutionReplayStepForwardButton'),
-        progressText: document.getElementById('solutionReplayProgressText'),
-        statsText: document.getElementById('solutionReplayStatsText'),
-        noSolutionMessage: document.getElementById('solutionReplayNoSolutionMessage')
+        progressText: document.getElementById('solutionReplayProgressText')
     };
 }
 
@@ -840,27 +848,192 @@ function getLevelCompleteElements() {
 function openCurrentLevelSolutionReplay() {
     playSound('click');
 
-    const levelKey = `${currentSet}_${currentLevelNumber}`;
-    const levelProgressData = levelProgress.get(levelKey);
+    solutionReplayData.isActive = true;
+    solutionReplayData.isPlaying = false;
+    solutionReplayData.currentMoveIndex = 0;
+    solutionReplayData.solution = '';
+    solutionReplayData.simulatedContinuousDirection = null;
+    solutionReplayData.shouldClearContinuousAfterMove = false;
+    solutionReplayData.hasExecutedMoves = false;
+    solutionReplayData.solvedByToolbox = false;
+    solutionReplayData.saveEligible = false;
+    solutionReplayData.statusMessage = '';
+    solutionReplayData.inputSource = 'custom';
+    solutionReplayData.inputDraft = '';
 
-    if (levelProgressData && levelProgressData.solution) {
-        startSolutionReplay(levelProgressData.solution);
+    if (solutionReplayData.intervalId) {
+        clearInterval(solutionReplayData.intervalId);
+        solutionReplayData.intervalId = null;
+    }
+
+    currentGameState = GAME_STATES.SOLUTION_REPLAY;
+}
+
+function getCurrentLevelProgressData() {
+    const levelKey = `${currentSet}_${currentLevelNumber}`;
+    return levelProgress.get(levelKey) || null;
+}
+
+function getStoredSolutionForCurrentLevel() {
+    const levelProgressData = getCurrentLevelProgressData();
+    if (!levelProgressData || !levelProgressData.solution) {
+        return '';
+    }
+
+    const normalized = normalizeSolutionNotation(levelProgressData.solution, currentSet, currentLevelNumber) || '';
+    return normalized.replace(/\s+/g, '');
+}
+
+function normalizeLurdInput(rawInput) {
+    const source = String(rawInput || '');
+    let normalized = '';
+
+    for (let index = 0; index < source.length; index++) {
+        const char = source[index];
+        if (/\s/.test(char)) {
+            continue;
+        }
+
+        const upper = char.toUpperCase();
+        if (upper !== 'L' && upper !== 'U' && upper !== 'R' && upper !== 'D') {
+            return {
+                isValid: false,
+                normalized,
+                error: `Invalid character '${char}' at position ${index + 1}. Use only L, U, R, D.`
+            };
+        }
+
+        normalized += upper;
+    }
+
+    return {
+        isValid: true,
+        normalized,
+        error: ''
+    };
+}
+
+function escapeHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderLurdTrack(trackElement, lurd, currentIndex) {
+    if (!trackElement) {
+        return;
+    }
+
+    if (!lurd) {
+        trackElement.innerHTML = '<span class="future">No LURD loaded</span>';
+        trackElement.scrollLeft = 0;
+        return;
+    }
+
+    const clampedIndex = Math.max(0, Math.min(currentIndex, lurd.length));
+    const pastText = escapeHtml(lurd.slice(0, clampedIndex));
+    const currentText = clampedIndex < lurd.length ? escapeHtml(lurd.charAt(clampedIndex)) : '';
+    const futureText = escapeHtml(lurd.slice(clampedIndex + (currentText ? 1 : 0)));
+    const sidePadding = Math.max(0, Math.floor((trackElement.clientWidth - 12) / 2));
+
+    trackElement.innerHTML = `<span class="pad" style="display:inline-block;width:${sidePadding}px;"></span>${pastText ? `<span class="past">${pastText}</span>` : ''}${currentText ? `<span class="current">${currentText}</span>` : ''}${futureText ? `<span class="future">${futureText}</span>` : ''}<span class="pad" style="display:inline-block;width:${sidePadding}px;"></span>`;
+
+    const highlighted = trackElement.querySelector('.current');
+    if (highlighted) {
+        const centerHighlightedMove = () => {
+            const maxScrollLeft = Math.max(0, trackElement.scrollWidth - trackElement.clientWidth);
+            const targetScrollLeft = highlighted.offsetLeft - ((trackElement.clientWidth - highlighted.offsetWidth) / 2);
+            trackElement.scrollLeft = Math.max(0, Math.min(targetScrollLeft, maxScrollLeft));
+        };
+
+        centerHighlightedMove();
+        requestAnimationFrame(centerHighlightedMove);
     } else {
-        currentGameState = GAME_STATES.SOLUTION_REPLAY;
-        solutionReplayData.isActive = true;
-        solutionReplayData.solution = '';
-        solutionReplayData.currentMoveIndex = 0;
-        solutionReplayData.isPlaying = false;
-        solutionReplayData.simulatedContinuousDirection = null;
-        solutionReplayData.shouldClearContinuousAfterMove = false;
+        trackElement.scrollLeft = trackElement.scrollWidth;
     }
 }
 
-function setReplayShareCopiedState() {
-    solutionCopiedState = true;
-    setTimeout(() => {
-        solutionCopiedState = false;
-    }, 3000);
+function centerLurdInputAtIndex(inputElement, lurd, currentIndex) {
+    if (!inputElement || !lurd) {
+        return;
+    }
+
+    const clampedIndex = Math.max(0, Math.min(currentIndex, lurd.length));
+    const targetText = lurd.slice(0, clampedIndex);
+    const style = window.getComputedStyle(inputElement);
+    const measureCanvas = centerLurdInputAtIndex._canvas || (centerLurdInputAtIndex._canvas = document.createElement('canvas'));
+    const measureContext = measureCanvas.getContext('2d');
+    if (!measureContext) {
+        return;
+    }
+
+    measureContext.font = style.font;
+
+    const textWidthBefore = measureContext.measureText(targetText).width;
+    const currentChar = clampedIndex < lurd.length ? lurd.charAt(clampedIndex) : '';
+    const currentCharWidth = currentChar ? measureContext.measureText(currentChar).width : 0;
+
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const visibleContentWidth = Math.max(0, inputElement.clientWidth - paddingLeft - paddingRight);
+
+    const targetScrollLeft = textWidthBefore + (currentCharWidth / 2) - (visibleContentWidth / 2);
+    const maxScrollLeft = Math.max(0, inputElement.scrollWidth - inputElement.clientWidth);
+    inputElement.scrollLeft = Math.max(0, Math.min(targetScrollLeft, maxScrollLeft));
+}
+
+function updateLurdInputAlignment(inputElement) {
+    if (!inputElement) {
+        return;
+    }
+
+    const text = String(inputElement.value || '');
+    if (!text) {
+        inputElement.style.textAlign = 'left';
+        return;
+    }
+
+    const style = window.getComputedStyle(inputElement);
+    const measureCanvas = updateLurdInputAlignment._canvas || (updateLurdInputAlignment._canvas = document.createElement('canvas'));
+    const measureContext = measureCanvas.getContext('2d');
+    if (!measureContext) {
+        return;
+    }
+
+    measureContext.font = style.font;
+    const textWidth = measureContext.measureText(text).width;
+
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const visibleContentWidth = Math.max(0, inputElement.clientWidth - paddingLeft - paddingRight);
+    const fitsWithoutScroll = textWidth <= visibleContentWidth;
+
+    inputElement.style.textAlign = fitsWithoutScroll ? 'center' : 'left';
+    if (fitsWithoutScroll) {
+        inputElement.scrollLeft = 0;
+    }
+}
+
+function clearToolboxSolveState() {
+    solutionReplayData.solvedByToolbox = false;
+    solutionReplayData.saveEligible = false;
+}
+
+function shouldOfferToolboxSave() {
+    if (isCustomLevelActive) {
+        return false;
+    }
+
+    const storedSolution = (getStoredSolutionForCurrentLevel() || '').toUpperCase();
+    const currentReplaySolution = (solutionReplayData.solution || '').toUpperCase();
+    if (!currentReplaySolution) {
+        return false;
+    }
+
+    return storedSolution !== currentReplaySolution;
 }
 
 function isImportLevelModalOpen() {
@@ -1540,8 +1713,11 @@ function initializeSolutionReplayUI() {
     const {
         triggerButton,
         overlay,
+        lurdInput,
+        loadSavedButton,
+        storedShareButton,
+        saveButton,
         closeButton,
-        shareButton,
         rewindButton,
         stepBackButton,
         playPauseButton,
@@ -1556,22 +1732,60 @@ function initializeSolutionReplayUI() {
         openCurrentLevelSolutionReplay();
     });
 
+    lurdInput?.addEventListener('input', () => {
+        solutionReplayData.inputDraft = lurdInput.value;
+        solutionReplayData.inputSource = 'custom';
+        clearToolboxSolveState();
+        solutionReplayData.statusMessage = '';
+        solutionReplayData.solution = '';
+        solutionReplayData.currentMoveIndex = 0;
+        updateSolutionReplayUI();
+    });
+
+    lurdInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+        }
+    });
+
+    loadSavedButton?.addEventListener('click', () => {
+        playSound('click');
+        loadSavedSolutionIntoToolbox();
+    });
+
+    storedShareButton?.addEventListener('click', async () => {
+        const levelProgressData = getCurrentLevelProgressData();
+        if (!levelProgressData || !levelProgressData.solution) {
+            solutionReplayData.statusMessage = 'No saved solution for this level yet.';
+            updateSolutionReplayUI();
+            return;
+        }
+
+        playSound('share');
+        const shared = await copySavedSolutionToClipboard(levelProgressData);
+        solutionReplayData.statusMessage = shared ? 'Saved solution copied to clipboard.' : 'Copy failed.';
+        updateSolutionReplayUI();
+    });
+
+    saveButton?.addEventListener('click', async () => {
+        if (!solutionReplayData.saveEligible) {
+            return;
+        }
+
+        playSound('click');
+        const saved = await saveToolboxSolutionToProgress();
+        if (saved) {
+            solutionReplayData.statusMessage = 'Solution saved.';
+            clearToolboxSolveState();
+        } else {
+            solutionReplayData.statusMessage = 'Could not save solution.';
+        }
+        updateSolutionReplayUI();
+    });
+
     closeButton?.addEventListener('click', () => {
         playSound('click');
         exitSolutionReplay();
-    });
-
-    shareButton?.addEventListener('click', () => {
-        playSound('share');
-        const levelKey = `${currentSet}_${currentLevelNumber}`;
-        const levelProgressData = levelProgress.get(levelKey);
-        if (levelProgressData && levelProgressData.solution) {
-            copySavedSolutionToClipboard(levelProgressData).then(success => {
-                if (success) {
-                    setReplayShareCopiedState();
-                }
-            });
-        }
     });
 
     rewindButton?.addEventListener('click', () => {
@@ -1590,6 +1804,11 @@ function initializeSolutionReplayUI() {
 
     playPauseButton?.addEventListener('click', () => {
         playSound('click');
+        if (!solutionReplayData.solution || solutionReplayData.solution.length === 0) {
+            runToolboxLurdPlayback();
+            return;
+        }
+
         toggleSolutionReplayPlayback();
     });
 
@@ -1604,24 +1823,140 @@ function initializeSolutionReplayUI() {
     updateSolutionReplayUI();
 }
 
+function runToolboxLurdPlayback() {
+    const { lurdInput } = getSolutionReplayElements();
+    const raw = lurdInput ? lurdInput.value : solutionReplayData.inputDraft;
+    const parsed = normalizeLurdInput(raw);
+
+    if (!parsed.isValid) {
+        solutionReplayData.statusMessage = parsed.error;
+        updateSolutionReplayUI();
+        return;
+    }
+
+    if (!parsed.normalized) {
+        solutionReplayData.statusMessage = 'Paste or type a LURD string first.';
+        updateSolutionReplayUI();
+        return;
+    }
+
+    const displayDraft = String(raw || '').replace(/\s+/g, '');
+    solutionReplayData.inputDraft = displayDraft;
+    solutionReplayData.inputSource = 'custom';
+    solutionReplayData.statusMessage = 'Running LURD...';
+    clearToolboxSolveState();
+
+    startSolutionReplay(parsed.normalized);
+    toggleSolutionReplayPlayback();
+    updateSolutionReplayUI();
+}
+
+function loadSavedSolutionIntoToolbox() {
+    const { lurdInput } = getSolutionReplayElements();
+    const stored = getStoredSolutionForCurrentLevel();
+
+    if (!stored) {
+        solutionReplayData.statusMessage = 'No saved solution for this level yet.';
+        updateSolutionReplayUI();
+        return;
+    }
+
+    solutionReplayData.inputDraft = stored;
+    solutionReplayData.inputSource = 'saved';
+    solutionReplayData.statusMessage = 'Loaded saved solution into input.';
+    clearToolboxSolveState();
+    solutionReplayData.solution = '';
+    solutionReplayData.currentMoveIndex = 0;
+
+    if (lurdInput) {
+        lurdInput.value = stored;
+        lurdInput.scrollLeft = 0;
+    }
+
+    updateSolutionReplayUI();
+}
+
+async function saveToolboxSolutionToProgress() {
+    if (!progressDB || isCustomLevelActive || !solutionReplayData.solution) {
+        return false;
+    }
+
+    const key = `${currentSet}_${currentLevelNumber}`;
+    const id = key;
+    const nowIso = new Date().toISOString();
+
+    try {
+        const transaction = progressDB.transaction(['levelProgress'], 'readwrite');
+        const store = transaction.objectStore('levelProgress');
+
+        const existingRequest = store.get(id);
+        const existing = await new Promise((resolve) => {
+            existingRequest.onsuccess = () => resolve(existingRequest.result || null);
+            existingRequest.onerror = () => resolve(null);
+        });
+
+        const bestMoves = existing?.bestMoves == null ? moveCount : Math.min(existing.bestMoves, moveCount);
+        const bestPushes = existing?.bestPushes == null ? pushCount : Math.min(existing.bestPushes, pushCount);
+
+        const record = {
+            id,
+            setName: currentSet,
+            levelNumber: currentLevelNumber,
+            attempted: true,
+            completed: true,
+            bestMoves,
+            bestPushes,
+            completionCount: (existing?.completionCount || 0) + 1,
+            solution: solutionReplayData.solution,
+            lastPlayed: nowIso,
+            lastCompletionDate: nowIso
+        };
+
+        await store.put(record);
+
+        levelProgress.set(key, {
+            attempted: true,
+            completed: true,
+            bestMoves,
+            bestPushes,
+            completionCount: record.completionCount,
+            solution: record.solution
+        });
+
+        if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
+            uploadGameProgress().catch(error => {
+                console.error('Failed to upload toolbox-saved solution:', error);
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Failed to save toolbox solution:', error);
+        return false;
+    }
+}
+
 function updateSolutionReplayUI() {
     const {
         triggerButton,
         overlay,
         modal,
-        shareButton,
-        shareLabel,
+        lurdInput,
+        loadSavedButton,
+        storedShareButton,
+        saveButton,
+        lurdTrack,
+        lurdStatus,
         rewindButton,
         stepBackButton,
         playPauseButton,
         stepForwardButton,
-        progressText,
-        statsText,
-        noSolutionMessage
+        progressText
     } = getSolutionReplayElements();
 
-    if (!triggerButton || !overlay || !modal || !shareButton || !rewindButton ||
-        !stepBackButton || !playPauseButton || !stepForwardButton || !progressText || !statsText || !noSolutionMessage) {
+    if (!triggerButton || !overlay || !modal || !rewindButton ||
+        !stepBackButton || !playPauseButton || !stepForwardButton || !progressText ||
+        !lurdInput || !loadSavedButton || !storedShareButton || !saveButton || !lurdTrack || !lurdStatus) {
         return;
     }
 
@@ -1642,7 +1977,7 @@ function updateSolutionReplayUI() {
         triggerButton.style.fontSize = isMobile ? '11px' : '13px';
     }
 
-    const shouldShowTrigger = showSolutionButton && currentGameState === GAME_STATES.PLAYING;
+    const shouldShowTrigger = currentGameState === GAME_STATES.PLAYING;
     triggerButton.style.display = shouldShowTrigger ? 'inline-flex' : 'none';
     triggerButton.style.alignItems = 'center';
     triggerButton.style.justifyContent = 'center';
@@ -1655,35 +1990,62 @@ function updateSolutionReplayUI() {
         return;
     }
 
-    const hasSolution = Boolean(solutionReplayData.solution && solutionReplayData.solution.length > 0);
-    modal.classList.toggle('no-solution', !hasSolution);
-    noSolutionMessage.classList.toggle('visible', !hasSolution);
-
-    if (!hasSolution) {
-        return;
-    }
-
+    const parsedInput = normalizeLurdInput(solutionReplayData.inputDraft);
+    const hasActiveReplaySequence = solutionReplayData.solution.length > 0;
     const currentMove = getCurrentReplayMoveNumber();
-    const totalMoves = solutionReplayData.solution.length;
+    const totalMoves = hasActiveReplaySequence
+        ? solutionReplayData.solution.length
+        : (parsedInput.isValid ? parsedInput.normalized.length : 0);
     progressText.textContent = `MOVE ${currentMove} / ${totalMoves}`;
 
-    const levelKey = `${currentSet}_${currentLevelNumber}`;
-    const levelProgressData = levelProgress.get(levelKey);
-    if (levelProgressData) {
-        statsText.textContent = `BEST: ${levelProgressData.bestMoves || '?'} MOVES, ${levelProgressData.bestPushes || '?'} PUSHES`;
+    const draftDisplay = String(solutionReplayData.inputDraft || '').replace(/\s+/g, '');
+    const hasInvalidDraftChars = /[^lurdLURD]/.test(draftDisplay);
+    let displaySequence = !hasInvalidDraftChars ? draftDisplay : '';
+    if (hasActiveReplaySequence) {
+        displaySequence = displaySequence.length >= solutionReplayData.solution.length
+            ? displaySequence.slice(0, solutionReplayData.solution.length)
+            : solutionReplayData.solution;
+    }
+    if (hasActiveReplaySequence) {
+        lurdTrack.style.visibility = 'visible';
+        lurdTrack.style.marginBottom = '';
+        renderLurdTrack(lurdTrack, displaySequence, solutionReplayData.currentMoveIndex);
     } else {
-        statsText.textContent = '';
+        lurdTrack.style.visibility = 'hidden';
+        lurdTrack.style.marginBottom = '0';
+        lurdTrack.innerHTML = '';
+        lurdTrack.scrollLeft = 0;
     }
 
-    if (shareLabel) {
-        shareLabel.textContent = solutionCopiedState ? 'COPIED' : '';
-        shareLabel.style.color = solutionCopiedState ? '#00ff88' : '#ffdd00';
+    if (document.activeElement !== lurdInput && lurdInput.value !== solutionReplayData.inputDraft) {
+        lurdInput.value = solutionReplayData.inputDraft;
     }
+
+    updateLurdInputAlignment(lurdInput);
+
+    if (hasActiveReplaySequence) {
+        centerLurdInputAtIndex(lurdInput, solutionReplayData.solution, solutionReplayData.currentMoveIndex);
+    } else if (document.activeElement !== lurdInput) {
+        lurdInput.scrollLeft = 0;
+    }
+
+    const storedSolution = getStoredSolutionForCurrentLevel();
+    loadSavedButton.style.display = storedSolution ? 'inline-flex' : 'none';
+    storedShareButton.style.display = storedSolution ? 'inline-flex' : 'none';
+
+    const existingSolutionDiffers = shouldOfferToolboxSave();
+    saveButton.style.display = solutionReplayData.saveEligible && existingSolutionDiffers ? 'inline-flex' : 'none';
+    saveButton.textContent = getStoredSolutionForCurrentLevel() ? 'OVERWRITE' : 'SAVE';
+    saveButton.setAttribute('title', getStoredSolutionForCurrentLevel() ? 'Overwrite stored solution' : 'Save solution');
+    lurdStatus.textContent = solutionReplayData.statusMessage || '';
 
     const baseEnabled = !solutionReplayData.isPlaying && !isPlayerMoving;
-    rewindButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex > 0);
-    stepBackButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex > 0);
-    stepForwardButton.disabled = !(baseEnabled && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length);
+    const canRunFromInput = parsedInput.isValid && parsedInput.normalized.length > 0;
+    rewindButton.disabled = !(baseEnabled && hasActiveReplaySequence && solutionReplayData.currentMoveIndex > 0);
+    stepBackButton.disabled = !(baseEnabled && hasActiveReplaySequence && solutionReplayData.currentMoveIndex > 0);
+    stepForwardButton.disabled = !(baseEnabled && hasActiveReplaySequence && solutionReplayData.currentMoveIndex < solutionReplayData.solution.length);
+    playPauseButton.disabled = !(hasActiveReplaySequence || canRunFromInput);
+    lurdInput.disabled = solutionReplayData.isPlaying;
 
     playPauseButton.textContent = solutionReplayData.isPlaying ? 'PAUSE' : 'PLAY';
     playPauseButton.setAttribute('aria-label', solutionReplayData.isPlaying ? 'Pause replay' : 'Play replay');
@@ -3393,6 +3755,35 @@ function updatePlayerMovement(deltaTime) {
         
         // Check if level is complete after movement
         checkLevelCompletion();
+
+        if (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive) {
+            if (isLevelComplete() && !solutionReplayData.solvedByToolbox) {
+                if (solutionReplayData.currentMoveIndex < solutionReplayData.solution.length) {
+                    solutionReplayData.solution = solutionReplayData.solution.slice(0, solutionReplayData.currentMoveIndex);
+                }
+
+                const displaySequence = String(solutionReplayData.inputDraft || '').replace(/\s+/g, '');
+                solutionReplayData.inputDraft = (displaySequence || solutionReplayData.solution).slice(0, solutionReplayData.currentMoveIndex);
+                solutionReplayData.isPlaying = false;
+                solutionReplayData.solvedByToolbox = true;
+                solutionReplayData.saveEligible = shouldOfferToolboxSave();
+                solutionReplayData.simulatedContinuousDirection = null;
+                solutionReplayData.shouldClearContinuousAfterMove = false;
+
+                if (solutionReplayData.intervalId) {
+                    clearInterval(solutionReplayData.intervalId);
+                    solutionReplayData.intervalId = null;
+                }
+
+                if (isCustomLevelActive) {
+                    solutionReplayData.statusMessage = 'Solved. Saving is disabled for custom levels.';
+                } else if (solutionReplayData.saveEligible) {
+                    solutionReplayData.statusMessage = 'Solved. Use SAVE/OVERWRITE to store this solution.';
+                } else {
+                    solutionReplayData.statusMessage = 'Solved. Stored solution already matches this run.';
+                }
+            }
+        }
         
         // Immediately check for continued input to eliminate pause
         checkForContinuedInput();
@@ -7035,12 +7426,17 @@ function startSolutionReplay(solutionString) {
     attemptCount = currentAttemptCount; // Restore original count
     
     // Set up the solution replay data
-    solutionReplayData.solution = solutionString;
+    const parsed = normalizeLurdInput(solutionString);
+    solutionReplayData.solution = parsed.isValid ? parsed.normalized : '';
     solutionReplayData.currentMoveIndex = 0;
     solutionReplayData.isActive = true;
     solutionReplayData.isPlaying = false; // Start paused
     solutionReplayData.simulatedContinuousDirection = null; // Clear simulated continuous input
     solutionReplayData.shouldClearContinuousAfterMove = false; // Clear flag
+    solutionReplayData.hasExecutedMoves = false;
+    solutionReplayData.solvedByToolbox = false;
+    solutionReplayData.saveEligible = false;
+    solutionReplayData.statusMessage = '';
     
     // Switch to solution replay state
     currentGameState = GAME_STATES.SOLUTION_REPLAY;
@@ -7054,6 +7450,7 @@ function startSolutionReplay(solutionString) {
 
 function toggleSolutionReplayPlayback() {
     if (!solutionReplayData.isActive) return;
+    if (!solutionReplayData.solution || solutionReplayData.solution.length === 0) return;
     
     solutionReplayData.isPlaying = !solutionReplayData.isPlaying;
     
@@ -7104,6 +7501,7 @@ function executeNextReplayMove() {
         if (moveSuccessful) {
             // Move to next character in solution
             solutionReplayData.currentMoveIndex++;
+            solutionReplayData.hasExecutedMoves = true;
         } else {
             // Move failed - this shouldn't happen with a valid solution
             console.warn('Solution replay move failed:', direction, 'at move', solutionReplayData.currentMoveIndex);
@@ -7156,6 +7554,7 @@ function stepSolutionReplayForward() {
         if (moveSuccessful) {
             // Move to next character in solution
             solutionReplayData.currentMoveIndex++;
+            solutionReplayData.hasExecutedMoves = true;
             
             // Since we're stepping manually (paused), clear any continuous animation that was set up
             // The move is complete and we want to stop at this position
@@ -7195,6 +7594,8 @@ function stepSolutionReplayBackward() {
     const undoStarted = undoLastMove();
     if (undoStarted) {
         solutionReplayData.currentMoveIndex--;
+        clearToolboxSolveState();
+        solutionReplayData.statusMessage = '';
     }
 }
 
@@ -7233,6 +7634,9 @@ function rewindSolutionReplayToStart() {
     solutionReplayData.isPlaying = false; // Start paused
     solutionReplayData.simulatedContinuousDirection = null;
     solutionReplayData.shouldClearContinuousAfterMove = false;
+    solutionReplayData.hasExecutedMoves = false;
+    clearToolboxSolveState();
+    solutionReplayData.statusMessage = '';
     
     // Switch to solution replay state
     currentGameState = GAME_STATES.SOLUTION_REPLAY;
@@ -7248,6 +7652,9 @@ function completeSolutionReplay() {
     // Clear simulated continuous input
     solutionReplayData.simulatedContinuousDirection = null;
     solutionReplayData.shouldClearContinuousAfterMove = false;
+    solutionReplayData.statusMessage = solutionReplayData.solvedByToolbox
+        ? solutionReplayData.statusMessage
+        : 'Playback finished.';
     
     // Show completion message briefly, then return to controls
     // Don't trigger normal level completion logic
@@ -7263,11 +7670,17 @@ function exitSolutionReplay() {
         solutionReplayData.intervalId = null;
     }
     
-    // Return to normal gameplay - reset to starting state
-    // Preserve attempt counter when returning to gameplay
-    const currentAttemptCount = attemptCount;
-    restartCurrentLevel(); // Reset level to starting position
-    attemptCount = currentAttemptCount; // Restore original count
+    if (solutionReplayData.hasExecutedMoves || solutionReplayData.currentMoveIndex > 0) {
+        // Return to normal gameplay - reset to starting state
+        // Preserve attempt counter when returning to gameplay
+        const currentAttemptCount = attemptCount;
+        restartCurrentLevel(); // Reset level to starting position
+        attemptCount = currentAttemptCount; // Restore original count
+    }
+
+    solutionReplayData.hasExecutedMoves = false;
+    solutionReplayData.statusMessage = '';
+    clearToolboxSolveState();
     currentGameState = GAME_STATES.PLAYING;
 }
 

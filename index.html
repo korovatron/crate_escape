@@ -344,14 +344,14 @@
         .solution-replay-modal {
             position: relative;
             width: min(760px, 96vw);
-            min-height: 120px;
-            max-height: 140px;
+            min-height: 182px;
+            max-height: 206px;
             overflow: hidden;
             background: rgba(11, 11, 11, 0.76);
             border: 2px solid #00aaff;
             border-radius: 10px;
             box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
-            padding: 10px 14px 8px 14px;
+            padding: 18px 14px 10px 14px;
             color: #e6f7ff;
             font-family: Arial, system-ui, -apple-system, sans-serif;
             pointer-events: auto;
@@ -382,8 +382,123 @@
             color: #00aaff;
             font-weight: 700;
             font-size: 1.05rem;
-            margin: 0 40px 8px 40px;
+            margin: 0 40px 6px 40px;
             line-height: 1.1;
+        }
+
+        .solution-replay-lurd-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 6px;
+            align-items: center;
+            margin: 0 0 6px 0;
+        }
+
+        .solution-replay-lurd-input {
+            width: 100%;
+            min-height: 36px;
+            max-height: 36px;
+            resize: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: pre;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: rgba(6, 14, 20, 0.9);
+            color: #dff7ff;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 1.02rem;
+            line-height: 1.2;
+            box-sizing: border-box;
+            padding: 6px 9px;
+        }
+
+        .solution-replay-mini-button {
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: #102318;
+            color: #00ff88;
+            min-height: 30px;
+            padding: 0 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .solution-replay-mini-button.save {
+            border-color: #ffdd00;
+            color: #ffdd00;
+            background: #2a230a;
+        }
+
+        .solution-replay-mini-button.share {
+            border-color: #00aaff;
+            color: #00aaff;
+            background: #0f1720;
+        }
+
+        .solution-replay-track {
+            min-height: 30px;
+            max-height: 30px;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            color: #cde9f5;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 0.96rem;
+            line-height: 1.2;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: pre;
+            padding: 5px 8px;
+            box-sizing: border-box;
+            margin-bottom: 6px;
+        }
+
+        .solution-replay-lurd-input,
+        .solution-replay-track {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .solution-replay-lurd-input::-webkit-scrollbar,
+        .solution-replay-track::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        .solution-replay-track .past {
+            color: #7f97a3;
+        }
+
+        .solution-replay-track .current {
+            color: #101820;
+            background: #00ff88;
+            border-radius: 3px;
+            padding: 0 1px;
+        }
+
+        .solution-replay-track .future {
+            color: #dff7ff;
+        }
+
+        .solution-replay-status {
+            min-height: 0.95rem;
+            font-size: 0.84rem;
+            color: #ffdd00;
+            font-weight: 700;
+            text-align: center;
+            margin: 0 2px 10px 2px;
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .solution-replay-controls {
@@ -401,22 +516,12 @@
             gap: 4px;
         }
 
-        .solution-replay-share {
-            border: 1px solid #00aaff;
-            background: #0f1720;
-            color: #dff7ff;
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: 0.82rem;
-            cursor: pointer;
-            min-height: 32px;
-        }
-
-        .solution-replay-share-label {
-            color: #ffdd00;
-            font-size: 0.72rem;
-            font-weight: 700;
-            min-height: 0.9rem;
+        .solution-replay-side.actions {
+            min-width: 0;
+            flex-direction: row;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
         }
 
         .solution-replay-main-controls {
@@ -451,21 +556,10 @@
             color: #ff6666;
         }
 
-        .solution-replay-button:disabled,
-        .solution-replay-share:disabled {
+        .solution-replay-button:disabled {
             color: #666666;
             border-color: #444444;
             cursor: default;
-        }
-
-        .solution-replay-stats {
-            margin-top: 8px;
-            text-align: center;
-            color: #ffdd00;
-            font-size: 0.84rem;
-            font-weight: 700;
-            line-height: 1.1;
-            min-height: 1em;
         }
 
         .solution-replay-message {
@@ -482,8 +576,7 @@
         }
 
         .solution-replay-modal.no-solution .solution-replay-progress,
-        .solution-replay-modal.no-solution .solution-replay-controls,
-        .solution-replay-modal.no-solution .solution-replay-stats {
+        .solution-replay-modal.no-solution .solution-replay-controls {
             display: none;
         }
 
@@ -493,9 +586,9 @@
             }
 
             .solution-replay-modal {
-                min-height: 118px;
-                max-height: 124px;
-                padding: 8px 10px 8px 10px;
+                min-height: 172px;
+                max-height: 196px;
+                padding: 16px 10px 10px 10px;
             }
 
             .solution-replay-progress {
@@ -508,6 +601,38 @@
                 gap: 6px;
             }
 
+            .solution-replay-lurd-row {
+                gap: 5px;
+                margin-bottom: 5px;
+            }
+
+            .solution-replay-lurd-input {
+                min-height: 32px;
+                max-height: 32px;
+                font-size: 0.84rem;
+                padding: 5px 8px;
+            }
+
+            .solution-replay-mini-button {
+                min-height: 28px;
+                font-size: 0.62rem;
+                padding: 0 6px;
+            }
+
+            .solution-replay-track {
+                min-height: 24px;
+                max-height: 24px;
+                font-size: 0.82rem;
+                padding: 4px 7px;
+                margin-bottom: 5px;
+            }
+
+            .solution-replay-status {
+                font-size: 0.74rem;
+                margin-bottom: 8px;
+            }
+
+
             .solution-replay-button {
                 min-height: 28px;
                 font-size: 0.78rem;
@@ -516,21 +641,6 @@
             #solutionReplayPlayPauseButton {
                 font-size: 0.66rem;
                 padding: 0 5px;
-            }
-
-            .solution-replay-share {
-                min-height: 28px;
-                font-size: 0.76rem;
-                padding: 3px 8px;
-            }
-
-            .solution-replay-share-label {
-                font-size: 0.68rem;
-            }
-
-            .solution-replay-stats {
-                margin-top: 6px;
-                font-size: 0.74rem;
             }
 
             .solution-replay-message {
@@ -698,30 +808,31 @@
         <p>Alternative: Try our other puzzle games at <a href="https://www.korovatron.co.uk/">Korovatron Games</a></p>
     </canvas>
 
-        <button id="solutionTriggerButton" class="solution-trigger-button" type="button" aria-label="View your solution">VIEW YOUR
-SOLUTION</button>
+        <button id="solutionTriggerButton" class="solution-trigger-button" type="button" aria-label="Open LURD console for move-string experiments and saved solution viewing" title="LURD Console: experiment with custom LURD move strings, run/review playback, load saved solutions, and share saved best solutions with stats.">LURD
+    CONSOLE</button>
 
         <div id="solutionReplayOverlay" class="solution-replay-overlay" aria-hidden="true">
-            <div id="solutionReplayModal" class="solution-replay-modal" role="dialog" aria-modal="false" aria-label="Solution replay controls">
+            <div id="solutionReplayModal" class="solution-replay-modal" role="dialog" aria-modal="false" aria-label="LURD console controls">
                 <button id="solutionReplayCloseButton" class="solution-replay-close" type="button" aria-label="Close solution replay">×</button>
                 <div id="solutionReplayProgressText" class="solution-replay-progress">MOVE 0 / 0</div>
+                <div class="solution-replay-lurd-row">
+                    <textarea id="solutionReplayLurdInput" class="solution-replay-lurd-input" rows="1" wrap="off" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Paste LURD (e.g. LURRDDL...)" aria-label="LURD input"></textarea>
+                </div>
+                <div id="solutionReplayLurdTrack" class="solution-replay-track" aria-live="polite"></div>
+                <div id="solutionReplayLurdStatus" class="solution-replay-status" aria-live="polite"></div>
                 <div class="solution-replay-controls">
-                    <div class="solution-replay-side">
-                        <button id="solutionReplayShareButton" class="solution-replay-share" type="button" aria-label="Copy solution to clipboard" title="Copy solution to clipboard">SHARE</button>
-                        <div id="solutionReplayShareLabel" class="solution-replay-share-label" aria-live="polite"></div>
-                    </div>
+                    <div class="solution-replay-side" aria-hidden="true"></div>
                     <div class="solution-replay-main-controls">
                         <button id="solutionReplayRewindButton" class="solution-replay-button step" type="button" aria-label="Rewind to start" title="Rewind to start">&lt;&lt;</button>
                         <button id="solutionReplayStepBackButton" class="solution-replay-button step" type="button" aria-label="Step backward" title="Step backward">◄</button>
                         <button id="solutionReplayPlayPauseButton" class="solution-replay-button" type="button" aria-label="Play replay" title="Play replay">PLAY</button>
                         <button id="solutionReplayStepForwardButton" class="solution-replay-button step" type="button" aria-label="Step forward" title="Step forward">►</button>
                     </div>
-                    <div class="solution-replay-side"></div>
-                </div>
-                <div id="solutionReplayStatsText" class="solution-replay-stats"></div>
-                <div id="solutionReplayNoSolutionMessage" class="solution-replay-message">
-                    You solved this level before the saving feature was implemented.<br>
-                    Solve again to store your solution.
+                    <div class="solution-replay-side actions">
+                        <button id="solutionReplaySaveButton" class="solution-replay-mini-button save" type="button" style="display:none;" aria-label="Save solution" title="Save solution">SAVE</button>
+                        <button id="solutionReplayLoadSavedButton" class="solution-replay-mini-button" type="button" style="display:none;" aria-label="Load saved solution into input" title="Load saved solution into input">LOAD SAVED</button>
+                        <button id="solutionReplayStoredShareButton" class="solution-replay-mini-button share" type="button" style="display:none;" aria-label="Share saved solution" title="Share saved solution">SHARE</button>
+                    </div>
                 </div>
             </div>
         </div>
