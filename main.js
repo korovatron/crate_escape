@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.41';
+const APP_VERSION = '1.1.42';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1332,7 +1332,7 @@ async function loadLegalModalContent(type) {
     }
 
     try {
-        const response = await fetch(config.path, { cache: 'no-cache' });
+        const response = await fetch(config.path);
         if (!response.ok) {
             throw new Error(`Failed to load ${config.path}`);
         }

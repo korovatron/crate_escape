@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-1.1.41';
+const CACHE_NAME = 'crate-escape-version-1.1.42';
 const urlsToCache = [
   './',
   './index.html',
@@ -18,7 +18,9 @@ const urlsToCache = [
   './assets/sounds/restart.mp3',
   './app-icon.png',
   './manifest.json',
-  './firebase-config.js'
+  './firebase-config.js',
+  './policies/privacy_policy.html',
+  './policies/terms_of_service.html'
 ];
 
 // Install event - cache resources
