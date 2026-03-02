@@ -259,17 +259,17 @@
             }
 
             .title-screen-logo {
-                width: min(440px, 54vw);
-                max-height: 24vh;
+                width: var(--title-logo-width, min(440px, 54vw));
+                max-height: var(--title-logo-height, 24vh);
             }
 
             .title-screen-tagline {
-                font-size: clamp(12px, 1.7vw, 17px);
-                max-width: 68vw;
+                font-size: var(--title-tagline-size, clamp(12px, 1.7vw, 17px));
+                max-width: var(--title-tagline-width, 68vw);
             }
 
             .title-screen-start-wrap {
-                bottom: clamp(62px, 12vh, 110px);
+                bottom: var(--title-start-bottom, clamp(62px, 12vh, 110px));
             }
         }
 
@@ -687,9 +687,9 @@
 
         .solution-touch-trigger-button {
             position: fixed;
-            left: 50%;
+            left: calc(10px + env(safe-area-inset-left));
             bottom: calc(8px + env(safe-area-inset-bottom));
-            transform: translateX(-50%);
+            transform: none;
             display: none;
             align-items: center;
             justify-content: center;
@@ -1249,7 +1249,7 @@
                 <p class="title-screen-tagline">Complete your shift by pushing all crates into their designated positions before escaping to the pub!</p>
             </div>
             <div class="title-screen-start-wrap">
-                <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Start game" title="Start game">START GAME</button>
+                <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Play" title="Play">PLAY</button>
             </div>
         </div>
 

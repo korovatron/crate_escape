@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.67';
+const APP_VERSION = '1.1.68';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1858,11 +1858,16 @@ function updateTitleScreenUI() {
     const shortSide = Math.max(1, Math.min(width, height));
     const longSide = Math.max(width, height);
     const aspectRatio = width / Math.max(1, height);
+    const isTouchLandscape = isTouchDevice() && width > height;
     const isMobileLandscape = width > height && height < 600;
     const isUltraWide = aspectRatio >= 2;
 
-    const logoMaxWidth = isUltraWide ? width * 0.62 : (isMobileLandscape ? width * 0.6 : width * 0.7);
-    const logoMaxHeight = isUltraWide ? height * 0.38 : (isMobileLandscape ? height * 0.25 : height * 0.3);
+    const logoMaxWidth = isTouchLandscape
+        ? width * 0.56
+        : (isUltraWide ? width * 0.62 : (isMobileLandscape ? width * 0.6 : width * 0.7));
+    const logoMaxHeight = isTouchLandscape
+        ? height * 0.22
+        : (isUltraWide ? height * 0.38 : (isMobileLandscape ? height * 0.25 : height * 0.3));
     let logoWidth = Math.min(logoMaxWidth, width * 0.92);
     let logoHeight = logoMaxHeight;
 
@@ -1877,19 +1882,25 @@ function updateTitleScreenUI() {
         }
     }
 
-    const taglineSize = Math.max(13, Math.min(40, shortSide * (isUltraWide ? 0.056 : 0.04)));
+    const taglineSize = isTouchLandscape
+        ? Math.max(14, Math.min(20, height * 0.048))
+        : Math.max(13, Math.min(40, shortSide * (isUltraWide ? 0.056 : 0.04)));
     const startFontSize = Math.max(16, Math.min(32, shortSide * 0.048));
     const startPadY = Math.max(10, Math.min(16, shortSide * 0.02));
     const startPadX = Math.max(20, Math.min(46, longSide * 0.045));
-    const startBottom = isUltraWide
+    const startBottom = isTouchLandscape
+        ? Math.max(44, Math.min(84, height * 0.11))
+        : isUltraWide
         ? Math.max(90, Math.min(210, height * 0.24))
         : Math.max(60, Math.min(138, height * 0.16));
 
-    container.style.setProperty('--title-top-margin', isUltraWide ? 'max(10px, 2.6vh) auto 0 auto' : '0 auto 0 auto');
-    container.style.setProperty('--title-top-gap', isUltraWide ? '14px' : '10px');
+    container.style.setProperty('--title-top-margin', isUltraWide && !isTouchLandscape ? 'max(10px, 2.6vh) auto 0 auto' : '0 auto 0 auto');
+    container.style.setProperty('--title-top-gap', isTouchLandscape ? '8px' : (isUltraWide ? '14px' : '10px'));
     container.style.setProperty('--title-logo-width', `${Math.round(logoWidth)}px`);
     container.style.setProperty('--title-logo-height', `${Math.round(logoHeight)}px`);
-    container.style.setProperty('--title-tagline-width', `${Math.round(Math.min(width * 0.92, Math.max(logoWidth, 360)))}px`);
+    container.style.setProperty('--title-tagline-width', `${Math.round(isTouchLandscape
+        ? Math.min(width * 0.82, Math.max(logoWidth * 0.92, 300))
+        : Math.min(width * 0.92, Math.max(logoWidth, 360)))}px`);
     container.style.setProperty('--title-tagline-size', `${Math.round(taglineSize)}px`);
     container.style.setProperty('--title-start-font-size', `${Math.round(startFontSize)}px`);
     container.style.setProperty('--title-start-pad-y', `${Math.round(startPadY)}px`);
@@ -5446,6 +5457,8 @@ function drawTitleScreen() {
         yPos = drawWrappedText(context, "Complete your shift by pushing all crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     }
 
+    const shouldDrawMiniDemo = !(isTouchDevice() && canvas.width > canvas.height);
+
     // MIDDLE CONTENT POSITIONING: Use available space between top content and bottom-anchored elements
     
     // Calculate the available space for middle content
@@ -5473,148 +5486,150 @@ function drawTitleScreen() {
     const tempButtonSpacing = isMobileLandscape ? tempButtonHeight * 0.8 : tempButtonHeight * 1.2;
     const bottomBoundary = bottomCreditsY - tempAuthorSize - tempButtonSpacing - tempButtonHeight;
     
-    // Calculate available space for demo level and determine optimal positioning
-    const availableMiddleSpace = bottomBoundary - yPos;
-    const demoHeight = 3; // tiles
-    
-    // Calculate demo tile size that fits well in available space
-    let baseDemoTileSize;
-    if (isMobilePortrait) {
-        baseDemoTileSize = Math.min(canvas.width / 15, availableMiddleSpace / 8, 40);
-    } else if (isMobileLandscape) {
-        baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 6, 28);
-    } else {
-        baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 8, 32);
-    }
-    
-    // Ensure tile size is an integer for pixel-perfect rendering
-    const demoTileSize = Math.floor(baseDemoTileSize);
-    
-    const demoWidth = 7; // 7 tiles wide
-    const totalDemoHeight = demoHeight * demoTileSize;
-    
-    // Center the demo level in the available middle space
-    const middleSpaceCenter = yPos + (availableMiddleSpace / 2);
-    const demoStartY = Math.floor(middleSpaceCenter - (totalDemoHeight / 2));
-    
-    // Pixel-align the demo level position
-    const demoStartX = Math.floor((canvas.width - (demoWidth * demoTileSize)) / 2);
-    
-    // Draw demo level tiles with pixel-perfect positioning
-    for (let y = 0; y < demoHeight; y++) {
-        for (let x = 0; x < demoWidth; x++) {
-            // Ensure pixel-aligned tile positions
-            const tileX = Math.floor(demoStartX + x * demoTileSize);
-            const tileY = Math.floor(demoStartY + y * demoTileSize);
-            
-            if (y === 0 || y === 2 || x === 0 || x === 6) {
-                // Wall tiles - use current theme
-                const sprites = getThemeSprites();
-                const sprite = textureAtlas.frames[sprites.wall];
-                context.drawImage(
-                    spriteSheet,
-                    sprite.x, sprite.y, sprite.width, sprite.height,
-                    tileX, tileY, demoTileSize, demoTileSize
-                );
-            } else if (y === 1) {
-                // Floor corridor - use current theme
-                const sprites = getThemeSprites();
-                const sprite = textureAtlas.frames[sprites.ground];
-                context.drawImage(
-                    spriteSheet,
-                    sprite.x, sprite.y, sprite.width, sprite.height,
-                    tileX, tileY, demoTileSize, demoTileSize
-                );
+    if (shouldDrawMiniDemo) {
+        // Calculate available space for demo level and determine optimal positioning
+        const availableMiddleSpace = bottomBoundary - yPos;
+        const demoHeight = 3; // tiles
+        
+        // Calculate demo tile size that fits well in available space
+        let baseDemoTileSize;
+        if (isMobilePortrait) {
+            baseDemoTileSize = Math.min(canvas.width / 15, availableMiddleSpace / 8, 40);
+        } else if (isMobileLandscape) {
+            baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 6, 28);
+        } else {
+            baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 8, 32);
+        }
+        
+        // Ensure tile size is an integer for pixel-perfect rendering
+        const demoTileSize = Math.floor(baseDemoTileSize);
+        
+        const demoWidth = 7; // 7 tiles wide
+        const totalDemoHeight = demoHeight * demoTileSize;
+        
+        // Center the demo level in the available middle space
+        const middleSpaceCenter = yPos + (availableMiddleSpace / 2);
+        const demoStartY = Math.floor(middleSpaceCenter - (totalDemoHeight / 2));
+        
+        // Pixel-align the demo level position
+        const demoStartX = Math.floor((canvas.width - (demoWidth * demoTileSize)) / 2);
+        
+        // Draw demo level tiles with pixel-perfect positioning
+        for (let y = 0; y < demoHeight; y++) {
+            for (let x = 0; x < demoWidth; x++) {
+                // Ensure pixel-aligned tile positions
+                const tileX = Math.floor(demoStartX + x * demoTileSize);
+                const tileY = Math.floor(demoStartY + y * demoTileSize);
                 
-                // Add game elements
-                if (x === 1) {
-                    // Player - use default player sprite (same as main game fallback)
-                    const playerSprite = textureAtlas.frames["player_03.png"];
-                    context.drawImage(
-                        spriteSheet,
-                        playerSprite.x, playerSprite.y, playerSprite.width, playerSprite.height,
-                        tileX, tileY, demoTileSize, demoTileSize
-                    );
-                } else if (x === 3) {
-                    // Crate - use current theme crate sprite
+                if (y === 0 || y === 2 || x === 0 || x === 6) {
+                    // Wall tiles - use current theme
                     const sprites = getThemeSprites();
-                    const crateSprite = textureAtlas.frames[sprites.crate];
+                    const sprite = textureAtlas.frames[sprites.wall];
                     context.drawImage(
                         spriteSheet,
-                        crateSprite.x, crateSprite.y, crateSprite.width, crateSprite.height,
+                        sprite.x, sprite.y, sprite.width, sprite.height,
                         tileX, tileY, demoTileSize, demoTileSize
                     );
-                } else if (x === 5) {
-                    // Goal tile - same as main game (floor + goal sprite with margin)
-                    const goalSprite = textureAtlas.frames["environment_06.png"];
-                    const goalMargin = Math.max(1, Math.floor(demoTileSize / 8)); // Scale margin with tile size
-                    const goalSize = Math.floor(demoTileSize - (goalMargin * 2)); // Ensure integer size
-                    const goalX = Math.floor(tileX + goalMargin); // Pixel-align goal position
-                    const goalY = Math.floor(tileY + goalMargin);
+                } else if (y === 1) {
+                    // Floor corridor - use current theme
+                    const sprites = getThemeSprites();
+                    const sprite = textureAtlas.frames[sprites.ground];
                     context.drawImage(
                         spriteSheet,
-                        goalSprite.x, goalSprite.y, goalSprite.width, goalSprite.height,
-                        goalX, goalY, goalSize, goalSize
+                        sprite.x, sprite.y, sprite.width, sprite.height,
+                        tileX, tileY, demoTileSize, demoTileSize
                     );
-                }
-                
-                // Add movement arrows on empty tiles with dramatic manual glow effect
-                if (x === 2 || x === 4) {
-                    // Draw arrow with bright blue glow for maximum contrast against brown ground
-                    const arrowSize = Math.floor(demoTileSize * 0.4);
-                    const arrowX = Math.floor(tileX + demoTileSize / 2);
-                    const arrowY = Math.floor(tileY + demoTileSize / 2);
                     
-                    // Calculate pulsating intensity
-                    const time = Date.now() * 0.005;
-                    const glowIntensity = 0.5 + 0.5 * Math.sin(time); // 0.5 to 1.0 for brighter baseline
-                    
-                    // Save context
-                    context.save();
-                    
-                    // Create manual glow effect with bright blue colors for contrast against brown ground
-                    const arrowThird = Math.floor(arrowSize / 3);
-                    
-                    // Draw multiple glow layers from largest to smallest
-                    for (let layer = 6; layer >= 0; layer--) {
-                        const layerSize = arrowSize + layer * 4; // Each layer 4px larger for bigger glow
-                        const layerThird = Math.floor(layerSize / 3);
-                        const baseOpacity = glowIntensity * 0.4; // Much higher base opacity
-                        
-                        if (layer > 4) {
-                            // Outer bright blue glow layers - perfect contrast against brown
-                            context.fillStyle = `rgba(0, 150, 255, ${baseOpacity / (layer - 2)})`; // Bright blue
-                        } else if (layer > 2) {
-                            // Middle cyan-blue glow layers - bright and prominent
-                            context.fillStyle = `rgba(100, 200, 255, ${baseOpacity / (layer - 1)})`; // Light blue
-                        } else if (layer > 0) {
-                            // Inner bright cyan layers
-                            context.fillStyle = `rgba(200, 230, 255, ${baseOpacity * 1.5})`; // Very light blue
-                        } else {
-                            // Core very bright white arrow
-                            context.fillStyle = `rgba(255, 255, 255, ${0.9 + glowIntensity * 0.1})`; // Almost always bright white
-                        }
-                        
-                        // Draw complete arrow with head and tail
-                        const tailWidth = Math.floor(layerThird * 0.6); // Tail is narrower than head
-                        const tailLength = Math.floor(layerThird * 1.2); // Tail extends behind
-                        
-                        context.beginPath();
-                        // Arrow head (pointing right)
-                        context.moveTo(arrowX - layerThird, arrowY - layerThird); // Top left of head
-                        context.lineTo(arrowX + layerThird, arrowY); // Arrow tip
-                        context.lineTo(arrowX - layerThird, arrowY + layerThird); // Bottom left of head
-                        // Connect to tail
-                        context.lineTo(arrowX - layerThird, arrowY + tailWidth); // Top of tail notch
-                        context.lineTo(arrowX - layerThird - tailLength, arrowY + tailWidth); // End of top tail
-                        context.lineTo(arrowX - layerThird - tailLength, arrowY - tailWidth); // End of bottom tail
-                        context.lineTo(arrowX - layerThird, arrowY - tailWidth); // Bottom of tail notch
-                        context.closePath();
-                        context.fill();
+                    // Add game elements
+                    if (x === 1) {
+                        // Player - use default player sprite (same as main game fallback)
+                        const playerSprite = textureAtlas.frames["player_03.png"];
+                        context.drawImage(
+                            spriteSheet,
+                            playerSprite.x, playerSprite.y, playerSprite.width, playerSprite.height,
+                            tileX, tileY, demoTileSize, demoTileSize
+                        );
+                    } else if (x === 3) {
+                        // Crate - use current theme crate sprite
+                        const sprites = getThemeSprites();
+                        const crateSprite = textureAtlas.frames[sprites.crate];
+                        context.drawImage(
+                            spriteSheet,
+                            crateSprite.x, crateSprite.y, crateSprite.width, crateSprite.height,
+                            tileX, tileY, demoTileSize, demoTileSize
+                        );
+                    } else if (x === 5) {
+                        // Goal tile - same as main game (floor + goal sprite with margin)
+                        const goalSprite = textureAtlas.frames["environment_06.png"];
+                        const goalMargin = Math.max(1, Math.floor(demoTileSize / 8)); // Scale margin with tile size
+                        const goalSize = Math.floor(demoTileSize - (goalMargin * 2)); // Ensure integer size
+                        const goalX = Math.floor(tileX + goalMargin); // Pixel-align goal position
+                        const goalY = Math.floor(tileY + goalMargin);
+                        context.drawImage(
+                            spriteSheet,
+                            goalSprite.x, goalSprite.y, goalSprite.width, goalSprite.height,
+                            goalX, goalY, goalSize, goalSize
+                        );
                     }
                     
-                    // Restore context
-                    context.restore();
+                    // Add movement arrows on empty tiles with dramatic manual glow effect
+                    if (x === 2 || x === 4) {
+                        // Draw arrow with bright blue glow for maximum contrast against brown ground
+                        const arrowSize = Math.floor(demoTileSize * 0.4);
+                        const arrowX = Math.floor(tileX + demoTileSize / 2);
+                        const arrowY = Math.floor(tileY + demoTileSize / 2);
+                        
+                        // Calculate pulsating intensity
+                        const time = Date.now() * 0.005;
+                        const glowIntensity = 0.5 + 0.5 * Math.sin(time); // 0.5 to 1.0 for brighter baseline
+                        
+                        // Save context
+                        context.save();
+                        
+                        // Create manual glow effect with bright blue colors for contrast against brown ground
+                        const arrowThird = Math.floor(arrowSize / 3);
+                        
+                        // Draw multiple glow layers from largest to smallest
+                        for (let layer = 6; layer >= 0; layer--) {
+                            const layerSize = arrowSize + layer * 4; // Each layer 4px larger for bigger glow
+                            const layerThird = Math.floor(layerSize / 3);
+                            const baseOpacity = glowIntensity * 0.4; // Much higher base opacity
+                            
+                            if (layer > 4) {
+                                // Outer bright blue glow layers - perfect contrast against brown
+                                context.fillStyle = `rgba(0, 150, 255, ${baseOpacity / (layer - 2)})`; // Bright blue
+                            } else if (layer > 2) {
+                                // Middle cyan-blue glow layers - bright and prominent
+                                context.fillStyle = `rgba(100, 200, 255, ${baseOpacity / (layer - 1)})`; // Light blue
+                            } else if (layer > 0) {
+                                // Inner bright cyan layers
+                                context.fillStyle = `rgba(200, 230, 255, ${baseOpacity * 1.5})`; // Very light blue
+                            } else {
+                                // Core very bright white arrow
+                                context.fillStyle = `rgba(255, 255, 255, ${0.9 + glowIntensity * 0.1})`; // Almost always bright white
+                            }
+                            
+                            // Draw complete arrow with head and tail
+                            const tailWidth = Math.floor(layerThird * 0.6); // Tail is narrower than head
+                            const tailLength = Math.floor(layerThird * 1.2); // Tail extends behind
+                            
+                            context.beginPath();
+                            // Arrow head (pointing right)
+                            context.moveTo(arrowX - layerThird, arrowY - layerThird); // Top left of head
+                            context.lineTo(arrowX + layerThird, arrowY); // Arrow tip
+                            context.lineTo(arrowX - layerThird, arrowY + layerThird); // Bottom left of head
+                            // Connect to tail
+                            context.lineTo(arrowX - layerThird, arrowY + tailWidth); // Top of tail notch
+                            context.lineTo(arrowX - layerThird - tailLength, arrowY + tailWidth); // End of top tail
+                            context.lineTo(arrowX - layerThird - tailLength, arrowY - tailWidth); // End of bottom tail
+                            context.lineTo(arrowX - layerThird, arrowY - tailWidth); // Bottom of tail notch
+                            context.closePath();
+                            context.fill();
+                        }
+                        
+                        // Restore context
+                        context.restore();
+                    }
                 }
             }
         }
@@ -5653,7 +5668,7 @@ function drawTitleScreen() {
         const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
 
         // Button dimensions
-        const buttonText = "START GAME";
+        const buttonText = "PLAY";
         context.font = `700 ${buttonTextSize}px Arial, system-ui, -apple-system, sans-serif`;
         const textMetrics = context.measureText(buttonText);
         const buttonPadding = buttonTextSize * 0.8;
