@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crate-escape-version-1.1.54';
+const CACHE_NAME = 'crate-escape-version-1.1.55';
 const urlsToCache = [
   './',
   './index.html',

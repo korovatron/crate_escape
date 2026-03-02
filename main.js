@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.54';
+const APP_VERSION = '1.1.55';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1995,11 +1995,14 @@ function updateSolutionReplayUI() {
 
     const parsedInput = normalizeLurdInput(solutionReplayData.inputDraft);
     const hasActiveReplaySequence = solutionReplayData.solution.length > 0;
-    const currentMove = getCurrentReplayMoveNumber();
     const totalMoves = hasActiveReplaySequence
         ? solutionReplayData.solution.length
         : (parsedInput.isValid ? parsedInput.normalized.length : 0);
-    progressText.textContent = `STEP ${currentMove} / ${totalMoves}`;
+    const shouldShowHistoryAsCompleted = !hasActiveReplaySequence &&
+        solutionReplayData.inputSource === 'history' &&
+        totalMoves > 0;
+    const currentMove = shouldShowHistoryAsCompleted ? totalMoves : getCurrentReplayMoveNumber();
+    progressText.innerHTML = `MOVE ${currentMove} / ${totalMoves} · <span class="push-count">PUSH ${pushCount}</span>`;
 
     const draftDisplay = String(solutionReplayData.inputDraft || '').replace(/\s+/g, '');
     const hasInvalidDraftChars = /[^lurdLURD]/.test(draftDisplay);
@@ -7483,6 +7486,20 @@ function startReplayInterval() {
     }, solutionReplayData.moveDelay);
 }
 
+function removeReplayStepAtCurrentIndex() {
+    const index = solutionReplayData.currentMoveIndex;
+    if (index < 0 || index >= solutionReplayData.solution.length) {
+        return;
+    }
+
+    solutionReplayData.solution = `${solutionReplayData.solution.slice(0, index)}${solutionReplayData.solution.slice(index + 1)}`;
+
+    const displaySequence = String(solutionReplayData.inputDraft || '').replace(/\s+/g, '');
+    if (displaySequence) {
+        solutionReplayData.inputDraft = `${displaySequence.slice(0, index)}${displaySequence.slice(index + 1)}`;
+    }
+}
+
 function executeNextReplayMove() {
     if (!solutionReplayData.isActive || !solutionReplayData.isPlaying) return;
     
@@ -7501,7 +7518,7 @@ function executeNextReplayMove() {
     const direction = getDirectionFromChar(currentChar);
 
     if (!direction) {
-        solutionReplayData.currentMoveIndex++;
+        removeReplayStepAtCurrentIndex();
         return;
     }
     
@@ -7513,7 +7530,7 @@ function executeNextReplayMove() {
         solutionReplayData.currentMoveIndex++;
         solutionReplayData.hasExecutedMoves = true;
     } else {
-        solutionReplayData.currentMoveIndex++;
+        removeReplayStepAtCurrentIndex();
         solutionReplayData.simulatedContinuousDirection = null;
         solutionReplayData.shouldClearContinuousAfterMove = false;
     }
@@ -7555,7 +7572,7 @@ function stepSolutionReplayForward() {
     const direction = getDirectionFromChar(currentChar);
 
     if (!direction) {
-        solutionReplayData.currentMoveIndex++;
+        removeReplayStepAtCurrentIndex();
         return;
     }
     
@@ -7572,7 +7589,7 @@ function stepSolutionReplayForward() {
         solutionReplayData.simulatedContinuousDirection = null;
         solutionReplayData.shouldClearContinuousAfterMove = false;
     } else {
-        solutionReplayData.currentMoveIndex++;
+        removeReplayStepAtCurrentIndex();
         solutionReplayData.simulatedContinuousDirection = null;
         solutionReplayData.shouldClearContinuousAfterMove = false;
     }
