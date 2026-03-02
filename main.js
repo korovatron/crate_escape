@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.70';
+const APP_VERSION = '1.1.71';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1062,6 +1062,14 @@ async function loadLegalModalContent(type) {
                     <li>Also accepted: <code>-</code>/<code>_</code> for floor, <code>p/P</code> for player, <code>b/B</code> for crates, <code>o/O</code> for goals.</li>
                     <li>Lines starting with <code>;</code> are treated as comments and ignored.</li>
                     <li>You can generate a shareable level link directly from the import modal.</li>
+                </ul>
+
+                <p><strong>LURD console</strong></p>
+                <ul>
+                    <li>Open from the LURD control at the bottom of gameplay (desktop tab, touch button).</li>
+                    <li>Enter a LURD move string: <code>L</code> left, <code>U</code> up, <code>R</code> right, <code>D</code> down.</li>
+                    <li>Use playback controls to run, pause, step, or rewind the sequence.</li>
+                    <li>You can load, save, and share solutions from this panel.</li>
                 </ul>
 
                 <p>More on Sokoban/XSB notation: <a href="http://sokoban.org/about_sokoban.php" target="_blank" rel="noopener noreferrer">sokoban.org/about_sokoban.php</a></p>
