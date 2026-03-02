@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.59';
+const APP_VERSION = '1.1.60';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -320,13 +320,6 @@ function setupCanvasEventListeners() {
         
         // Check for button clicks during gameplay
         if (currentGameState === GAME_STATES.PLAYING) {
-            // Check for hamburger menu click
-            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
-                playSound('click');
-                isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                return;
-            }
-
             // Check for menu option clicks when menu is open
             if (isHamburgerMenuOpen) {
                 if (handleMenuOptionClick(mouseX, mouseY)) {
@@ -361,13 +354,6 @@ function setupCanvasEventListeners() {
         
         // Handle game state transitions (same logic as space key)
         if (currentGameState === GAME_STATES.TITLE) {
-            // Check for hamburger menu click
-            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
-                playSound('click');
-                isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                return;
-            }
-            
             // Check for menu option clicks when menu is open
             if (isHamburgerMenuOpen) {
                 if (handleMenuOptionClick(mouseX, mouseY)) {
@@ -388,13 +374,6 @@ function setupCanvasEventListeners() {
             }
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
-            // Check for hamburger menu click
-            if (isClickOnHamburgerMenu(mouseX, mouseY)) {
-                playSound('click');
-                isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                return;
-            }
-
             // Check for menu option clicks when menu is open
             if (isHamburgerMenuOpen) {
                 if (handleMenuOptionClick(mouseX, mouseY)) {
@@ -554,8 +533,6 @@ function setupCanvasEventListeners() {
         e.stopPropagation();
         e.stopImmediatePropagation();
 
-        const previousTouchMenuHoverIndex = touchMenuHoverIndex;
-        
         // Stop continuous movement
         isTouchActive = false;
         touchMenuHoverIndex = null;
@@ -570,20 +547,6 @@ function setupCanvasEventListeners() {
             const touch = e.changedTouches[0];
             const canvasPos = getTouchCanvasPosition(touch);
 
-            // Support touch press-and-drag release to activate hovered menu option.
-            // This should work even when drag distance/time exceeds tap thresholds.
-            if (isHamburgerMenuOpen) {
-                const releaseTouchMenuHoverIndex = getHamburgerMenuHoverIndex(canvasPos.x, canvasPos.y);
-                const activeTouchMenuHoverIndex = releaseTouchMenuHoverIndex !== null
-                    ? releaseTouchMenuHoverIndex
-                    : previousTouchMenuHoverIndex;
-
-                if (activeTouchMenuHoverIndex !== null &&
-                    handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
-                    return;
-                }
-            }
-
             touchEndX = touch.clientX;
             touchEndY = touch.clientY;
             const dx = touchEndX - touchStartX;
@@ -594,13 +557,6 @@ function setupCanvasEventListeners() {
             if (dt < tapTimeThreshold && Math.abs(dx) < tapMoveThreshold && Math.abs(dy) < tapMoveThreshold) {
                 // Check for button taps during gameplay
                 if (currentGameState === GAME_STATES.PLAYING) {
-                    // Check for hamburger menu click
-                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                        return;
-                    }
-
                     // Check for menu option taps when menu is open
                     if (isHamburgerMenuOpen) {
                         if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
@@ -635,13 +591,6 @@ function setupCanvasEventListeners() {
                 
                 // Tap detected
                 if (currentGameState === GAME_STATES.TITLE) {
-                    // Check for hamburger menu click
-                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                        return;
-                    }
-                    
                     // Check for menu option clicks when menu is open
                     if (isHamburgerMenuOpen) {
                         if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
@@ -660,13 +609,6 @@ function setupCanvasEventListeners() {
                         inputFadeTimer = 2000;
                     }
                 } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
-                    // Check for hamburger menu click
-                    if (isClickOnHamburgerMenu(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        isHamburgerMenuOpen = !isHamburgerMenuOpen;
-                        return;
-                    }
-
                     // Check for menu option taps when menu is open
                     if (isHamburgerMenuOpen) {
                         if (handleMenuOptionClick(canvasPos.x, canvasPos.y)) {
@@ -810,6 +752,15 @@ function getLegalModalElements() {
         closeButton: document.getElementById('legalModalCloseButton'),
         title: document.getElementById('legalModalTitle'),
         content: document.getElementById('legalModalContent')
+    };
+}
+
+function getHamburgerMenuElements() {
+    return {
+        container: document.getElementById('hamburgerUI'),
+        button: document.getElementById('hamburgerMenuButton'),
+        backdrop: document.getElementById('hamburgerMenuBackdrop'),
+        panel: document.getElementById('hamburgerMenuPanel')
     };
 }
 
@@ -1709,6 +1660,102 @@ function initializeImportLevelModal() {
     });
 
     overlay.dataset.bound = 'true';
+}
+
+function initializeHamburgerMenuUI() {
+    const { container, button, backdrop, panel } = getHamburgerMenuElements();
+    if (!container || !button || !backdrop || !panel || container.dataset.bound === 'true') {
+        return;
+    }
+
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        playSound('click');
+        isHamburgerMenuOpen = !isHamburgerMenuOpen;
+        updateHamburgerMenuUI();
+    });
+
+    backdrop.addEventListener('click', (event) => {
+        event.preventDefault();
+        isHamburgerMenuOpen = false;
+        updateHamburgerMenuUI();
+    });
+
+    panel.addEventListener('click', (event) => {
+        const optionButton = event.target.closest('[data-menu-state]');
+        if (!optionButton) {
+            return;
+        }
+
+        event.preventDefault();
+        const targetState = optionButton.getAttribute('data-menu-state');
+        if (!targetState) {
+            return;
+        }
+
+        playSound('click');
+        handleMenuOptionTarget(targetState);
+        updateHamburgerMenuUI();
+    });
+
+    container.dataset.bound = 'true';
+    updateHamburgerMenuUI();
+}
+
+function updateHamburgerMenuUI() {
+    const { container, button, backdrop, panel } = getHamburgerMenuElements();
+    if (!container || !button || !backdrop || !panel) {
+        return;
+    }
+
+    const shouldShowHamburger = currentGameState === GAME_STATES.TITLE ||
+        currentGameState === GAME_STATES.LEVEL_SELECT ||
+        currentGameState === GAME_STATES.PLAYING;
+
+    container.style.display = shouldShowHamburger ? 'block' : 'none';
+
+    if (!shouldShowHamburger) {
+        isHamburgerMenuOpen = false;
+        backdrop.style.display = 'none';
+        panel.style.display = 'none';
+        container.setAttribute('aria-hidden', 'true');
+        button.setAttribute('aria-expanded', 'false');
+        backdrop.setAttribute('aria-hidden', 'true');
+        panel.setAttribute('aria-hidden', 'true');
+        return;
+    }
+
+    const menuConfig = getCurrentMenuConfig();
+    const currentOptionsHtml = menuConfig.options.map((label, index) => {
+        const targetState = menuConfig.gameStates[index];
+        const isCurrentScreen = targetState === currentGameState && targetState !== GAME_STATES.TITLE;
+        const optionClass = isCurrentScreen ? 'hamburger-menu-option active' : 'hamburger-menu-option';
+        const isCloudSyncOption = targetState === 'open_cloud_sync_modal';
+
+        let indicatorHtml = '';
+        if (isCloudSyncOption) {
+            const isSignedIn = Boolean(window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser);
+            const isLoadingSync = cloudSyncState === 'checking' || cloudSyncState === 'signing_in';
+            const indicatorText = isSignedIn ? '✓' : (isLoadingSync ? '…' : '✗');
+            const indicatorClass = isSignedIn ? 'is-on' : (isLoadingSync ? 'is-loading' : 'is-off');
+            indicatorHtml = `<span class="cloud-sync-indicator ${indicatorClass}" aria-hidden="true">${indicatorText}</span>`;
+        }
+
+        return `<button class="${optionClass}" type="button" role="menuitem" data-menu-state="${escapeHtml(targetState)}"><span>${escapeHtml(label)}</span>${indicatorHtml}</button>`;
+    }).join('');
+
+    if (panel.innerHTML !== currentOptionsHtml) {
+        panel.innerHTML = currentOptionsHtml;
+    }
+
+    const isOpen = Boolean(isHamburgerMenuOpen);
+    backdrop.style.display = isOpen ? 'block' : 'none';
+    panel.style.display = isOpen ? 'block' : 'none';
+
+    container.setAttribute('aria-hidden', 'false');
+    button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
 }
 
 function initializeSolutionReplayUI() {
@@ -2770,6 +2817,7 @@ async function loadAudioAndCreateCanvas() {
 function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
+    initializeHamburgerMenuUI();
     initializeImportLevelModal();
     initializeLegalModal();
     initializeSolutionReplayUI();
@@ -4341,84 +4389,84 @@ function getCurrentMenuConfig() {
 // Helper function to handle menu option clicks dynamically
 function handleMenuOptionClick(mouseX, mouseY) {
     const menuConfig = getCurrentMenuConfig();
-    const auxiliaryMenuStates = [];
     
     for (let i = 0; i < menuConfig.options.length; i++) {
         if (isClickOnMenuOption(mouseX, mouseY, i)) {
             playSound('click');
             const targetState = menuConfig.gameStates[i];
-
-            if (targetState === 'open_privacy_policy') {
-                openPrivacyPolicyLink();
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-
-            if (targetState === 'open_terms_of_service') {
-                openTermsOfServiceLink();
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-
-            if (targetState === 'open_import_level') {
-                openImportLevelModal();
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-
-            if (targetState === 'open_instructions_modal') {
-                openLegalModal('instructions');
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-
-            if (targetState === 'open_credits_modal') {
-                openLegalModal('credits');
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-
-            if (targetState === 'open_cloud_sync_modal') {
-                openLegalModal('cloud_sync');
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-
-            if (targetState === 'open_ios_install_modal') {
-                openLegalModal('ios_install');
-                isHamburgerMenuOpen = false;
-                return true;
-            }
-            
-            // Handle special cases
-            if (targetState === GAME_STATES.TITLE) {
-                // Home - always go to title screen
-                currentGameState = GAME_STATES.TITLE;
-                hamburgerMenuReturnState = GAME_STATES.TITLE;
-                isHamburgerMenuOpen = false;
-                return true;
-            } else {
-                // Preserve return target when navigating via hamburger menu.
-                // If already in an auxiliary menu screen, keep existing return target.
-                if (!auxiliaryMenuStates.includes(currentGameState)) {
-                    hamburgerMenuReturnState = currentGameState;
-                } else if (!hamburgerMenuReturnState) {
-                    hamburgerMenuReturnState = GAME_STATES.TITLE;
-                }
-
-                if (typeof targetState === 'string' && targetState.startsWith('open_')) {
-                    isHamburgerMenuOpen = false;
-                    return true;
-                }
-
-                currentGameState = targetState;
-                isHamburgerMenuOpen = false;
-                return true;
-            }
+            return handleMenuOptionTarget(targetState);
         }
     }
     
     // No menu option was clicked - close menu
+    isHamburgerMenuOpen = false;
+    return true;
+}
+
+function handleMenuOptionTarget(targetState) {
+    const auxiliaryMenuStates = [];
+
+    if (targetState === 'open_privacy_policy') {
+        openPrivacyPolicyLink();
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (targetState === 'open_terms_of_service') {
+        openTermsOfServiceLink();
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (targetState === 'open_import_level') {
+        openImportLevelModal();
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (targetState === 'open_instructions_modal') {
+        openLegalModal('instructions');
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (targetState === 'open_credits_modal') {
+        openLegalModal('credits');
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (targetState === 'open_cloud_sync_modal') {
+        openLegalModal('cloud_sync');
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (targetState === 'open_ios_install_modal') {
+        openLegalModal('ios_install');
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+    
+    if (targetState === GAME_STATES.TITLE) {
+        currentGameState = GAME_STATES.TITLE;
+        hamburgerMenuReturnState = GAME_STATES.TITLE;
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    if (!auxiliaryMenuStates.includes(currentGameState)) {
+        hamburgerMenuReturnState = currentGameState;
+    } else if (!hamburgerMenuReturnState) {
+        hamburgerMenuReturnState = GAME_STATES.TITLE;
+    }
+
+    if (typeof targetState === 'string' && targetState.startsWith('open_')) {
+        isHamburgerMenuOpen = false;
+        return true;
+    }
+
+    currentGameState = targetState;
     isHamburgerMenuOpen = false;
     return true;
 }
@@ -5057,6 +5105,7 @@ function draw() {
 
     updateSolutionReplayUI();
     updateLevelCompleteModalUI();
+    updateHamburgerMenuUI();
     
     // Draw font loading overlay on top of everything if needed
     if (showFontLoadingOverlay) {
@@ -5433,10 +5482,6 @@ function drawTitleScreen() {
     // Draw F11 fullscreen hint for Windows (session-only, with fade)
     drawF11FullscreenHint();
     
-    // Draw hamburger menu overlay (dims background) then menu on top
-    drawHamburgerMenuOverlay();
-    drawHamburgerMenu();
-    
     context.restore();
 }
 
@@ -5658,9 +5703,6 @@ function drawGameplay() {
         drawNormalGameplay();
     }
 
-    // Draw hamburger menu overlay (dims background) then menu on top
-    drawHamburgerMenuOverlay();
-    drawHamburgerMenu();
 }
 
 function drawOverviewMode() {
@@ -6448,10 +6490,6 @@ function drawLevelSelectScreen() {
     context.drawImage(backIcon, exitButtonX, exitButtonY, buttonSize, buttonSize);
     context.restore();
 
-    // Draw hamburger menu overlay (dims background) then menu on top
-    drawHamburgerMenuOverlay();
-    drawHamburgerMenu();
-
     context.textAlign = "left";
 }
 
@@ -7062,6 +7100,7 @@ function resizeCanvas() {
 
     updateSolutionReplayUI();
     updateLevelCompleteModalUI();
+    updateHamburgerMenuUI();
 }
 
 // Function to recalculate level layout when screen size changes

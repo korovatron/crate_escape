@@ -176,6 +176,106 @@
       margin: 0;
     }
 
+        .hamburger-ui {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 9000;
+            display: none;
+        }
+
+        .hamburger-button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            color: #ffffff;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .hamburger-button .line {
+            width: 24px;
+            height: 4px;
+            background: #ffffff;
+            border-radius: 2px;
+        }
+
+        .hamburger-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 8998;
+            display: none;
+        }
+
+        .hamburger-menu-panel {
+            position: fixed;
+            left: 15px;
+            top: 70px;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00aaff;
+            box-shadow: 0 0 10px rgba(0, 170, 255, 0.4);
+            z-index: 8999;
+            display: none;
+            box-sizing: border-box;
+        }
+
+        .hamburger-menu-option {
+            width: 100%;
+            height: 40px;
+            border: none;
+            background: transparent;
+            color: #ffffff;
+            text-align: left;
+            padding: 0 12px;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-size: 18px;
+            cursor: pointer;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .hamburger-menu-option .cloud-sync-indicator {
+            font-weight: 700;
+            min-width: 14px;
+            text-align: center;
+        }
+
+        .hamburger-menu-option .cloud-sync-indicator.is-on {
+            color: #00ff00;
+        }
+
+        .hamburger-menu-option .cloud-sync-indicator.is-loading {
+            color: #ffcc00;
+        }
+
+        .hamburger-menu-option .cloud-sync-indicator.is-off {
+            color: #ff0000;
+        }
+
+        .hamburger-menu-option.active,
+        .hamburger-menu-option:hover,
+        .hamburger-menu-option:focus-visible {
+            background: rgba(255, 255, 255, 0.16);
+            outline: none;
+        }
+
+        @media (max-width: 600px) {
+            .hamburger-menu-option {
+                font-size: 16px;
+            }
+        }
+
         .import-level-overlay {
             position: fixed;
             inset: 0;
@@ -854,6 +954,16 @@
         <p>Your browser does not support the HTML5 canvas tag. Please upgrade to a modern browser to play The Crate Escape.</p>
         <p>Alternative: Try our other puzzle games at <a href="https://www.korovatron.co.uk/">Korovatron Games</a></p>
     </canvas>
+
+        <div id="hamburgerUI" class="hamburger-ui" aria-hidden="true">
+            <button id="hamburgerMenuButton" class="hamburger-button" type="button" aria-label="Open main menu" title="Open menu">
+                <span class="line"></span>
+                <span class="line"></span>
+                <span class="line"></span>
+            </button>
+        </div>
+        <div id="hamburgerMenuBackdrop" class="hamburger-backdrop" aria-hidden="true"></div>
+        <div id="hamburgerMenuPanel" class="hamburger-menu-panel" role="menu" aria-hidden="true"></div>
 
         <button id="solutionTriggerButton" class="solution-trigger-button" type="button" aria-label="Open LURD console for move-string experiments and saved solution viewing" title="LURD Console: experiment with custom LURD move strings, run/review playback, load saved solutions, and share saved best solutions with stats.">LURD
     CONSOLE</button>
