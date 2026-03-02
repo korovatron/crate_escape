@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.56';
+const APP_VERSION = '1.1.57';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -5364,7 +5364,7 @@ function drawTitleScreen() {
     
     const creditsY = canvas.height * 0.95; // Always 5% from bottom
     context.font = `400 ${authorSize}px Arial, system-ui, -apple-system, sans-serif`;
-    context.fillStyle = "#FFCC00"; // Yellow color
+    context.fillStyle = "#00aaff";
     context.fillText("Copyright © 2025-2026 Neil Kendall", canvas.width / 2, creditsY);
     
     // Start button - positioned above credits with fixed spacing
@@ -5404,21 +5404,21 @@ function drawTitleScreen() {
     
     // Draw button background with modal PLAY LEVEL style treatment
     context.save();
-    context.shadowColor = `rgba(0, 255, 136, ${0.25 + pulse * 0.2})`;
+    context.shadowColor = `rgba(0, 170, 255, ${0.25 + pulse * 0.2})`;
     context.shadowBlur = 10 * pulse;
-    context.fillStyle = "#102318";
+    context.fillStyle = "#102030";
     context.beginPath();
     context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 6);
     context.fill();
     
     // Draw button border
-    context.strokeStyle = `rgba(0, 255, 136, ${0.7 + pulse * 0.3})`;
+    context.strokeStyle = `rgba(0, 170, 255, ${0.7 + pulse * 0.3})`;
     context.lineWidth = 2;
     context.stroke();
     
     // Draw button text
     context.shadowBlur = 0;
-    context.fillStyle = "#d6ffe9";
+    context.fillStyle = "#dff7ff";
     context.textAlign = "center";
     context.textBaseline = "middle"; // Center text vertically
     const textVerticalOffset = isIOSPlatform() ? buttonTextSize * 0.05 : buttonTextSize * 0.1;
