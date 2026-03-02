@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.60';
+const APP_VERSION = '1.1.61';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -761,6 +761,17 @@ function getHamburgerMenuElements() {
         button: document.getElementById('hamburgerMenuButton'),
         backdrop: document.getElementById('hamburgerMenuBackdrop'),
         panel: document.getElementById('hamburgerMenuPanel')
+    };
+}
+
+function getLevelSelectElements() {
+    return {
+        container: document.getElementById('levelSelectUI'),
+        setIndicator: document.getElementById('levelSelectSetIndicator'),
+        pageInfo: document.getElementById('levelSelectPageInfo'),
+        prevButton: document.getElementById('levelSelectPrevButton'),
+        nextButton: document.getElementById('levelSelectNextButton'),
+        backButton: document.getElementById('levelSelectBackButton')
     };
 }
 
@@ -1756,6 +1767,65 @@ function updateHamburgerMenuUI() {
     button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
     panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+}
+
+function initializeLevelSelectUI() {
+    const { container, prevButton, nextButton, backButton } = getLevelSelectElements();
+    if (!container || !prevButton || !nextButton || !backButton || container.dataset.bound === 'true') {
+        return;
+    }
+
+    prevButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleLevelSelectLeft();
+        updateLevelSelectUI();
+    });
+
+    nextButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleLevelSelectRight();
+        updateLevelSelectUI();
+    });
+
+    backButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        playSound('click');
+        currentGameState = GAME_STATES.TITLE;
+        updateLevelSelectUI();
+    });
+
+    container.dataset.bound = 'true';
+    updateLevelSelectUI();
+}
+
+function updateLevelSelectUI() {
+    const { container, setIndicator, pageInfo, prevButton, nextButton, backButton } = getLevelSelectElements();
+    if (!container || !setIndicator || !pageInfo || !prevButton || !nextButton || !backButton) {
+        return;
+    }
+
+    const shouldShow = currentGameState === GAME_STATES.LEVEL_SELECT;
+    container.style.display = shouldShow ? 'block' : 'none';
+    container.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+
+    if (!shouldShow) {
+        return;
+    }
+
+    setIndicator.textContent = selectedSet;
+
+    const maxLevel = getLevelCount(selectedSet);
+    const maxPages = Math.max(1, Math.ceil(maxLevel / Math.max(1, levelsPerPage)));
+    pageInfo.textContent = maxPages > 1 ? `Page ${currentLevelPage + 1} of ${maxPages}` : '';
+
+    const canGoPrev = maxPages > 1 || Object.keys(SOKOBAN_LEVELS).length > 1;
+    const canGoNext = maxPages > 1 || Object.keys(SOKOBAN_LEVELS).length > 1;
+    prevButton.disabled = !canGoPrev;
+    nextButton.disabled = !canGoNext;
+
+    const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
+    backButton.style.width = isMobile ? '35px' : '45px';
+    backButton.style.height = isMobile ? '35px' : '45px';
 }
 
 function initializeSolutionReplayUI() {
@@ -2818,6 +2888,7 @@ function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
     initializeHamburgerMenuUI();
+    initializeLevelSelectUI();
     initializeImportLevelModal();
     initializeLegalModal();
     initializeSolutionReplayUI();
@@ -5106,6 +5177,7 @@ function draw() {
     updateSolutionReplayUI();
     updateLevelCompleteModalUI();
     updateHamburgerMenuUI();
+    updateLevelSelectUI();
     
     // Draw font loading overlay on top of everything if needed
     if (showFontLoadingOverlay) {
@@ -6444,51 +6516,14 @@ function drawLevelSelectScreen() {
     }
     
     const centerX = canvas.width / 2;
-    const isMobile = canvas.width < 600;
-    const titleFontSize = isMobile ? 28 : 36;
-    const fontSize = isMobile ? 16 : 20;
     
     // Calculate layout areas
     const headerHeight = canvas.height * 0.18; // Reduced even further for tighter layout
     const footerHeight = canvas.height * 0.15;
     const gridAreaHeight = canvas.height - headerHeight - footerHeight;
     
-    // Title - moved slightly lower to avoid conflict with back button
-    context.font = `bold ${titleFontSize}px Arial, system-ui, -apple-system, sans-serif`;
-    context.fillStyle = "#00ccff";
-    context.textAlign = "center";
-    context.fillText("SELECT LEVEL", centerX, headerHeight * 0.35);
-    
-    // Set selector - moved further down to avoid overlap with title on landscape screens
-    const setY = headerHeight * 0.85;
-    const buttonWidth = isMobile ? 30 : 35; // Match page navigation button size
-    const buttonHeight = isMobile ? 30 : 35; // Match page navigation button size
-    const indicatorWidth = isMobile ? 200 : 250;
-    const indicatorHeight = isMobile ? 40 : 50;
-    
-    drawSelector("", selectedSet, centerX, setY, buttonWidth, buttonHeight, indicatorWidth, indicatorHeight, 'set', fontSize);
-    
     // Draw level grid
     drawLevelGrid(headerHeight, gridAreaHeight);
-    
-    // Show page info if needed (without navigation buttons)
-    const maxLevel = getLevelCount(selectedSet);
-    const maxPages = Math.ceil(maxLevel / levelsPerPage);
-    if (maxPages > 1) {
-        drawPageInfo(headerHeight + gridAreaHeight + 20, maxPages);
-    }
-
-    // Draw back button (same as exit button in gameplay) - just the PNG icon
-    const buttonSize = isMobile ? 35 : 45; // Same size as gameplay exit button
-    const exitButtonX = canvas.width - buttonSize - 10;
-    const exitButtonY = isMobile ? 15 : 10; // Match gameplay positioning exactly
-    
-    // Draw backIcon.png with smooth scaling
-    context.save();
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(backIcon, exitButtonX, exitButtonY, buttonSize, buttonSize);
-    context.restore();
 
     context.textAlign = "left";
 }
@@ -6563,9 +6598,9 @@ function drawLevelButton(x, y, size, levelNumber, fontSize) {
         case 'never_played':
         default:
             // Blue for never played (default)
-            backgroundColor = "rgba(0, 204, 255, 0.2)";
-            borderColor = "#00ccff";
-            textColor = "#00ccff";
+            backgroundColor = "rgba(0, 170, 255, 0.2)";
+            borderColor = "#00aaff";
+            textColor = "#00aaff";
             break;
     }
     
@@ -6894,40 +6929,6 @@ function handleLevelSelectRight() {
 }
 
 function handleLevelSelectClick(x, y) {
-    // Check back button click (same position as exit button in gameplay)
-    const isMobile = canvas.width < 600;
-    const buttonSize = isMobile ? 35 : 45;
-    const exitButtonX = canvas.width - buttonSize - 10;
-    const exitButtonY = 10;
-    
-    if (x >= exitButtonX && x <= exitButtonX + buttonSize &&
-        y >= exitButtonY && y <= exitButtonY + buttonSize) {
-        // Go back to title screen
-        playSound('click');
-        currentGameState = GAME_STATES.TITLE;
-        return;
-    }
-
-    // Check set navigation buttons - now unified navigation
-    if (window.levelSelectButtons && window.levelSelectButtons.set) {
-        const leftBtn = window.levelSelectButtons.set.left;
-        const rightBtn = window.levelSelectButtons.set.right;
-        
-        // Left navigation button - unified previous page/set logic
-        if (x >= leftBtn.x && x <= leftBtn.x + leftBtn.width &&
-            y >= leftBtn.y && y <= leftBtn.y + leftBtn.height) {
-            handleLevelSelectLeft(); // Uses new unified logic
-            return;
-        }
-        
-        // Right navigation button - unified next page/set logic
-        if (x >= rightBtn.x && x <= rightBtn.x + rightBtn.width &&
-            y >= rightBtn.y && y <= rightBtn.y + rightBtn.height) {
-            handleLevelSelectRight(); // Uses new unified logic
-            return;
-        }
-    }
-    
     // Check level grid buttons
     if (isClickOnLevelGrid(x, y)) {
         return;
@@ -7101,6 +7102,7 @@ function resizeCanvas() {
     updateSolutionReplayUI();
     updateLevelCompleteModalUI();
     updateHamburgerMenuUI();
+    updateLevelSelectUI();
 }
 
 // Function to recalculate level layout when screen size changes

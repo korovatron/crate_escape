@@ -276,6 +276,134 @@
             }
         }
 
+        .level-select-ui {
+            position: fixed;
+            inset: 0;
+            z-index: 8800;
+            display: none;
+            pointer-events: none;
+        }
+
+        .level-select-title {
+            position: absolute;
+            top: 4vh;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+            color: #00aaff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-weight: 700;
+            font-size: clamp(1.6rem, 4.5vw, 2.25rem);
+            line-height: 1;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .level-select-set-row {
+            position: absolute;
+            top: 12vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .level-select-nav-btn {
+            width: 35px;
+            height: 50px;
+            border: 2px solid #00aaff;
+            background: rgba(0, 170, 255, 0.2);
+            color: #00aaff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .level-select-set-indicator {
+            min-width: 250px;
+            min-height: 50px;
+            border: 2px solid #00aaff;
+            background: rgba(0, 170, 255, 0.2);
+            color: #00aaff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 0 12px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .level-select-page-info {
+            position: absolute;
+            left: 50%;
+            bottom: 11vh;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-size: clamp(1rem, 2.2vw, 1.25rem);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .level-select-back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 45px;
+            height: 45px;
+            border: none;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .level-select-back-btn img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: auto;
+        }
+
+        @media (max-width: 600px) {
+            .level-select-set-row {
+                top: 11vh;
+                gap: 8px;
+            }
+
+            .level-select-nav-btn {
+                width: 30px;
+                height: 40px;
+                font-size: 0.9rem;
+            }
+
+            .level-select-set-indicator {
+                min-width: 200px;
+                min-height: 40px;
+                font-size: 1rem;
+            }
+
+            .level-select-back-btn {
+                top: 15px;
+                width: 35px;
+                height: 35px;
+            }
+        }
+
         .import-level-overlay {
             position: fixed;
             inset: 0;
@@ -964,6 +1092,19 @@
         </div>
         <div id="hamburgerMenuBackdrop" class="hamburger-backdrop" aria-hidden="true"></div>
         <div id="hamburgerMenuPanel" class="hamburger-menu-panel" role="menu" aria-hidden="true"></div>
+
+        <div id="levelSelectUI" class="level-select-ui" aria-hidden="true">
+            <h2 id="levelSelectTitle" class="level-select-title">SELECT LEVEL</h2>
+            <div class="level-select-set-row">
+                <button id="levelSelectPrevButton" class="level-select-nav-btn" type="button" aria-label="Previous set or page" title="Previous set or page">◀</button>
+                <div id="levelSelectSetIndicator" class="level-select-set-indicator" aria-live="polite"></div>
+                <button id="levelSelectNextButton" class="level-select-nav-btn" type="button" aria-label="Next set or page" title="Next set or page">▶</button>
+            </div>
+            <div id="levelSelectPageInfo" class="level-select-page-info" aria-live="polite"></div>
+            <button id="levelSelectBackButton" class="level-select-back-btn" type="button" aria-label="Back to title" title="Back to title">
+                <img src="assets/images/backIcon.png" alt="">
+            </button>
+        </div>
 
         <button id="solutionTriggerButton" class="solution-trigger-button" type="button" aria-label="Open LURD console for move-string experiments and saved solution viewing" title="LURD Console: experiment with custom LURD move strings, run/review playback, load saved solutions, and share saved best solutions with stats.">LURD
     CONSOLE</button>
