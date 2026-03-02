@@ -195,8 +195,12 @@
         }
 
         .title-screen-top {
+            position: absolute;
+            left: 50%;
+            top: 25%;
+            transform: translate(-50%, -50%);
             width: min(760px, 96vw);
-            margin: var(--title-top-margin, 0 auto 0 auto);
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -225,9 +229,35 @@
         .title-screen-start-wrap {
             position: absolute;
             left: 50%;
-            bottom: var(--title-start-bottom, clamp(72px, 16vh, 138px));
-            transform: translateX(-50%);
+            top: var(--title-start-center-y, 70%);
+            transform: translate(-50%, -50%);
             pointer-events: auto;
+        }
+
+        .title-screen-footer {
+            position: absolute;
+            left: 50%;
+            bottom: calc(8px + env(safe-area-inset-bottom));
+            transform: translateX(-50%);
+            text-align: center;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            color: #00aaff;
+            line-height: 1.25;
+            pointer-events: auto;
+        }
+
+        .title-screen-footer .copyright {
+            font-size: clamp(14px, 1.8vw, 22px);
+        }
+
+        .title-screen-footer .more-link {
+            margin-top: 2px;
+            font-size: clamp(13px, 1.45vw, 19px);
+        }
+
+        .title-screen-footer .more-link a {
+            color: #00aaff;
+            text-decoration: underline;
         }
 
         .title-screen-start-button {
@@ -269,7 +299,7 @@
             }
 
             .title-screen-start-wrap {
-                bottom: var(--title-start-bottom, clamp(62px, 12vh, 110px));
+                top: var(--title-start-center-y, 70%);
             }
         }
 
@@ -1250,10 +1280,14 @@
         <div id="titleScreenUI" class="title-screen-ui" aria-hidden="true">
             <div class="title-screen-top">
                 <img id="titleScreenLogo" class="title-screen-logo" src="assets/images/cartoonLogo.png" alt="The Crate Escape">
-                <p class="title-screen-tagline">Complete your shift by pushing all crates into their designated positions before escaping to the pub!</p>
+                <p class="title-screen-tagline">Classic Sokoban Puzzles</p>
             </div>
             <div class="title-screen-start-wrap">
                 <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Play" title="Play">PLAY</button>
+            </div>
+            <div class="title-screen-footer" aria-label="Copyright and link">
+                <div class="copyright">Copyright © 2025-2026 Neil Kendall</div>
+                <div class="more-link">More @ <a href="https://www.korovatron.co.uk/" target="_blank" rel="noopener noreferrer">www.korovatron.co.uk</a></div>
             </div>
         </div>
 

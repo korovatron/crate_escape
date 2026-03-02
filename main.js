@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.69';
+const APP_VERSION = '1.1.70';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -795,7 +795,10 @@ function getLevelCompleteElements() {
 function getTitleScreenElements() {
     return {
         container: document.getElementById('titleScreenUI'),
-        startButton: document.getElementById('titleScreenStartButton')
+        startButton: document.getElementById('titleScreenStartButton'),
+        startWrap: document.querySelector('#titleScreenUI .title-screen-start-wrap'),
+        tagline: document.querySelector('#titleScreenUI .title-screen-tagline'),
+        footer: document.querySelector('#titleScreenUI .title-screen-footer')
     };
 }
 
@@ -1848,8 +1851,16 @@ function initializeTitleScreenUI() {
 }
 
 function updateTitleScreenUI() {
-    const { container } = getTitleScreenElements();
+    const { container, startWrap, tagline, footer } = getTitleScreenElements();
     if (!container) {
+        return;
+    }
+
+    const shouldShow = currentGameState === GAME_STATES.TITLE;
+    container.style.display = shouldShow ? 'block' : 'none';
+    container.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+
+    if (!shouldShow) {
         return;
     }
 
@@ -1907,9 +1918,20 @@ function updateTitleScreenUI() {
     container.style.setProperty('--title-start-pad-x', `${Math.round(startPadX)}px`);
     container.style.setProperty('--title-start-bottom', `${Math.round(startBottom)}px`);
 
-    const shouldShow = currentGameState === GAME_STATES.TITLE;
-    container.style.display = shouldShow ? 'block' : 'none';
-    container.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+    if (startWrap && tagline && footer) {
+        const containerRect = container.getBoundingClientRect();
+        const taglineRect = tagline.getBoundingClientRect();
+        const footerRect = footer.getBoundingClientRect();
+
+        const taglineBottom = taglineRect.bottom - containerRect.top;
+        const footerTop = footerRect.top - containerRect.top;
+        const midpoint = (taglineBottom + footerTop) / 2;
+        const minTop = taglineBottom + 24;
+        const maxTop = footerTop - 24;
+        const startCenterY = Math.max(minTop, Math.min(maxTop, midpoint));
+
+        container.style.setProperty('--title-start-center-y', `${Math.round(startCenterY)}px`);
+    }
 }
 
 function initializeSolutionReplayUI() {
@@ -5439,25 +5461,9 @@ function drawTitleScreen() {
     }
     const lineHeight = textSize * 1.3; // Slightly tighter but not too compressed
     
-    // Main instruction - larger and responsive with wrapping
-    if (!hasDomTitleUI) {
-        yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Slightly reduced spacing for landscape
-        let mainInstructionSize;
-        if (isMobilePortrait) {
-            mainInstructionSize = textSize * 1.3;
-        } else if (isMobileLandscape) {
-            mainInstructionSize = textSize * 1.25; // Moderate increase for landscape
-        } else {
-            mainInstructionSize = textSize * 1.3; // Original size for desktop
-        }
-        context.font = `400 ${mainInstructionSize}px Arial, system-ui, -apple-system, sans-serif`;
-        context.fillStyle = "#DDDDDD";
-        const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
-        const mainInstructionLineHeight = mainInstructionSize * 1.4;
-        yPos = drawWrappedText(context, "Complete your shift by pushing all crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
-    }
+    // Tagline removed by request.
 
-    const shouldDrawMiniDemo = !(isTouchDevice() && canvas.width > canvas.height);
+    const shouldDrawMiniDemo = false;
 
     // MIDDLE CONTENT POSITIONING: Use available space between top content and bottom-anchored elements
     
@@ -5647,12 +5653,14 @@ function drawTitleScreen() {
         authorSize = textSize * 1.1; // Original size for desktop
     }
     
-    const creditsY = canvas.height * 0.95; // Always 5% from bottom
-    context.font = `400 ${authorSize}px Arial, system-ui, -apple-system, sans-serif`;
-    context.fillStyle = "#00aaff";
-    context.fillText("Copyright © 2025-2026 Neil Kendall", canvas.width / 2, creditsY);
-    
     if (!hasDomTitleUI) {
+        const creditsY = canvas.height * 0.95; // Always 5% from bottom
+        context.font = `400 ${authorSize}px Arial, system-ui, -apple-system, sans-serif`;
+        context.fillStyle = "#00aaff";
+        context.fillText("Copyright © 2025-2026 Neil Kendall", canvas.width / 2, creditsY);
+        context.font = `400 ${Math.max(12, authorSize * 0.85)}px Arial, system-ui, -apple-system, sans-serif`;
+        context.fillText("More @ www.korovatron.co.uk", canvas.width / 2, creditsY + Math.max(14, authorSize * 0.95));
+
         // Start button - positioned above credits with fixed spacing
         let buttonTextSize;
         if (isMobilePortrait) {
