@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.62';
+const APP_VERSION = '1.1.63';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -312,6 +312,12 @@ function setupCanvasEventListeners() {
 
         // Prevent click-through to canvas/game while modal is open
         if (isAnyBlockingModalOpen()) {
+            return;
+        }
+
+        // Canvas gameplay handlers should only process actual canvas clicks.
+        // This prevents conflicts with HTML UI controls (hamburger, overlays, etc.).
+        if (e.target !== canvas) {
             return;
         }
         
