@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.53';
+const APP_VERSION = '1.1.54';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -848,6 +848,7 @@ function getLevelCompleteElements() {
 
 function openCurrentLevelSolutionReplay() {
     playSound('click');
+    const currentHistory = generateSolutionString();
 
     solutionReplayData.isActive = true;
     solutionReplayData.isPlaying = false;
@@ -859,8 +860,8 @@ function openCurrentLevelSolutionReplay() {
     solutionReplayData.solvedByToolbox = false;
     solutionReplayData.saveEligible = false;
     solutionReplayData.statusMessage = '';
-    solutionReplayData.inputSource = 'custom';
-    solutionReplayData.inputDraft = '';
+    solutionReplayData.inputSource = currentHistory ? 'history' : 'custom';
+    solutionReplayData.inputDraft = currentHistory || '';
 
     if (solutionReplayData.intervalId) {
         clearInterval(solutionReplayData.intervalId);
@@ -7679,14 +7680,6 @@ function exitSolutionReplay() {
         solutionReplayData.intervalId = null;
     }
     
-    if (solutionReplayData.hasExecutedMoves || solutionReplayData.currentMoveIndex > 0) {
-        // Return to normal gameplay - reset to starting state
-        // Preserve attempt counter when returning to gameplay
-        const currentAttemptCount = attemptCount;
-        restartCurrentLevel(); // Reset level to starting position
-        attemptCount = currentAttemptCount; // Restore original count
-    }
-
     solutionReplayData.hasExecutedMoves = false;
     solutionReplayData.statusMessage = '';
     clearToolboxSolveState();
