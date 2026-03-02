@@ -184,6 +184,95 @@
             display: none;
         }
 
+        .title-screen-ui {
+            position: fixed;
+            inset: 0;
+            display: none;
+            pointer-events: none;
+            z-index: 8950;
+            box-sizing: border-box;
+            padding: max(14px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom));
+        }
+
+        .title-screen-top {
+            width: min(760px, 96vw);
+            margin: var(--title-top-margin, 0 auto 0 auto);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--title-top-gap, 10px);
+        }
+
+        .title-screen-logo {
+            width: var(--title-logo-width, min(520px, 72vw));
+            height: auto;
+            max-height: var(--title-logo-height, 30vh);
+            object-fit: contain;
+            display: block;
+        }
+
+        .title-screen-tagline {
+            margin: 0;
+            width: var(--title-tagline-width, min(740px, 90vw));
+            text-align: center;
+            color: #dddddd;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-size: var(--title-tagline-size, clamp(13px, 2.1vw, 22px));
+            line-height: 1.35;
+            text-wrap: balance;
+        }
+
+        .title-screen-start-wrap {
+            position: absolute;
+            left: 50%;
+            bottom: var(--title-start-bottom, clamp(72px, 16vh, 138px));
+            transform: translateX(-50%);
+            pointer-events: auto;
+        }
+
+        .title-screen-start-button {
+            border: 2px solid #00aaff;
+            border-radius: 10px;
+            background: rgba(11, 11, 11, 0.76);
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            color: #dff7ff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-weight: 700;
+            font-size: var(--title-start-font-size, clamp(16px, 2.8vw, 30px));
+            line-height: 1;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            padding: var(--title-start-pad-y, clamp(10px, 1.6vw, 16px)) var(--title-start-pad-x, clamp(20px, 4.4vw, 46px));
+            cursor: pointer;
+            min-height: 44px;
+        }
+
+        .title-screen-start-button:focus-visible,
+        .title-screen-start-button:hover {
+            background: rgba(0, 170, 255, 0.2);
+            outline: none;
+        }
+
+        @media (max-width: 900px) and (orientation: landscape) {
+            .title-screen-ui {
+                padding-top: max(10px, env(safe-area-inset-top));
+            }
+
+            .title-screen-logo {
+                width: min(440px, 54vw);
+                max-height: 24vh;
+            }
+
+            .title-screen-tagline {
+                font-size: clamp(12px, 1.7vw, 17px);
+                max-width: 68vw;
+            }
+
+            .title-screen-start-wrap {
+                bottom: clamp(62px, 12vh, 110px);
+            }
+        }
+
         .hamburger-button {
             width: 40px;
             height: 40px;
@@ -1098,6 +1187,16 @@
         <p>Your browser does not support the HTML5 canvas tag. Please upgrade to a modern browser to play The Crate Escape.</p>
         <p>Alternative: Try our other puzzle games at <a href="https://www.korovatron.co.uk/">Korovatron Games</a></p>
     </canvas>
+
+        <div id="titleScreenUI" class="title-screen-ui" aria-hidden="true">
+            <div class="title-screen-top">
+                <img id="titleScreenLogo" class="title-screen-logo" src="assets/images/cartoonLogo.png" alt="The Crate Escape">
+                <p class="title-screen-tagline">Complete your shift by pushing all crates into their designated positions before escaping to the pub!</p>
+            </div>
+            <div class="title-screen-start-wrap">
+                <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Start game" title="Start game">START GAME</button>
+            </div>
+        </div>
 
         <div id="hamburgerUI" class="hamburger-ui" aria-hidden="true">
             <button id="hamburgerMenuButton" class="hamburger-button" type="button" aria-label="Open main menu" title="Open menu">

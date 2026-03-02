@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.64';
+const APP_VERSION = '1.1.65';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -64,18 +64,7 @@ document.addEventListener('keydown', (e) => {
     // Handle game state transitions
     if (isPrimaryActionKey) {
         if (currentGameState === GAME_STATES.TITLE) {
-            // Check for cloud sync updates when navigating to level select
-            if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
-                downloadGameProgress(true, false).catch(error => {
-                    console.log('Background cloud sync failed (non-critical):', error);
-                });
-            }
-            playSound('click');
-            currentGameState = GAME_STATES.LEVEL_SELECT;
-            initializeLevelSelect();
-            lastInputType = "Level Select";
-            lastInputTime = Date.now();
-            inputFadeTimer = 2000;
+            transitionTitleToLevelSelect();
             return;
         } else if (currentGameState === GAME_STATES.LEVEL_COMPLETE) {
             if (isCustomLevelActive) {
@@ -369,13 +358,7 @@ function setupCanvasEventListeners() {
             
             // Check for start button click from title screen (if menu not open)
             if (isClickOnStartButton(mouseX, mouseY)) {
-                playSound('click');
-                currentGameState = GAME_STATES.LEVEL_SELECT;
-                downloadGameProgress(true, false); // Silent cloud sync on navigation
-                initializeLevelSelect();
-                lastInputType = "Level Select";
-                lastInputTime = Date.now();
-                inputFadeTimer = 2000;
+                transitionTitleToLevelSelect();
                 return;
             }
             return;
@@ -606,13 +589,7 @@ function setupCanvasEventListeners() {
                     
                     // Check for start button tap from title screen (if menu not open)
                     if (isClickOnStartButton(canvasPos.x, canvasPos.y)) {
-                        playSound('click');
-                        currentGameState = GAME_STATES.LEVEL_SELECT;
-                        downloadGameProgress(true, false); // Silent cloud sync on navigation
-                        initializeLevelSelect();
-                        lastInputType = "Level Select";
-                        lastInputTime = Date.now();
-                        inputFadeTimer = 2000;
+                        transitionTitleToLevelSelect();
                     }
                 } else if (currentGameState === GAME_STATES.LEVEL_SELECT) {
                     // Check for menu option taps when menu is open
@@ -812,6 +789,23 @@ function getLevelCompleteElements() {
         replayButton: document.getElementById('levelCompleteReplayButton'),
         exitButton: document.getElementById('levelCompleteExitButton')
     };
+}
+
+function getTitleScreenElements() {
+    return {
+        container: document.getElementById('titleScreenUI'),
+        startButton: document.getElementById('titleScreenStartButton')
+    };
+}
+
+function transitionTitleToLevelSelect() {
+    playSound('click');
+    currentGameState = GAME_STATES.LEVEL_SELECT;
+    downloadGameProgress(true, false); // Silent cloud sync on navigation
+    initializeLevelSelect();
+    lastInputType = "Level Select";
+    lastInputTime = Date.now();
+    inputFadeTimer = 2000;
 }
 
 function openCurrentLevelSolutionReplay() {
@@ -1832,6 +1826,78 @@ function updateLevelSelectUI() {
     const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
     backButton.style.width = isMobile ? '35px' : '45px';
     backButton.style.height = isMobile ? '35px' : '45px';
+}
+
+function initializeTitleScreenUI() {
+    const { container, startButton } = getTitleScreenElements();
+    if (!container || !startButton || container.dataset.bound === 'true') {
+        return;
+    }
+
+    startButton.addEventListener('click', () => {
+        if (currentGameState !== GAME_STATES.TITLE) {
+            return;
+        }
+
+        transitionTitleToLevelSelect();
+    });
+
+    container.dataset.bound = 'true';
+    updateTitleScreenUI();
+}
+
+function updateTitleScreenUI() {
+    const { container } = getTitleScreenElements();
+    if (!container) {
+        return;
+    }
+
+    const width = canvas ? canvas.width : window.innerWidth;
+    const height = canvas ? canvas.height : window.innerHeight;
+    const shortSide = Math.max(1, Math.min(width, height));
+    const longSide = Math.max(width, height);
+    const aspectRatio = width / Math.max(1, height);
+    const isMobileLandscape = width > height && height < 600;
+    const isUltraWide = aspectRatio >= 2;
+
+    const logoMaxWidth = isUltraWide ? width * 0.62 : (isMobileLandscape ? width * 0.6 : width * 0.7);
+    const logoMaxHeight = isUltraWide ? height * 0.38 : (isMobileLandscape ? height * 0.25 : height * 0.3);
+    let logoWidth = Math.min(logoMaxWidth, width * 0.92);
+    let logoHeight = logoMaxHeight;
+
+    if (cartoonLogo && cartoonLogo.width > 0 && cartoonLogo.height > 0) {
+        const logoAspectRatio = cartoonLogo.width / cartoonLogo.height;
+        if ((logoMaxWidth / logoAspectRatio) <= logoMaxHeight) {
+            logoWidth = logoMaxWidth;
+            logoHeight = logoMaxWidth / logoAspectRatio;
+        } else {
+            logoHeight = logoMaxHeight;
+            logoWidth = logoMaxHeight * logoAspectRatio;
+        }
+    }
+
+    const taglineSize = Math.max(13, Math.min(40, shortSide * (isUltraWide ? 0.056 : 0.04)));
+    const startFontSize = Math.max(16, Math.min(32, shortSide * 0.048));
+    const startPadY = Math.max(10, Math.min(16, shortSide * 0.02));
+    const startPadX = Math.max(20, Math.min(46, longSide * 0.045));
+    const startBottom = isUltraWide
+        ? Math.max(90, Math.min(210, height * 0.24))
+        : Math.max(60, Math.min(138, height * 0.16));
+
+    container.style.setProperty('--title-top-margin', isUltraWide ? 'max(10px, 2.6vh) auto 0 auto' : '0 auto 0 auto');
+    container.style.setProperty('--title-top-gap', isUltraWide ? '14px' : '10px');
+    container.style.setProperty('--title-logo-width', `${Math.round(logoWidth)}px`);
+    container.style.setProperty('--title-logo-height', `${Math.round(logoHeight)}px`);
+    container.style.setProperty('--title-tagline-width', `${Math.round(Math.min(width * 0.92, Math.max(logoWidth, 360)))}px`);
+    container.style.setProperty('--title-tagline-size', `${Math.round(taglineSize)}px`);
+    container.style.setProperty('--title-start-font-size', `${Math.round(startFontSize)}px`);
+    container.style.setProperty('--title-start-pad-y', `${Math.round(startPadY)}px`);
+    container.style.setProperty('--title-start-pad-x', `${Math.round(startPadX)}px`);
+    container.style.setProperty('--title-start-bottom', `${Math.round(startBottom)}px`);
+
+    const shouldShow = currentGameState === GAME_STATES.TITLE;
+    container.style.display = shouldShow ? 'block' : 'none';
+    container.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
 }
 
 function initializeSolutionReplayUI() {
@@ -2931,6 +2997,7 @@ async function loadAudioAndCreateCanvas() {
 function createCanvas() {
     canvas = document.getElementById('canvas');
     context = canvas.getContext('2d');
+    initializeTitleScreenUI();
     initializeHamburgerMenuUI();
     initializeLevelSelectUI();
     initializeImportLevelModal();
@@ -5222,6 +5289,7 @@ function draw() {
     updateLevelCompleteModalUI();
     updateHamburgerMenuUI();
     updateLevelSelectUI();
+    updateTitleScreenUI();
     
     // Draw font loading overlay on top of everything if needed
     if (showFontLoadingOverlay) {
@@ -5245,6 +5313,7 @@ function drawTitleScreen() {
     // Draw industrial-style text title
     context.save();
     context.textAlign = "center";
+    const hasDomTitleUI = Boolean(getTitleScreenElements().container);
     
     // Detect device orientation and adjust sizing accordingly
     const isMobilePortrait = canvas.height > canvas.width && canvas.width < 768;
@@ -5297,12 +5366,14 @@ function drawTitleScreen() {
     const logoX = (canvas.width - logoWidth) / 2;
     const logoY = yPos;
     
-    // Apply same high-quality rendering settings as push/move icons
-    context.save();
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(cartoonLogo, logoX, logoY, logoWidth, logoHeight);
-    context.restore();
+    if (!hasDomTitleUI) {
+        // Apply same high-quality rendering settings as push/move icons
+        context.save();
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(cartoonLogo, logoX, logoY, logoWidth, logoHeight);
+        context.restore();
+    }
     
     // Update yPos to be after the logo
     yPos = logoY + logoHeight;
@@ -5329,20 +5400,22 @@ function drawTitleScreen() {
     const lineHeight = textSize * 1.3; // Slightly tighter but not too compressed
     
     // Main instruction - larger and responsive with wrapping
-    yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Slightly reduced spacing for landscape
-    let mainInstructionSize;
-    if (isMobilePortrait) {
-        mainInstructionSize = textSize * 1.3;
-    } else if (isMobileLandscape) {
-        mainInstructionSize = textSize * 1.25; // Moderate increase for landscape
-    } else {
-        mainInstructionSize = textSize * 1.3; // Original size for desktop
+    if (!hasDomTitleUI) {
+        yPos += lineHeight * (isMobileLandscape ? 1.2 : 1.5); // Slightly reduced spacing for landscape
+        let mainInstructionSize;
+        if (isMobilePortrait) {
+            mainInstructionSize = textSize * 1.3;
+        } else if (isMobileLandscape) {
+            mainInstructionSize = textSize * 1.25; // Moderate increase for landscape
+        } else {
+            mainInstructionSize = textSize * 1.3; // Original size for desktop
+        }
+        context.font = `400 ${mainInstructionSize}px Arial, system-ui, -apple-system, sans-serif`;
+        context.fillStyle = "#DDDDDD";
+        const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
+        const mainInstructionLineHeight = mainInstructionSize * 1.4;
+        yPos = drawWrappedText(context, "Complete your shift by pushing all crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
     }
-    context.font = `400 ${mainInstructionSize}px Arial, system-ui, -apple-system, sans-serif`;
-    context.fillStyle = "#DDDDDD";
-    const maxTextWidth = logoWidth; // Match the cartoon logo width exactly
-    const mainInstructionLineHeight = mainInstructionSize * 1.4;
-    yPos = drawWrappedText(context, "Complete your shift by pushing all crates into their designated positions before escaping to the pub!", canvas.width / 2, yPos, maxTextWidth, mainInstructionLineHeight);
 
     // MIDDLE CONTENT POSITIONING: Use available space between top content and bottom-anchored elements
     
@@ -5535,65 +5608,69 @@ function drawTitleScreen() {
     context.fillStyle = "#00aaff";
     context.fillText("Copyright © 2025-2026 Neil Kendall", canvas.width / 2, creditsY);
     
-    // Start button - positioned above credits with fixed spacing
-    let buttonTextSize;
-    if (isMobilePortrait) {
-        buttonTextSize = textSize * 1.2;
-    } else if (isMobileLandscape) {
-        buttonTextSize = textSize * 1.1; // Moderate increase for landscape
+    if (!hasDomTitleUI) {
+        // Start button - positioned above credits with fixed spacing
+        let buttonTextSize;
+        if (isMobilePortrait) {
+            buttonTextSize = textSize * 1.2;
+        } else if (isMobileLandscape) {
+            buttonTextSize = textSize * 1.1; // Moderate increase for landscape
+        } else {
+            buttonTextSize = textSize * 1.1; // Original size for desktop
+        }
+
+        // Button styling with pulsing effect (same as level complete overlay)
+        const time = Date.now() / 1000;
+        const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
+
+        // Button dimensions
+        const buttonText = "START GAME";
+        context.font = `700 ${buttonTextSize}px Arial, system-ui, -apple-system, sans-serif`;
+        const textMetrics = context.measureText(buttonText);
+        const buttonPadding = buttonTextSize * 0.8;
+        const buttonWidth = textMetrics.width + buttonPadding * 2;
+        const buttonHeight = buttonTextSize * 1.8;
+        const buttonX = (canvas.width - buttonWidth) / 2;
+
+        // Position button above credits with responsive spacing
+        const buttonSpacing = isMobileLandscape ? buttonHeight * 0.8 : buttonHeight * 1.2;
+        const buttonY = creditsY - authorSize - buttonSpacing - buttonHeight / 2;
+
+        // Store button bounds for click detection
+        window.startButtonBounds = {
+            x: buttonX,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+
+        // Draw button background with modal PLAY LEVEL style treatment
+        context.save();
+        context.shadowColor = `rgba(0, 170, 255, ${0.25 + pulse * 0.2})`;
+        context.shadowBlur = 10 * pulse;
+        context.fillStyle = "#102030";
+        context.beginPath();
+        context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 6);
+        context.fill();
+
+        // Draw button border
+        context.strokeStyle = `rgba(0, 170, 255, ${0.7 + pulse * 0.3})`;
+        context.lineWidth = 2;
+        context.stroke();
+
+        // Draw button text
+        context.shadowBlur = 0;
+        context.fillStyle = "#dff7ff";
+        context.textAlign = "center";
+        context.textBaseline = "middle"; // Center text vertically
+        const textVerticalOffset = isIOSPlatform() ? buttonTextSize * 0.05 : buttonTextSize * 0.1;
+        const textCenterY = buttonY + buttonHeight / 2 + textVerticalOffset; // Slight adjustment for visual centering
+        context.fillText(buttonText, canvas.width / 2, textCenterY);
+        context.textBaseline = "alphabetic"; // Reset to default
+        context.restore();
     } else {
-        buttonTextSize = textSize * 1.1; // Original size for desktop
+        window.startButtonBounds = null;
     }
-    
-    // Button styling with pulsing effect (same as level complete overlay)
-    const time = Date.now() / 1000;
-    const pulse = Math.sin(time * 3) * 0.3 + 0.7; // Pulse between 0.4 and 1.0
-    
-    // Button dimensions
-    const buttonText = "START GAME";
-    context.font = `700 ${buttonTextSize}px Arial, system-ui, -apple-system, sans-serif`;
-    const textMetrics = context.measureText(buttonText);
-    const buttonPadding = buttonTextSize * 0.8;
-    const buttonWidth = textMetrics.width + buttonPadding * 2;
-    const buttonHeight = buttonTextSize * 1.8;
-    const buttonX = (canvas.width - buttonWidth) / 2;
-    
-    // Position button above credits with responsive spacing
-    const buttonSpacing = isMobileLandscape ? buttonHeight * 0.8 : buttonHeight * 1.2;
-    const buttonY = creditsY - authorSize - buttonSpacing - buttonHeight / 2;
-    
-    // Store button bounds for click detection
-    window.startButtonBounds = {
-        x: buttonX,
-        y: buttonY,
-        width: buttonWidth,
-        height: buttonHeight
-    };
-    
-    // Draw button background with modal PLAY LEVEL style treatment
-    context.save();
-    context.shadowColor = `rgba(0, 170, 255, ${0.25 + pulse * 0.2})`;
-    context.shadowBlur = 10 * pulse;
-    context.fillStyle = "#102030";
-    context.beginPath();
-    context.roundRect(buttonX, buttonY, buttonWidth, buttonHeight, 6);
-    context.fill();
-    
-    // Draw button border
-    context.strokeStyle = `rgba(0, 170, 255, ${0.7 + pulse * 0.3})`;
-    context.lineWidth = 2;
-    context.stroke();
-    
-    // Draw button text
-    context.shadowBlur = 0;
-    context.fillStyle = "#dff7ff";
-    context.textAlign = "center";
-    context.textBaseline = "middle"; // Center text vertically
-    const textVerticalOffset = isIOSPlatform() ? buttonTextSize * 0.05 : buttonTextSize * 0.1;
-    const textCenterY = buttonY + buttonHeight / 2 + textVerticalOffset; // Slight adjustment for visual centering
-    context.fillText(buttonText, canvas.width / 2, textCenterY);
-    context.textBaseline = "alphabetic"; // Reset to default
-    context.restore();
     
     // Draw F11 fullscreen hint for Windows (session-only, with fade)
     drawF11FullscreenHint();
