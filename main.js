@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.65';
+const APP_VERSION = '1.1.66';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -761,6 +761,7 @@ function getLevelSelectElements() {
 function getSolutionReplayElements() {
     return {
         triggerButton: document.getElementById('solutionTriggerButton'),
+        touchTriggerButton: document.getElementById('solutionTouchTriggerButton'),
         overlay: document.getElementById('solutionReplayOverlay'),
         modal: document.getElementById('solutionReplayModal'),
         controls: document.getElementById('solutionReplayControls'),
@@ -1903,6 +1904,7 @@ function updateTitleScreenUI() {
 function initializeSolutionReplayUI() {
     const {
         triggerButton,
+        touchTriggerButton,
         overlay,
         lurdInput,
         loadSavedButton,
@@ -1930,6 +1932,14 @@ function initializeSolutionReplayUI() {
         if (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive) {
             playSound('click');
             exitSolutionReplay();
+            return;
+        }
+
+        openCurrentLevelSolutionReplay();
+    });
+
+    touchTriggerButton?.addEventListener('click', () => {
+        if (currentGameState !== GAME_STATES.PLAYING) {
             return;
         }
 
@@ -2176,6 +2186,7 @@ async function saveToolboxSolutionToProgress() {
 function updateSolutionReplayUI() {
     const {
         triggerButton,
+        touchTriggerButton,
         overlay,
         modal,
         controls,
@@ -2199,20 +2210,38 @@ function updateSolutionReplayUI() {
     }
 
     const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
-
-    const shouldShowTrigger = currentGameState === GAME_STATES.PLAYING ||
-        (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive);
-    triggerButton.style.display = shouldShowTrigger ? 'inline-flex' : 'none';
-    triggerButton.style.alignItems = 'center';
-    triggerButton.style.justifyContent = 'center';
-    triggerButton.style.fontSize = isMobile ? '11px' : '13px';
-    triggerButton.textContent = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive
-        ? 'LURD CONSOLE ▼'
-        : 'LURD CONSOLE ▲';
-
+    const isTouchUi = isTouchDevice();
     const shouldShowReplayModal = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive;
-    const shouldShowReplayHost = shouldShowTrigger;
-    overlay.style.display = shouldShowReplayHost ? 'flex' : 'none';
+
+    if (isTouchUi) {
+        triggerButton.style.display = 'none';
+
+        if (touchTriggerButton) {
+            const shouldShowTouchTrigger = currentGameState === GAME_STATES.PLAYING && !shouldShowReplayModal;
+            touchTriggerButton.style.display = shouldShowTouchTrigger ? 'inline-flex' : 'none';
+            touchTriggerButton.style.fontSize = isMobile ? '11px' : '13px';
+        }
+
+        overlay.style.display = shouldShowReplayModal ? 'flex' : 'none';
+    } else {
+        if (touchTriggerButton) {
+            touchTriggerButton.style.display = 'none';
+        }
+
+        const shouldShowTrigger = currentGameState === GAME_STATES.PLAYING ||
+            (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive);
+        triggerButton.style.display = shouldShowTrigger ? 'inline-flex' : 'none';
+        triggerButton.style.alignItems = 'center';
+        triggerButton.style.justifyContent = 'center';
+        triggerButton.style.fontSize = isMobile ? '11px' : '13px';
+        triggerButton.textContent = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive
+            ? 'LURD CONSOLE ▼'
+            : 'LURD CONSOLE ▲';
+
+        const shouldShowReplayHost = shouldShowTrigger;
+        overlay.style.display = shouldShowReplayHost ? 'flex' : 'none';
+    }
+
     overlay.classList.toggle('open', shouldShowReplayModal);
     overlay.setAttribute('aria-hidden', shouldShowReplayModal ? 'false' : 'true');
 
