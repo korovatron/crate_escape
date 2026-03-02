@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.61';
+const APP_VERSION = '1.1.62';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -6161,12 +6161,27 @@ function drawStatusBar() {
     // Draw solid black background
     context.fillStyle = "#000000";
     context.fillRect(0, 0, canvas.width, STATUS_BAR_HEIGHT);
-    
-    // Draw neon border at bottom of status bar (more subtle)
-    context.shadowColor = "#e6cc00";
-    context.shadowBlur = 6;
-    context.fillStyle = "#e6cc00";
-    context.fillRect(0, STATUS_BAR_HEIGHT - 3, canvas.width, 3);
+
+    // Draw cyan HUD panel to match modal styling language
+    const headerPanelInset = 4;
+    const headerPanelX = headerPanelInset;
+    const headerPanelY = headerPanelInset;
+    const headerPanelWidth = Math.max(0, canvas.width - (headerPanelInset * 2));
+    const headerPanelHeight = Math.max(0, STATUS_BAR_HEIGHT - (headerPanelInset * 2));
+    const headerPanelRadius = 6;
+
+    context.fillStyle = "rgba(0, 0, 0, 0.88)";
+    context.beginPath();
+    context.roundRect(headerPanelX, headerPanelY, headerPanelWidth, headerPanelHeight, headerPanelRadius);
+    context.fill();
+
+    context.shadowColor = "rgba(0, 170, 255, 0.35)";
+    context.shadowBlur = 8;
+    context.strokeStyle = "#00aaff";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.roundRect(headerPanelX, headerPanelY, headerPanelWidth, headerPanelHeight, headerPanelRadius);
+    context.stroke();
     context.shadowBlur = 0;
     
     // Third: Draw all UI elements on top of the black background
