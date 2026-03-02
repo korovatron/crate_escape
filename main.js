@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.57';
+const APP_VERSION = '1.1.58';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2024,6 +2024,9 @@ function updateSolutionReplayUI() {
     if (document.activeElement !== lurdInput && lurdInput.value !== solutionReplayData.inputDraft) {
         lurdInput.value = solutionReplayData.inputDraft;
     }
+
+    lurdInput.classList.toggle('invalid', !parsedInput.isValid);
+    lurdInput.setAttribute('aria-invalid', parsedInput.isValid ? 'false' : 'true');
 
     updateLurdInputAlignment(lurdInput);
 
