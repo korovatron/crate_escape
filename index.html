@@ -675,7 +675,7 @@
             text-transform: uppercase;
             letter-spacing: 0.02em;
             cursor: pointer;
-            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            box-shadow: none;
             line-height: 1;
             padding: 8px 16px 9px 16px;
             white-space: nowrap;
@@ -683,6 +683,10 @@
             top: -36px;
             transform: translateX(-50%);
             z-index: 2;
+        }
+
+        .solution-replay-overlay.open .solution-trigger-button {
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
         }
 
         .solution-touch-trigger-button {
