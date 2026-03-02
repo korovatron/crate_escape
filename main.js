@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.55';
+const APP_VERSION = '1.1.56';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -7460,6 +7460,10 @@ function startSolutionReplay(solutionString) {
 function toggleSolutionReplayPlayback() {
     if (!solutionReplayData.isActive) return;
     if (!solutionReplayData.solution || solutionReplayData.solution.length === 0) return;
+
+    if (!solutionReplayData.isPlaying && solutionReplayData.currentMoveIndex >= solutionReplayData.solution.length) {
+        rewindSolutionReplayToStart();
+    }
     
     solutionReplayData.isPlaying = !solutionReplayData.isPlaying;
     
