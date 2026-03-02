@@ -219,10 +219,10 @@
             left: 15px;
             top: 70px;
             width: 200px;
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid #00aaff;
-            box-shadow: 0 0 10px rgba(0, 170, 255, 0.4);
-            border-radius: 6px;
+            background: rgba(11, 11, 11, 0.76);
+            border: 2px solid #00aaff;
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            border-radius: 10px;
             overflow: hidden;
             z-index: 8999;
             display: none;
@@ -268,7 +268,8 @@
         .hamburger-menu-option.active,
         .hamburger-menu-option:hover,
         .hamburger-menu-option:focus-visible {
-            background: rgba(0, 170, 255, 0.22);
+            background: rgba(0, 170, 255, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(0, 170, 255, 0.35);
             outline: none;
         }
 
@@ -541,22 +542,28 @@
         }
 
         .solution-trigger-button {
-            position: fixed;
-            display: none;
-            z-index: 9000;
+            position: absolute;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border: 2px solid #00aaff;
-            border-radius: 8px;
-            background: rgba(0, 170, 255, 0.2);
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            background: rgba(11, 11, 11, 0.76);
             color: #00aaff;
             font-family: Arial, system-ui, -apple-system, sans-serif;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.02em;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 170, 255, 0.4);
-            line-height: 1.05;
-            padding: 6px 8px;
-            white-space: pre-line;
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            line-height: 1;
+            padding: 8px 16px 9px 16px;
+            white-space: nowrap;
+            left: 50%;
+            top: -36px;
+            transform: translateX(-50%);
+            z-index: 2;
         }
 
         .solution-replay-overlay {
@@ -576,16 +583,23 @@
             width: min(760px, 96vw);
             min-height: 206px;
             max-height: 206px;
-            overflow: hidden;
+            overflow: visible;
             background: rgba(11, 11, 11, 0.76);
             border: 2px solid #00aaff;
             border-radius: 10px;
-            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            box-shadow: none;
             padding: 24px 14px 10px 14px;
             color: #e6f7ff;
             font-family: Arial, system-ui, -apple-system, sans-serif;
             pointer-events: auto;
             box-sizing: border-box;
+            transform: translateY(calc(100% + 6px));
+            transition: transform 220ms ease;
+        }
+
+        .solution-replay-overlay.open .solution-replay-modal {
+            transform: translateY(0);
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
         }
 
         .solution-replay-close {
@@ -1108,11 +1122,9 @@
             </button>
         </div>
 
-        <button id="solutionTriggerButton" class="solution-trigger-button" type="button" aria-label="Open LURD console for move-string experiments and saved solution viewing" title="LURD Console: experiment with custom LURD move strings, run/review playback, load saved solutions, and share saved best solutions with stats.">LURD
-    CONSOLE</button>
-
         <div id="solutionReplayOverlay" class="solution-replay-overlay" aria-hidden="true">
             <div id="solutionReplayModal" class="solution-replay-modal" role="dialog" aria-modal="false" aria-label="LURD console controls">
+                <button id="solutionTriggerButton" class="solution-trigger-button" type="button" aria-label="Open LURD console for move-string experiments and saved solution viewing" title="LURD Console: experiment with custom LURD move strings, run/review playback, load saved solutions, and share saved best solutions with stats.">LURD CONSOLE ▲</button>
                 <button id="solutionReplayCloseButton" class="solution-replay-close" type="button" aria-label="Close solution replay">×</button>
                 <div id="solutionReplayProgressText" class="solution-replay-progress">MOVE 0 / 0</div>
                 <div class="solution-replay-lurd-row">

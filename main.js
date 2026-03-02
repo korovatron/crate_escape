@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.63';
+const APP_VERSION = '1.1.64';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1853,8 +1853,54 @@ function initializeSolutionReplayUI() {
         return;
     }
 
+    let triggerTouchStartY = null;
+    let suppressTriggerClickUntil = 0;
+
     triggerButton.addEventListener('click', () => {
+        if (Date.now() < suppressTriggerClickUntil) {
+            return;
+        }
+
+        if (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive) {
+            playSound('click');
+            exitSolutionReplay();
+            return;
+        }
+
         openCurrentLevelSolutionReplay();
+    });
+
+    triggerButton.addEventListener('touchstart', (event) => {
+        if (!event.touches || event.touches.length === 0) {
+            return;
+        }
+
+        triggerTouchStartY = event.touches[0].clientY;
+    }, { passive: true });
+
+    triggerButton.addEventListener('touchend', (event) => {
+        if (triggerTouchStartY == null || !event.changedTouches || event.changedTouches.length === 0) {
+            triggerTouchStartY = null;
+            return;
+        }
+
+        const touchEndY = event.changedTouches[0].clientY;
+        const deltaY = touchEndY - triggerTouchStartY;
+        triggerTouchStartY = null;
+
+        // Swipe up opens, swipe down closes.
+        if (deltaY < -18 && currentGameState !== GAME_STATES.SOLUTION_REPLAY) {
+            suppressTriggerClickUntil = Date.now() + 350;
+            playSound('click');
+            openCurrentLevelSolutionReplay();
+            return;
+        }
+
+        if (deltaY > 18 && currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive) {
+            suppressTriggerClickUntil = Date.now() + 350;
+            playSound('click');
+            exitSolutionReplay();
+        }
     });
 
     lurdInput?.addEventListener('input', () => {
@@ -2086,30 +2132,22 @@ function updateSolutionReplayUI() {
         return;
     }
 
-    const canvasRect = canvas?.getBoundingClientRect();
     const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
 
-    if (canvasRect) {
-        const padding = isMobile ? 15 : 20;
-        const bottomPadding = isMobile ? 35 : 40;
-        const buttonWidth = isMobile ? 90 : 110;
-        const buttonHeight = isMobile ? 40 : 50;
-        const buttonY = canvasRect.top + canvas.height - buttonHeight - bottomPadding;
-
-        triggerButton.style.left = `${canvasRect.left + padding}px`;
-        triggerButton.style.top = `${buttonY}px`;
-        triggerButton.style.width = `${buttonWidth}px`;
-        triggerButton.style.height = `${buttonHeight}px`;
-        triggerButton.style.fontSize = isMobile ? '11px' : '13px';
-    }
-
-    const shouldShowTrigger = currentGameState === GAME_STATES.PLAYING;
+    const shouldShowTrigger = currentGameState === GAME_STATES.PLAYING ||
+        (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive);
     triggerButton.style.display = shouldShowTrigger ? 'inline-flex' : 'none';
     triggerButton.style.alignItems = 'center';
     triggerButton.style.justifyContent = 'center';
+    triggerButton.style.fontSize = isMobile ? '11px' : '13px';
+    triggerButton.textContent = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive
+        ? 'LURD CONSOLE ▼'
+        : 'LURD CONSOLE ▲';
 
     const shouldShowReplayModal = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive;
-    overlay.style.display = shouldShowReplayModal ? 'flex' : 'none';
+    const shouldShowReplayHost = shouldShowTrigger;
+    overlay.style.display = shouldShowReplayHost ? 'flex' : 'none';
+    overlay.classList.toggle('open', shouldShowReplayModal);
     overlay.setAttribute('aria-hidden', shouldShowReplayModal ? 'false' : 'true');
 
     if (!shouldShowReplayModal) {
@@ -6174,15 +6212,23 @@ function drawStatusBar() {
     const headerPanelY = headerPanelInset;
     const headerPanelWidth = Math.max(0, canvas.width - (headerPanelInset * 2));
     const headerPanelHeight = Math.max(0, STATUS_BAR_HEIGHT - (headerPanelInset * 2));
-    const headerPanelRadius = 6;
+    const headerPanelRadius = 10;
 
-    context.fillStyle = "rgba(0, 0, 0, 0.88)";
+    context.fillStyle = "rgba(11, 11, 11, 0.76)";
     context.beginPath();
     context.roundRect(headerPanelX, headerPanelY, headerPanelWidth, headerPanelHeight, headerPanelRadius);
     context.fill();
 
+    context.save();
     context.shadowColor = "rgba(0, 170, 255, 0.35)";
-    context.shadowBlur = 8;
+    context.shadowBlur = 24;
+    context.strokeStyle = "#00aaff";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.roundRect(headerPanelX, headerPanelY, headerPanelWidth, headerPanelHeight, headerPanelRadius);
+    context.stroke();
+    context.restore();
+
     context.strokeStyle = "#00aaff";
     context.lineWidth = 2;
     context.beginPath();
