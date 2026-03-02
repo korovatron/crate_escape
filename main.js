@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.52';
+const APP_VERSION = '1.1.53';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1998,7 +1998,7 @@ function updateSolutionReplayUI() {
     const totalMoves = hasActiveReplaySequence
         ? solutionReplayData.solution.length
         : (parsedInput.isValid ? parsedInput.normalized.length : 0);
-    progressText.textContent = `MOVE ${currentMove} / ${totalMoves}`;
+    progressText.textContent = `STEP ${currentMove} / ${totalMoves}`;
 
     const draftDisplay = String(solutionReplayData.inputDraft || '').replace(/\s+/g, '');
     const hasInvalidDraftChars = /[^lurdLURD]/.test(draftDisplay);
@@ -7498,22 +7498,23 @@ function executeNextReplayMove() {
     // Get the current character from the solution string
     const currentChar = solutionReplayData.solution[solutionReplayData.currentMoveIndex];
     const direction = getDirectionFromChar(currentChar);
+
+    if (!direction) {
+        solutionReplayData.currentMoveIndex++;
+        return;
+    }
     
-    if (direction) {
-        // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
-        const moveSuccessful = attemptPlayerMove(direction);
-        
-        if (moveSuccessful) {
-            // Move to next character in solution
-            solutionReplayData.currentMoveIndex++;
-            solutionReplayData.hasExecutedMoves = true;
-        } else {
-            // Move failed - this shouldn't happen with a valid solution
-            console.warn('Solution replay move failed:', direction, 'at move', solutionReplayData.currentMoveIndex);
-            solutionReplayData.simulatedContinuousDirection = null;
-            solutionReplayData.shouldClearContinuousAfterMove = false;
-            completeSolutionReplay();
-        }
+    // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
+    const moveSuccessful = attemptPlayerMove(direction);
+    
+    if (moveSuccessful) {
+        // Move to next character in solution
+        solutionReplayData.currentMoveIndex++;
+        solutionReplayData.hasExecutedMoves = true;
+    } else {
+        solutionReplayData.currentMoveIndex++;
+        solutionReplayData.simulatedContinuousDirection = null;
+        solutionReplayData.shouldClearContinuousAfterMove = false;
     }
 }
 
@@ -7551,25 +7552,28 @@ function stepSolutionReplayForward() {
     // Get the current character from the solution string
     const currentChar = solutionReplayData.solution[solutionReplayData.currentMoveIndex];
     const direction = getDirectionFromChar(currentChar);
+
+    if (!direction) {
+        solutionReplayData.currentMoveIndex++;
+        return;
+    }
     
-    if (direction) {
-        // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
-        const moveSuccessful = attemptPlayerMove(direction);
+    // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
+    const moveSuccessful = attemptPlayerMove(direction);
+    
+    if (moveSuccessful) {
+        // Move to next character in solution
+        solutionReplayData.currentMoveIndex++;
+        solutionReplayData.hasExecutedMoves = true;
         
-        if (moveSuccessful) {
-            // Move to next character in solution
-            solutionReplayData.currentMoveIndex++;
-            solutionReplayData.hasExecutedMoves = true;
-            
-            // Since we're stepping manually (paused), clear any continuous animation that was set up
-            // The move is complete and we want to stop at this position
-            solutionReplayData.simulatedContinuousDirection = null;
-            solutionReplayData.shouldClearContinuousAfterMove = false;
-        } else {
-            // Move failed - this shouldn't happen with a valid solution
-            console.warn('Solution replay move failed:', direction, 'at move', solutionReplayData.currentMoveIndex);
-            solutionReplayData.simulatedContinuousDirection = null;
-        }
+        // Since we're stepping manually (paused), clear any continuous animation that was set up
+        // The move is complete and we want to stop at this position
+        solutionReplayData.simulatedContinuousDirection = null;
+        solutionReplayData.shouldClearContinuousAfterMove = false;
+    } else {
+        solutionReplayData.currentMoveIndex++;
+        solutionReplayData.simulatedContinuousDirection = null;
+        solutionReplayData.shouldClearContinuousAfterMove = false;
     }
 }
 
