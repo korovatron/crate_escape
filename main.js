@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.58';
+const APP_VERSION = '1.1.59';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -7507,6 +7507,22 @@ function removeReplayStepAtCurrentIndex() {
     }
 }
 
+function promoteReplayDraftMoveToPush(index) {
+    const displaySequence = String(solutionReplayData.inputDraft || '').replace(/\s+/g, '');
+    if (!displaySequence || index < 0 || index >= displaySequence.length) {
+        return;
+    }
+
+    const existingChar = displaySequence.charAt(index);
+    const upperChar = existingChar.toUpperCase();
+    if (upperChar !== 'L' && upperChar !== 'U' && upperChar !== 'R' && upperChar !== 'D') {
+        return;
+    }
+
+    const promoted = `${displaySequence.slice(0, index)}${upperChar}${displaySequence.slice(index + 1)}`;
+    solutionReplayData.inputDraft = promoted;
+}
+
 function executeNextReplayMove() {
     if (!solutionReplayData.isActive || !solutionReplayData.isPlaying) return;
     
@@ -7529,10 +7545,17 @@ function executeNextReplayMove() {
         return;
     }
     
+    const nextX = playerPos.x + direction.x;
+    const nextY = playerPos.y + direction.y;
+    const isPushMove = findBoxAt(nextX, nextY) !== -1;
+
     // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
     const moveSuccessful = attemptPlayerMove(direction);
     
     if (moveSuccessful) {
+        if (isPushMove) {
+            promoteReplayDraftMoveToPush(solutionReplayData.currentMoveIndex);
+        }
         // Move to next character in solution
         solutionReplayData.currentMoveIndex++;
         solutionReplayData.hasExecutedMoves = true;
@@ -7583,10 +7606,17 @@ function stepSolutionReplayForward() {
         return;
     }
     
+    const nextX = playerPos.x + direction.x;
+    const nextY = playerPos.y + direction.y;
+    const isPushMove = findBoxAt(nextX, nextY) !== -1;
+
     // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
     const moveSuccessful = attemptPlayerMove(direction);
     
     if (moveSuccessful) {
+        if (isPushMove) {
+            promoteReplayDraftMoveToPush(solutionReplayData.currentMoveIndex);
+        }
         // Move to next character in solution
         solutionReplayData.currentMoveIndex++;
         solutionReplayData.hasExecutedMoves = true;
