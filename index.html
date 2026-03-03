@@ -15,7 +15,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>The Crate Escape - Free Sokoban Puzzle Game Online | 1000+ Levels</title>
-    <meta name="description" content="Play The Crate Escape, a free online Sokoban puzzle game with over 1000 challenging levels. Import custom levels, share direct level links, and push crates to their targets in this addictive logic puzzle game.">
+    <meta name="description" content="Play The Crate Escape, a free online Sokoban puzzle game with over 1000 classic levels. Design custom levels and share fully playable links in this addictive logic puzzle game.">
     <meta name="keywords" content="Sokoban, puzzle game, crate escape, push puzzle, logic game, brain teaser, free online game, mobile puzzle, cloud save, 1000 levels, custom levels, level sharing">
     <meta name="author" content="Neil Kendall">
     <meta name="robots" content="index, follow">
@@ -25,7 +25,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.korovatron.co.uk/crate_escape/">
     <meta property="og:title" content="The Crate Escape - Free Sokoban Puzzle Game">
-    <meta property="og:description" content="Challenge yourself with over 1000 Sokoban puzzle levels, import custom levels, and share direct links to play them.">
+    <meta property="og:description" content="Play over 1000 classic Sokoban puzzle levels, design custom levels, and share fully playable links.">
     <meta property="og:image" content="https://www.korovatron.co.uk/crate_escape/app-icon.png">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">
@@ -37,7 +37,7 @@
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://www.korovatron.co.uk/crate_escape/">
     <meta property="twitter:title" content="The Crate Escape - Free Sokoban Puzzle Game">
-    <meta property="twitter:description" content="Challenge yourself with over 1000 Sokoban puzzle levels, import custom levels, and share direct links to play them.">
+    <meta property="twitter:description" content="Play over 1000 classic Sokoban puzzle levels, design custom levels, and share fully playable links.">
     <meta property="twitter:image" content="https://www.korovatron.co.uk/crate_escape/app-icon.png">
     <meta property="twitter:image:alt" content="The Crate Escape game icon - colorful crates and puzzle elements">
 
@@ -74,7 +74,7 @@
         "@context": "https://schema.org",
         "@type": "VideoGame",
         "name": "The Crate Escape",
-        "description": "A modern Sokoban-style puzzle game with over 1000 levels. Import custom levels, share direct level links, and push crates to their target positions in this challenging logic puzzle game.",
+        "description": "A modern Sokoban-style puzzle game with over 1000 classic levels. Design custom levels, share fully playable links, and push crates to their target positions in this challenging logic puzzle game.",
         "url": "https://www.korovatron.co.uk/crate_escape/",
         "image": "https://www.korovatron.co.uk/crate_escape/app-icon.png",
         "author": {
@@ -224,6 +224,17 @@
             font-size: var(--title-tagline-size, clamp(13px, 2.1vw, 22px));
             line-height: 1.35;
             text-wrap: balance;
+        }
+
+        .title-screen-tagline-main {
+            white-space: nowrap;
+        }
+
+        .title-screen-tagline-sub {
+            font-size: 0.88em;
+            color: #c9d6dd;
+            font-weight: 600;
+            white-space: nowrap;
         }
 
         .title-screen-start-wrap {
@@ -1543,7 +1554,7 @@
         <div id="titleScreenUI" class="title-screen-ui" aria-hidden="true">
             <div class="title-screen-top">
                 <img id="titleScreenLogo" class="title-screen-logo" src="assets/images/cartoonLogo.png" alt="The Crate Escape">
-                <p class="title-screen-tagline">Classic Sokoban Puzzles</p>
+                <p class="title-screen-tagline"><span class="title-screen-tagline-main">Play Classic Sokoban Puzzles.</span> <span class="title-screen-tagline-sub">Design &amp; Share Custom Levels.</span></p>
             </div>
             <div class="title-screen-start-wrap">
                 <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Play" title="Play">PLAY</button>
@@ -1632,7 +1643,7 @@
                 <div class="import-level-actions">
                     <button id="importLevelPasteButton" class="import-level-button" type="button" aria-label="Paste level text" title="Paste level text">Paste</button>
                     <button id="importLevelDesignerButton" class="import-level-button" type="button" aria-label="Open visual level designer" title="Open the visual editor to draw and edit this level.">Designer</button>
-                    <button id="importLevelLinkButton" class="import-level-button" type="button" aria-label="Copy shareable custom level link" title="Create and copy a shareable link for this custom level.">Copy Link</button>
+                    <button id="importLevelLinkButton" class="import-level-button" type="button" aria-label="Copy shareable playable custom level link" title="Create and copy a link that opens this custom level as fully playable.">Copy Link</button>
                     <button id="importLevelClearButton" class="import-level-button" type="button" aria-label="Clear level text" title="Clear level text">Clear</button>
                     <button id="importLevelPlayButton" class="import-level-button primary" type="button" aria-label="Play level" title="Play level">▶</button>
                 </div>

@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.80';
+const APP_VERSION = '1.1.81';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -39,6 +39,10 @@ const canProcessKey = (key) => {
 document.addEventListener('keydown', (e) => {
     pressedKeys.add(e.key);
 
+    if ((e.key === ' ' || e.key === 'Spacebar') && levelDesignerState?.isOpen) {
+        updateLevelDesignerCursor();
+    }
+
     const isNumpadEnd = e.code === 'Numpad1';
     const isNumpadHome = e.code === 'Numpad7';
     const isNumpadInsert = e.code === 'Numpad0';
@@ -59,6 +63,10 @@ document.addEventListener('keydown', (e) => {
             } else if (isLegalModalOpen()) {
                 closeLegalModal();
             }
+        }
+
+        if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter' || e.code === 'NumpadEnter') {
+            e.preventDefault();
         }
         return;
     }
@@ -272,7 +280,13 @@ document.addEventListener('keydown', (e) => {
     }
 }
 );
-document.addEventListener('keyup', (e) => pressedKeys.delete(e.key));
+document.addEventListener('keyup', (e) => {
+    pressedKeys.delete(e.key);
+
+    if ((e.key === ' ' || e.key === 'Spacebar') && levelDesignerState?.isOpen) {
+        updateLevelDesignerCursor();
+    }
+});
 // #endregion
 
 // #region Touch Input Variables
@@ -1753,6 +1767,39 @@ function getClosestDesignerTileSizeIndex(targetSize) {
     return closestIndex;
 }
 
+const LEVEL_DESIGNER_ERASER_CURSOR = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 viewBox=%270 0 24 24%27%3E%3Cpath fill=%27%23ffffff%27 stroke=%27%23000000%27 stroke-width=%271.4%27 d=%27M3 15l8-8 7 7-8 8H6z%27/%3E%3Cpath stroke=%27%23000000%27 stroke-width=%271.6%27 stroke-linecap=%27round%27 d=%27M13 20h8%27/%3E%3C/svg%3E") 3 18, cell';
+
+function updateLevelDesignerCursor() {
+    const { canvas } = getLevelDesignerElements();
+    if (!canvas) {
+        return;
+    }
+
+    if (!levelDesignerState.isOpen) {
+        canvas.style.cursor = 'crosshair';
+        return;
+    }
+
+    const hasSpacePan = pressedKeys.has(' ') || pressedKeys.has('Spacebar');
+
+    if (levelDesignerState.isPanning) {
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+
+    if (levelDesignerState.isPainting && levelDesignerState.activePaintTool === 'eraser') {
+        canvas.style.cursor = LEVEL_DESIGNER_ERASER_CURSOR;
+        return;
+    }
+
+    if (hasSpacePan) {
+        canvas.style.cursor = 'grab';
+        return;
+    }
+
+    canvas.style.cursor = 'crosshair';
+}
+
 function updateLevelDesignerToolstripActiveState() {
     const { tools } = getLevelDesignerElements();
     if (!tools) {
@@ -2097,6 +2144,7 @@ function openLevelDesignerModal() {
     renderLevelDesignerToolstripIcons();
     updateLevelDesignerToolstripActiveState();
     updateLevelDesignerZoomLabel();
+    updateLevelDesignerCursor();
     refreshLevelDesignerValidation();
     renderLevelDesigner();
 }
@@ -2118,6 +2166,7 @@ function closeLevelDesignerModal() {
     overlay.style.background = '';
     overlay.style.backdropFilter = '';
     overlay.style.webkitBackdropFilter = '';
+    updateLevelDesignerCursor();
 }
 
 function initializeLevelDesignerUI() {
@@ -2179,6 +2228,7 @@ function initializeLevelDesignerUI() {
         levelDesignerState.isPanning = false;
         levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
         levelDesignerState.lastPaintKey = '';
+        updateLevelDesignerCursor();
     };
 
     canvas.addEventListener('pointerdown', (event) => {
@@ -2197,11 +2247,13 @@ function initializeLevelDesignerUI() {
             levelDesignerState.panStartClientY = event.clientY;
             levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
             levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+            updateLevelDesignerCursor();
         } else {
             const cell = getDesignerCellFromClientPoint(event.clientX, event.clientY);
             if (cell) {
                 levelDesignerState.isPainting = true;
                 levelDesignerState.activePaintTool = event.button === 2 ? 'eraser' : levelDesignerState.selectedTool;
+                updateLevelDesignerCursor();
                 placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
             }
         }
