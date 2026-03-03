@@ -2063,6 +2063,9 @@ function openLevelDesignerModal() {
 
     overlay.style.display = 'flex';
     overlay.setAttribute('aria-hidden', 'false');
+    overlay.style.background = 'transparent';
+    overlay.style.backdropFilter = 'none';
+    overlay.style.webkitBackdropFilter = 'none';
 
     syncDesignerFromImportTextarea(true);
     renderLevelDesignerToolstripIcons();
@@ -2086,6 +2089,9 @@ function closeLevelDesignerModal() {
     levelDesignerState.lastPaintKey = '';
     overlay.style.display = 'none';
     overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.background = '';
+    overlay.style.backdropFilter = '';
+    overlay.style.webkitBackdropFilter = '';
 }
 
 function initializeLevelDesignerUI() {
@@ -2124,12 +2130,6 @@ function initializeLevelDesignerUI() {
     closeButton.addEventListener('click', () => {
         playSound('click');
         closeLevelDesignerModal();
-    });
-
-    overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) {
-            closeLevelDesignerModal();
-        }
     });
 
     zoomOutButton.addEventListener('click', () => {
