@@ -662,6 +662,179 @@
             font-size: 0.92rem;
         }
 
+        .level-designer-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.86);
+            z-index: 10001;
+            padding: 14px;
+            box-sizing: border-box;
+        }
+
+        .level-designer-modal {
+            position: relative;
+            width: min(1200px, 96vw);
+            height: min(900px, 92vh);
+            background: #0b0b0b;
+            border: 2px solid #00aaff;
+            border-radius: 10px;
+            box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
+            color: #dff7ff;
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            display: grid;
+            grid-template-rows: auto auto auto 1fr auto;
+            gap: 8px;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .level-designer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-height: 32px;
+        }
+
+        .level-designer-title {
+            margin: 0;
+            color: #00ccff;
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .level-designer-close {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: #0f1720;
+            color: #dff7ff;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            flex: 0 0 auto;
+        }
+
+        .level-designer-tools {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 2px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .level-designer-tools::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        .level-designer-tool {
+            min-width: 40px;
+            height: 36px;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: #0f1720;
+            color: #dff7ff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        .level-designer-tool-icon {
+            width: 24px;
+            height: 24px;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .level-designer-tool.active {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.45);
+        }
+
+        .level-designer-status {
+            min-height: 1.15rem;
+            font-size: 0.82rem;
+            color: #ffdd00;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .level-designer-canvas-wrap {
+            border: 1px solid #00aaff;
+            border-radius: 8px;
+            background: #091018;
+            overflow: hidden;
+            position: relative;
+            min-height: 180px;
+        }
+
+        .level-designer-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .level-designer-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .level-designer-zoom {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .level-designer-zoom button {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: #0f1720;
+            color: #dff7ff;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .level-designer-zoom-value {
+            min-width: 58px;
+            text-align: center;
+            color: #00ccff;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
         .legal-modal-content {
             margin-top: 12px;
             max-height: 62vh;
@@ -1391,11 +1564,33 @@
                 <textarea id="importLevelTextarea" class="import-level-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
                 <div class="import-level-actions">
                     <button id="importLevelPasteButton" class="import-level-button" type="button">Paste</button>
+                    <button id="importLevelDesignerButton" class="import-level-button" type="button">Designer</button>
                     <button id="importLevelLinkButton" class="import-level-button" type="button">Copy Link</button>
                     <button id="importLevelClearButton" class="import-level-button" type="button">Clear</button>
                     <button id="importLevelPlayButton" class="import-level-button primary" type="button" aria-label="Play level" title="Play level">▶</button>
                 </div>
                 <div id="importLevelError" class="import-level-error" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <div id="levelDesignerOverlay" class="level-designer-overlay" aria-hidden="true">
+            <div class="level-designer-modal" role="dialog" aria-modal="true" aria-labelledby="levelDesignerTitle">
+                <div class="level-designer-header">
+                    <h2 id="levelDesignerTitle" class="level-designer-title">Level Designer (Under Development)</h2>
+                    <button id="levelDesignerCloseButton" class="level-designer-close" type="button" aria-label="Close level designer">×</button>
+                </div>
+                <div id="levelDesignerTools" class="level-designer-tools" role="toolbar" aria-label="Tile selection"></div>
+                <div id="levelDesignerStatus" class="level-designer-status" aria-live="polite"></div>
+                <div class="level-designer-canvas-wrap">
+                    <canvas id="levelDesignerCanvas" class="level-designer-canvas" width="1000" height="600" aria-label="Level designer canvas"></canvas>
+                </div>
+                <div class="level-designer-footer">
+                    <div class="level-designer-zoom">
+                        <button id="levelDesignerZoomOutButton" type="button" aria-label="Zoom out">−</button>
+                        <div id="levelDesignerZoomValue" class="level-designer-zoom-value">32 px</div>
+                        <button id="levelDesignerZoomInButton" type="button" aria-label="Zoom in">+</button>
+                    </div>
+                </div>
             </div>
         </div>
 

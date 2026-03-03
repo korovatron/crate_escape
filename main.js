@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.76';
+const APP_VERSION = '1.1.77';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -52,7 +52,9 @@ document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             e.preventDefault();
             playSound('click');
-            if (isImportLevelModalOpen()) {
+            if (isLevelDesignerModalOpen()) {
+                closeLevelDesignerModal();
+            } else if (isImportLevelModalOpen()) {
                 closeImportLevelModal();
             } else if (isLegalModalOpen()) {
                 closeLegalModal();
@@ -723,9 +725,23 @@ function getImportLevelElements() {
         error: document.getElementById('importLevelError'),
         closeButton: document.getElementById('importLevelCloseButton'),
         pasteButton: document.getElementById('importLevelPasteButton'),
+        designerButton: document.getElementById('importLevelDesignerButton'),
         playButton: document.getElementById('importLevelPlayButton'),
         linkButton: document.getElementById('importLevelLinkButton'),
         clearButton: document.getElementById('importLevelClearButton')
+    };
+}
+
+function getLevelDesignerElements() {
+    return {
+        overlay: document.getElementById('levelDesignerOverlay'),
+        canvas: document.getElementById('levelDesignerCanvas'),
+        tools: document.getElementById('levelDesignerTools'),
+        status: document.getElementById('levelDesignerStatus'),
+        zoomOutButton: document.getElementById('levelDesignerZoomOutButton'),
+        zoomInButton: document.getElementById('levelDesignerZoomInButton'),
+        zoomValue: document.getElementById('levelDesignerZoomValue'),
+        closeButton: document.getElementById('levelDesignerCloseButton')
     };
 }
 
@@ -1014,8 +1030,13 @@ function isLegalModalOpen() {
     return Boolean(overlay && overlay.style.display === 'flex');
 }
 
+function isLevelDesignerModalOpen() {
+    const { overlay } = getLevelDesignerElements();
+    return Boolean(overlay && overlay.style.display === 'flex');
+}
+
 function isAnyBlockingModalOpen() {
-    return isImportLevelModalOpen() || isLegalModalOpen();
+    return isImportLevelModalOpen() || isLegalModalOpen() || isLevelDesignerModalOpen();
 }
 
 const LEGAL_MODAL_CACHE = {
@@ -1388,9 +1409,801 @@ function closeImportLevelModal() {
         return;
     }
 
+    if (isLevelDesignerModalOpen()) {
+        closeLevelDesignerModal();
+    }
+
     overlay.style.display = 'none';
     overlay.setAttribute('aria-hidden', 'true');
     setImportLevelError('');
+}
+
+function normalizeDesignerImportChar(char) {
+    switch (char) {
+        case '-':
+        case '_':
+            return ' ';
+        case 'p':
+            return '@';
+        case 'P':
+            return '+';
+        case 'b':
+            return '$';
+        case 'B':
+            return '*';
+        case 'o':
+        case 'O':
+            return '.';
+        default:
+            return char;
+    }
+}
+
+function parseDesignerAsciiToCells(rawText) {
+    const normalizedText = String(rawText || '').replace(/\r/g, '');
+    let rows = normalizedText
+        .split('\n')
+        .map(line => line.replace(/\t/g, '    '))
+        .filter(line => !line.trim().startsWith(';'));
+
+    while (rows.length > 0 && rows[0].trim() === '') {
+        rows.shift();
+    }
+    while (rows.length > 0 && rows[rows.length - 1].trim() === '') {
+        rows.pop();
+    }
+
+    if (rows.length === 0) {
+        return { isValid: true, rows: [], cells: new Map() };
+    }
+
+    const rowsNormalized = rows.map(row => Array.from(row).map(normalizeDesignerImportChar).join(''));
+    const allowedCharsPattern = /^[ #@$.+*]*$/;
+
+    for (let rowIndex = 0; rowIndex < rowsNormalized.length; rowIndex++) {
+        if (!allowedCharsPattern.test(rowsNormalized[rowIndex])) {
+            return {
+                isValid: false,
+                error: `Invalid symbol on line ${rowIndex + 1}. Supported: # @ $ . + * space, plus aliases - _ p P b B o O.`
+            };
+        }
+    }
+
+    const cells = new Map();
+    for (let y = 0; y < rowsNormalized.length; y++) {
+        const row = rowsNormalized[y];
+        for (let x = 0; x < row.length; x++) {
+            const char = row.charAt(x);
+            if (char !== ' ') {
+                cells.set(`${x},${y}`, char);
+            }
+        }
+    }
+
+    return { isValid: true, rows: rowsNormalized, cells };
+}
+
+function getLevelDesignerBounds() {
+    if (!levelDesignerState.cells || levelDesignerState.cells.size === 0) {
+        return null;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const key of levelDesignerState.cells.keys()) {
+        const [xRaw, yRaw] = key.split(',');
+        const x = parseInt(xRaw, 10);
+        const y = parseInt(yRaw, 10);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            continue;
+        }
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+        return null;
+    }
+
+    return { minX, minY, maxX, maxY };
+}
+
+function exportLevelDesignerAsciiFromCells() {
+    const bounds = getLevelDesignerBounds();
+    if (!bounds) {
+        return '';
+    }
+
+    const width = bounds.maxX - bounds.minX + 1;
+    const height = bounds.maxY - bounds.minY + 1;
+    const grid = Array.from({ length: height }, () => Array(width).fill(' '));
+
+    for (const [key, value] of levelDesignerState.cells.entries()) {
+        const [xRaw, yRaw] = key.split(',');
+        const x = parseInt(xRaw, 10) - bounds.minX;
+        const y = parseInt(yRaw, 10) - bounds.minY;
+        if (x >= 0 && y >= 0 && y < height && x < width) {
+            grid[y][x] = value;
+        }
+    }
+
+    return grid
+        .map(row => row.join('').replace(/\s+$/g, ''))
+        .join('\n');
+}
+
+function getDesignerThemeSprites(themeIndex) {
+    const themeData = [
+        { ground: 4, wall: 5, crate: 7, crateOnGoal: 42 },
+        { ground: 4, wall: 5, crate: 10, crateOnGoal: 45 },
+        { ground: 4, wall: 6, crate: 7, crateOnGoal: 42 },
+        { ground: 4, wall: 6, crate: 10, crateOnGoal: 45 },
+        { ground: 5, wall: 5, crate: 11, crateOnGoal: 1 },
+        { ground: 5, wall: 5, crate: 9, crateOnGoal: 44 },
+        { ground: 5, wall: 6, crate: 11, crateOnGoal: 1 },
+        { ground: 5, wall: 6, crate: 9, crateOnGoal: 44 }
+    ];
+
+    const safeIndex = Number.isFinite(themeIndex) && themeIndex >= 0
+        ? themeIndex % themeData.length
+        : 0;
+    const theme = themeData[safeIndex];
+
+    return {
+        ground: `ground_${theme.ground.toString().padStart(2, '0')}.png`,
+        wall: `block_${theme.wall.toString().padStart(2, '0')}.png`,
+        crate: `crate_${theme.crate.toString().padStart(2, '0')}.png`,
+        crateOnGoal: `crate_${theme.crateOnGoal.toString().padStart(2, '0')}.png`
+    };
+}
+
+function setLevelDesignerStatus(message, isError = false) {
+    const { status } = getLevelDesignerElements();
+    if (!status) {
+        return;
+    }
+
+    status.style.color = isError ? '#ff9f9f' : '#ffdd00';
+    status.textContent = message || '';
+}
+
+function updateLevelDesignerZoomLabel() {
+    const { zoomValue } = getLevelDesignerElements();
+    if (!zoomValue) {
+        return;
+    }
+
+    const currentSize = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.tileSizeIndex] || 32;
+    zoomValue.textContent = `${currentSize} px`;
+}
+
+function getClosestDesignerTileSizeIndex(targetSize) {
+    let closestIndex = 0;
+    let closestDiff = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < LEVEL_DESIGNER_TILE_SIZES.length; index++) {
+        const diff = Math.abs(LEVEL_DESIGNER_TILE_SIZES[index] - targetSize);
+        if (diff < closestDiff) {
+            closestDiff = diff;
+            closestIndex = index;
+        }
+    }
+    return closestIndex;
+}
+
+function updateLevelDesignerToolstripActiveState() {
+    const { tools } = getLevelDesignerElements();
+    if (!tools) {
+        return;
+    }
+
+    const buttons = tools.querySelectorAll('[data-designer-tool]');
+    buttons.forEach(button => {
+        const isActive = button.getAttribute('data-designer-tool') === levelDesignerState.selectedTool;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+
+function renderLevelDesignerToolstripIcons() {
+    const { tools } = getLevelDesignerElements();
+    if (!tools) {
+        return;
+    }
+
+    const sprites = getDesignerThemeSprites(levelDesignerState.skinIndex);
+    const goalSprite = 'environment_06.png';
+    const playerSpriteName = 'player_03.png';
+
+    const drawGround = (ctx, size) => {
+        if (!drawLevelDesignerSprite(ctx, sprites.ground, 0, 0, size)) {
+            ctx.fillStyle = '#16202b';
+            ctx.fillRect(0, 0, size, size);
+        }
+    };
+
+    const drawGoal = (ctx, size) => {
+        drawGround(ctx, size);
+        const inset = Math.max(2, Math.floor(size * 0.18));
+        drawLevelDesignerSprite(ctx, goalSprite, inset, inset, Math.max(4, size - inset * 2));
+    };
+
+    const buttons = tools.querySelectorAll('[data-designer-tool]');
+    buttons.forEach(button => {
+        const toolId = button.getAttribute('data-designer-tool');
+        const iconCanvas = button.querySelector('.level-designer-tool-icon');
+        if (!toolId || !iconCanvas) {
+            return;
+        }
+
+        const iconSize = 24;
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        const target = Math.round(iconSize * dpr);
+        if (iconCanvas.width !== target || iconCanvas.height !== target) {
+            iconCanvas.width = target;
+            iconCanvas.height = target;
+        }
+
+        const ctx = iconCanvas.getContext('2d');
+        if (!ctx) {
+            return;
+        }
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, iconSize, iconSize);
+
+        if (toolId === 'wall') {
+            drawLevelDesignerSprite(ctx, sprites.wall, 0, 0, iconSize);
+        } else if (toolId === 'floor') {
+            drawGround(ctx, iconSize);
+        } else if (toolId === 'goal') {
+            drawGoal(ctx, iconSize);
+        } else if (toolId === 'crate') {
+            drawGround(ctx, iconSize);
+            drawLevelDesignerSprite(ctx, sprites.crate, 0, 0, iconSize);
+        } else if (toolId === 'player') {
+            drawGround(ctx, iconSize);
+            drawLevelDesignerSprite(ctx, playerSpriteName, 0, 0, iconSize);
+        } else if (toolId === 'eraser') {
+            drawGround(ctx, iconSize);
+            ctx.strokeStyle = '#ff6666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(4, 4);
+            ctx.lineTo(iconSize - 4, iconSize - 4);
+            ctx.moveTo(iconSize - 4, 4);
+            ctx.lineTo(4, iconSize - 4);
+            ctx.stroke();
+        } else {
+            drawGround(ctx, iconSize);
+        }
+    });
+}
+
+function drawLevelDesignerSprite(ctx, spriteName, x, y, size) {
+    const sprite = textureAtlas.frames[spriteName];
+    if (sprite && spriteSheet && spriteSheet.complete) {
+        ctx.drawImage(spriteSheet, sprite.x, sprite.y, sprite.width, sprite.height, x, y, size, size);
+        return true;
+    }
+    return false;
+}
+
+function removeDesignerPlayerCells() {
+    for (const [key, value] of levelDesignerState.cells.entries()) {
+        if (value === '@') {
+            levelDesignerState.cells.delete(key);
+        } else if (value === '+') {
+            levelDesignerState.cells.set(key, '.');
+        }
+    }
+}
+
+function getDesignerCellFromClientPoint(clientX, clientY) {
+    const { canvas } = getLevelDesignerElements();
+    if (!canvas) {
+        return null;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const tileSizeLocal = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.tileSizeIndex] || 32;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const x = Math.floor(((clientX - rect.left) - centerX) / tileSizeLocal - levelDesignerState.offsetX);
+    const y = Math.floor(((clientY - rect.top) - centerY) / tileSizeLocal - levelDesignerState.offsetY);
+    return { x, y };
+}
+
+function syncImportTextareaFromDesigner() {
+    const { textarea } = getImportLevelElements();
+    if (!textarea) {
+        return;
+    }
+
+    const asciiText = exportLevelDesignerAsciiFromCells();
+    if (textarea.value !== asciiText) {
+        textarea.value = asciiText;
+        scheduleSaveCustomLevelEditorText(textarea.value);
+    }
+
+    const bounds = getLevelDesignerBounds();
+    if (!bounds) {
+        setLevelDesignerStatus('Place tiles to start building your level.');
+        return;
+    }
+
+    const width = bounds.maxX - bounds.minX + 1;
+    const height = bounds.maxY - bounds.minY + 1;
+    setLevelDesignerStatus(`Selected: ${levelDesignerState.selectedTool.toUpperCase()} · Bounds: ${width}×${height}`);
+}
+
+function syncDesignerFromImportTextarea(recenter = false) {
+    const { textarea } = getImportLevelElements();
+    if (!textarea) {
+        return;
+    }
+
+    const parsed = parseDesignerAsciiToCells(textarea.value);
+    if (!parsed.isValid) {
+        setLevelDesignerStatus(parsed.error, true);
+        return;
+    }
+
+    levelDesignerState.cells = parsed.cells;
+
+    if (recenter) {
+        const bounds = getLevelDesignerBounds();
+        if (bounds) {
+            const centerX = bounds.minX + ((bounds.maxX - bounds.minX + 1) / 2);
+            const centerY = bounds.minY + ((bounds.maxY - bounds.minY + 1) / 2);
+            levelDesignerState.offsetX = -centerX;
+            levelDesignerState.offsetY = -centerY;
+        } else {
+            levelDesignerState.offsetX = 0;
+            levelDesignerState.offsetY = 0;
+        }
+    }
+
+    renderLevelDesigner();
+    syncImportTextareaFromDesigner();
+}
+
+function placeDesignerTileAtCell(cellX, cellY, toolId = levelDesignerState.selectedTool) {
+    const key = `${cellX},${cellY}`;
+    if (levelDesignerState.lastPaintKey === key && levelDesignerState.isPainting) {
+        return;
+    }
+
+    levelDesignerState.lastPaintKey = key;
+    const existingTile = levelDesignerState.cells.get(key) || ' ';
+
+    switch (toolId) {
+        case 'eraser':
+        case 'floor':
+            levelDesignerState.cells.delete(key);
+            break;
+        case 'wall':
+            levelDesignerState.cells.set(key, '#');
+            break;
+        case 'crate':
+            levelDesignerState.cells.set(key, (existingTile === '.' || existingTile === '+') ? '*' : '$');
+            break;
+        case 'goal':
+            if (existingTile === '@') {
+                levelDesignerState.cells.set(key, '+');
+            } else if (existingTile === '$') {
+                levelDesignerState.cells.set(key, '*');
+            } else {
+                levelDesignerState.cells.set(key, '.');
+            }
+            break;
+        case 'player':
+            removeDesignerPlayerCells();
+            levelDesignerState.cells.set(key, (existingTile === '.' || existingTile === '*') ? '+' : '@');
+            break;
+        default:
+            break;
+    }
+
+    renderLevelDesigner();
+    syncImportTextareaFromDesigner();
+    setImportLevelError('');
+}
+
+function renderLevelDesigner() {
+    if (!levelDesignerState.isOpen) {
+        return;
+    }
+
+    const { canvas } = getLevelDesignerElements();
+    if (!canvas) {
+        return;
+    }
+
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const cssWidth = Math.max(1, canvas.clientWidth || canvas.width);
+    const cssHeight = Math.max(1, canvas.clientHeight || canvas.height);
+    const targetWidth = Math.round(cssWidth * dpr);
+    const targetHeight = Math.round(cssHeight * dpr);
+
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        return;
+    }
+
+    const tileSizeLocal = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.tileSizeIndex] || 32;
+    const centerX = cssWidth / 2;
+    const centerY = cssHeight / 2;
+    const originX = Math.round(centerX + (levelDesignerState.offsetX * tileSizeLocal));
+    const originY = Math.round(centerY + (levelDesignerState.offsetY * tileSizeLocal));
+    const sprites = getDesignerThemeSprites(levelDesignerState.skinIndex);
+    const goalSprite = 'environment_06.png';
+    const playerSpriteName = 'player_03.png';
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    ctx.fillStyle = '#0b1118';
+    ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+    const startWorldX = Math.floor((-originX) / tileSizeLocal) - 1;
+    const endWorldX = Math.ceil((cssWidth - originX) / tileSizeLocal) + 1;
+    const startWorldY = Math.floor((-originY) / tileSizeLocal) - 1;
+    const endWorldY = Math.ceil((cssHeight - originY) / tileSizeLocal) + 1;
+
+    for (let worldY = startWorldY; worldY <= endWorldY; worldY++) {
+        for (let worldX = startWorldX; worldX <= endWorldX; worldX++) {
+            const drawX = originX + (worldX * tileSizeLocal);
+            const drawY = originY + (worldY * tileSizeLocal);
+            if (!drawLevelDesignerSprite(ctx, sprites.ground, drawX, drawY, tileSizeLocal)) {
+                ctx.fillStyle = '#16202b';
+                ctx.fillRect(drawX, drawY, tileSizeLocal, tileSizeLocal);
+            }
+        }
+    }
+
+    for (const [key, tileChar] of levelDesignerState.cells.entries()) {
+        const [xRaw, yRaw] = key.split(',');
+        const worldX = parseInt(xRaw, 10);
+        const worldY = parseInt(yRaw, 10);
+        if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) {
+            continue;
+        }
+
+        const drawX = originX + (worldX * tileSizeLocal);
+        const drawY = originY + (worldY * tileSizeLocal);
+
+        if (drawX < -tileSizeLocal || drawY < -tileSizeLocal || drawX > cssWidth + tileSizeLocal || drawY > cssHeight + tileSizeLocal) {
+            continue;
+        }
+
+        if (tileChar === '#') {
+            drawLevelDesignerSprite(ctx, sprites.wall, drawX, drawY, tileSizeLocal);
+        } else if (tileChar === '.') {
+            drawLevelDesignerSprite(ctx, goalSprite, drawX + 4, drawY + 4, Math.max(4, tileSizeLocal - 8));
+        } else if (tileChar === '$') {
+            drawLevelDesignerSprite(ctx, sprites.crate, drawX, drawY, tileSizeLocal);
+        } else if (tileChar === '*') {
+            drawLevelDesignerSprite(ctx, goalSprite, drawX + 4, drawY + 4, Math.max(4, tileSizeLocal - 8));
+            drawLevelDesignerSprite(ctx, sprites.crateOnGoal, drawX, drawY, tileSizeLocal);
+        } else if (tileChar === '@') {
+            drawLevelDesignerSprite(ctx, playerSpriteName, drawX, drawY, tileSizeLocal);
+        } else if (tileChar === '+') {
+            drawLevelDesignerSprite(ctx, goalSprite, drawX + 4, drawY + 4, Math.max(4, tileSizeLocal - 8));
+            drawLevelDesignerSprite(ctx, playerSpriteName, drawX, drawY, tileSizeLocal);
+        }
+    }
+}
+
+function openLevelDesignerModal() {
+    const { overlay } = getLevelDesignerElements();
+    const { textarea } = getImportLevelElements();
+    if (!overlay || !textarea) {
+        return;
+    }
+
+    levelDesignerState.isOpen = true;
+    levelDesignerState.skinIndex = Math.floor(Math.random() * 8);
+    levelDesignerState.lastPaintKey = '';
+
+    let closestSizeIndex = 0;
+    let closestSizeDiff = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < LEVEL_DESIGNER_TILE_SIZES.length; index++) {
+        const diff = Math.abs(LEVEL_DESIGNER_TILE_SIZES[index] - tileSize);
+        if (diff < closestSizeDiff) {
+            closestSizeDiff = diff;
+            closestSizeIndex = index;
+        }
+    }
+    levelDesignerState.tileSizeIndex = closestSizeIndex;
+
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+
+    syncDesignerFromImportTextarea(true);
+    renderLevelDesignerToolstripIcons();
+    updateLevelDesignerToolstripActiveState();
+    updateLevelDesignerZoomLabel();
+    renderLevelDesigner();
+}
+
+function closeLevelDesignerModal() {
+    const { overlay } = getLevelDesignerElements();
+    if (!overlay) {
+        return;
+    }
+
+    levelDesignerState.isOpen = false;
+    levelDesignerState.isPainting = false;
+    levelDesignerState.isPanning = false;
+    levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+    levelDesignerState.touchMode = '';
+    levelDesignerState.lastPaintKey = '';
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden', 'true');
+}
+
+function initializeLevelDesignerUI() {
+    const {
+        overlay,
+        canvas,
+        tools,
+        zoomOutButton,
+        zoomInButton,
+        closeButton
+    } = getLevelDesignerElements();
+    if (!overlay || !canvas || !tools || !zoomOutButton || !zoomInButton || !closeButton || overlay.dataset.bound === 'true') {
+        return;
+    }
+
+    tools.innerHTML = LEVEL_DESIGNER_TOOLS.map(tool =>
+        `<button class="level-designer-tool${tool.id === levelDesignerState.selectedTool ? ' active' : ''}" type="button" data-designer-tool="${escapeHtml(tool.id)}" aria-pressed="${tool.id === levelDesignerState.selectedTool ? 'true' : 'false'}" title="${escapeHtml(tool.label)}"><canvas class="level-designer-tool-icon" width="24" height="24" aria-hidden="true"></canvas></button>`
+    ).join('');
+
+    renderLevelDesignerToolstripIcons();
+
+    tools.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-designer-tool]');
+        if (!button) {
+            return;
+        }
+        const tool = button.getAttribute('data-designer-tool');
+        if (!tool) {
+            return;
+        }
+        levelDesignerState.selectedTool = tool;
+        updateLevelDesignerToolstripActiveState();
+        syncImportTextareaFromDesigner();
+    });
+
+    closeButton.addEventListener('click', () => {
+        playSound('click');
+        closeLevelDesignerModal();
+    });
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) {
+            closeLevelDesignerModal();
+        }
+    });
+
+    zoomOutButton.addEventListener('click', () => {
+        levelDesignerState.tileSizeIndex = Math.max(0, levelDesignerState.tileSizeIndex - 1);
+        updateLevelDesignerZoomLabel();
+        renderLevelDesigner();
+    });
+
+    zoomInButton.addEventListener('click', () => {
+        levelDesignerState.tileSizeIndex = Math.min(LEVEL_DESIGNER_TILE_SIZES.length - 1, levelDesignerState.tileSizeIndex + 1);
+        updateLevelDesignerZoomLabel();
+        renderLevelDesigner();
+    });
+
+    canvas.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+    });
+
+    const endPointerInteraction = () => {
+        levelDesignerState.isPainting = false;
+        levelDesignerState.isPanning = false;
+        levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+        levelDesignerState.lastPaintKey = '';
+    };
+
+    canvas.addEventListener('pointerdown', (event) => {
+        if (!levelDesignerState.isOpen) {
+            return;
+        }
+
+        if (event.pointerType === 'touch') {
+            return;
+        }
+
+        const isSpacePan = event.button === 0 && (pressedKeys.has(' ') || pressedKeys.has('Spacebar'));
+        if (event.button === 1 || isSpacePan) {
+            levelDesignerState.isPanning = true;
+            levelDesignerState.panStartClientX = event.clientX;
+            levelDesignerState.panStartClientY = event.clientY;
+            levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+            levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+        } else {
+            const cell = getDesignerCellFromClientPoint(event.clientX, event.clientY);
+            if (cell) {
+                levelDesignerState.isPainting = true;
+                levelDesignerState.activePaintTool = event.button === 2 ? 'eraser' : levelDesignerState.selectedTool;
+                placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
+            }
+        }
+
+        canvas.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    });
+
+    canvas.addEventListener('pointermove', (event) => {
+        if (!levelDesignerState.isOpen) {
+            return;
+        }
+
+        if (event.pointerType === 'touch') {
+            return;
+        }
+
+        if (levelDesignerState.isPanning) {
+            const tileSizeLocal = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.tileSizeIndex] || 32;
+            const dx = (event.clientX - levelDesignerState.panStartClientX) / tileSizeLocal;
+            const dy = (event.clientY - levelDesignerState.panStartClientY) / tileSizeLocal;
+            levelDesignerState.offsetX = levelDesignerState.panStartOffsetX + dx;
+            levelDesignerState.offsetY = levelDesignerState.panStartOffsetY + dy;
+            renderLevelDesigner();
+            return;
+        }
+
+        if (levelDesignerState.isPainting) {
+            const cell = getDesignerCellFromClientPoint(event.clientX, event.clientY);
+            if (cell) {
+                placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
+            }
+        }
+    });
+
+    canvas.addEventListener('pointerup', endPointerInteraction);
+    canvas.addEventListener('pointercancel', endPointerInteraction);
+
+    canvas.addEventListener('wheel', (event) => {
+        if (!levelDesignerState.isOpen) {
+            return;
+        }
+
+        event.preventDefault();
+        if (event.deltaY < 0) {
+            levelDesignerState.tileSizeIndex = Math.min(LEVEL_DESIGNER_TILE_SIZES.length - 1, levelDesignerState.tileSizeIndex + 1);
+        } else if (event.deltaY > 0) {
+            levelDesignerState.tileSizeIndex = Math.max(0, levelDesignerState.tileSizeIndex - 1);
+        }
+        updateLevelDesignerZoomLabel();
+        renderLevelDesigner();
+    }, { passive: false });
+
+    canvas.addEventListener('touchstart', (event) => {
+        if (!levelDesignerState.isOpen) {
+            return;
+        }
+
+        event.preventDefault();
+        const touches = event.touches;
+
+        if (touches.length >= 2) {
+            const first = touches[0];
+            const second = touches[1];
+            const dx = second.clientX - first.clientX;
+            const dy = second.clientY - first.clientY;
+            levelDesignerState.touchMode = 'panzoom';
+            levelDesignerState.isPainting = false;
+            levelDesignerState.isPanning = true;
+            levelDesignerState.touchStartDistance = Math.max(1, Math.hypot(dx, dy));
+            levelDesignerState.touchStartTileSizeIndex = levelDesignerState.tileSizeIndex;
+            levelDesignerState.touchStartMidX = (first.clientX + second.clientX) / 2;
+            levelDesignerState.touchStartMidY = (first.clientY + second.clientY) / 2;
+            levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+            levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+            return;
+        }
+
+        if (touches.length === 1) {
+            levelDesignerState.touchMode = 'paint';
+            levelDesignerState.isPainting = true;
+            levelDesignerState.isPanning = false;
+            levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+            const touch = touches[0];
+            const cell = getDesignerCellFromClientPoint(touch.clientX, touch.clientY);
+            if (cell) {
+                placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
+            }
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (event) => {
+        if (!levelDesignerState.isOpen) {
+            return;
+        }
+
+        event.preventDefault();
+        const touches = event.touches;
+
+        if (touches.length >= 2) {
+            const first = touches[0];
+            const second = touches[1];
+            const dx = second.clientX - first.clientX;
+            const dy = second.clientY - first.clientY;
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            const midX = (first.clientX + second.clientX) / 2;
+            const midY = (first.clientY + second.clientY) / 2;
+            const tileSizeLocal = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.tileSizeIndex] || 32;
+
+            const panDx = (midX - levelDesignerState.touchStartMidX) / tileSizeLocal;
+            const panDy = (midY - levelDesignerState.touchStartMidY) / tileSizeLocal;
+            levelDesignerState.offsetX = levelDesignerState.panStartOffsetX + panDx;
+            levelDesignerState.offsetY = levelDesignerState.panStartOffsetY + panDy;
+
+            const baseSize = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.touchStartTileSizeIndex] || 32;
+            const targetSize = baseSize * (distance / levelDesignerState.touchStartDistance);
+            levelDesignerState.tileSizeIndex = getClosestDesignerTileSizeIndex(targetSize);
+            levelDesignerState.touchMode = 'panzoom';
+            levelDesignerState.isPainting = false;
+            levelDesignerState.isPanning = true;
+
+            updateLevelDesignerZoomLabel();
+            renderLevelDesigner();
+            return;
+        }
+
+        if (touches.length === 1 && levelDesignerState.touchMode === 'paint') {
+            const touch = touches[0];
+            const cell = getDesignerCellFromClientPoint(touch.clientX, touch.clientY);
+            if (cell) {
+                placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
+            }
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (event) => {
+        if (!levelDesignerState.isOpen) {
+            return;
+        }
+
+        const touches = event.touches;
+        if (touches.length === 0) {
+            levelDesignerState.touchMode = '';
+            endPointerInteraction();
+            return;
+        }
+
+        if (touches.length === 1) {
+            levelDesignerState.touchMode = 'paint';
+            levelDesignerState.isPainting = true;
+            levelDesignerState.isPanning = false;
+            levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+            levelDesignerState.lastPaintKey = '';
+        }
+    }, { passive: false });
+
+    window.addEventListener('resize', () => {
+        if (levelDesignerState.isOpen) {
+            renderLevelDesigner();
+        }
+    });
+
+    overlay.dataset.bound = 'true';
+    updateLevelDesignerZoomLabel();
 }
 
 function parseImportedLevelText(rawText) {
@@ -1647,7 +2460,7 @@ function playImportedLevelFromModal() {
 }
 
 function initializeImportLevelModal() {
-    const { overlay, textarea, closeButton, pasteButton, playButton, linkButton, clearButton } = getImportLevelElements();
+    const { overlay, textarea, closeButton, pasteButton, designerButton, playButton, linkButton, clearButton } = getImportLevelElements();
     if (!overlay || overlay.dataset.bound === 'true') {
         return;
     }
@@ -1659,10 +2472,25 @@ function initializeImportLevelModal() {
 
     textarea?.addEventListener('input', () => {
         scheduleSaveCustomLevelEditorText(textarea.value);
+
+        if (levelDesignerState.textInputTimeoutId) {
+            clearTimeout(levelDesignerState.textInputTimeoutId);
+        }
+
+        if (levelDesignerState.isOpen) {
+            levelDesignerState.textInputTimeoutId = setTimeout(() => {
+                syncDesignerFromImportTextarea(false);
+            }, 140);
+        }
     });
 
     pasteButton?.addEventListener('click', () => {
         pasteClipboardIntoImportModal();
+    });
+
+    designerButton?.addEventListener('click', () => {
+        playSound('click');
+        openLevelDesignerModal();
     });
 
     playButton?.addEventListener('click', () => {
@@ -1678,10 +2506,16 @@ function initializeImportLevelModal() {
             textarea.value = '';
             scheduleSaveCustomLevelEditorText('');
             setImportLevelError('');
+
+            if (levelDesignerState.isOpen) {
+                syncDesignerFromImportTextarea(true);
+            }
+
             textarea.focus();
         }
     });
 
+    initializeLevelDesignerUI();
     overlay.dataset.bound = 'true';
 }
 
@@ -2596,6 +3430,42 @@ let customThemeIndex = 0;
 let launchedFromCustomLevelLink = false;
 let customLevelEditorDraft = '';
 let customLevelEditorSaveTimeout = null;
+
+const LEVEL_DESIGNER_TILE_SIZES = [16, 20, 24, 28, 32, 40, 48, 64, 80, 96, 128];
+const LEVEL_DESIGNER_TOOLS = [
+    { id: 'wall', label: 'WALL', symbol: '#' },
+    { id: 'floor', label: 'FLOOR', symbol: '·' },
+    { id: 'crate', label: 'CRATE', symbol: '$' },
+    { id: 'goal', label: 'GOAL', symbol: '.' },
+    { id: 'player', label: 'PLAYER', symbol: '@' },
+    { id: 'eraser', label: 'ERASE', symbol: '⌫' }
+];
+
+let levelDesignerState = {
+    isOpen: false,
+    selectedTool: 'wall',
+    tileSizeIndex: 4,
+    offsetX: 0,
+    offsetY: 0,
+    skinIndex: 0,
+    cells: new Map(),
+    isPainting: false,
+    isPanning: false,
+    activePaintTool: 'wall',
+    touchMode: '',
+    touchStartDistance: 0,
+    touchStartTileSizeIndex: 4,
+    touchStartMidX: 0,
+    touchStartMidY: 0,
+    panStartClientX: 0,
+    panStartClientY: 0,
+    panStartOffsetX: 0,
+    panStartOffsetY: 0,
+    lastPaintKey: '',
+    syncedFromDesigner: false,
+    textInputTimeoutId: null
+};
+
 let tileSize = 32; // Size of each tile in pixels - will be calculated dynamically
 let levelOffsetX = 0; // Offset for centering the level
 let levelOffsetY = 0;
