@@ -758,8 +758,8 @@
 
         .solution-replay-modal {
             position: relative;
-            width: min(760px, 96vw);
-            max-width: min(760px, 96vw);
+            width: 100%;
+            max-width: 760px;
             min-height: 206px;
             max-height: 206px;
             overflow: visible;
@@ -911,6 +911,14 @@
             white-space: pre;
             padding: 5px 8px;
             box-sizing: border-box;
+            margin-bottom: 0;
+        }
+
+        .solution-replay-track-wrap {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
             margin-bottom: 6px;
         }
 
@@ -1012,15 +1020,20 @@
             font-weight: 700;
             height: 32px;
             min-height: 32px;
+            min-width: 0;
+            width: 100%;
             cursor: pointer;
             font-size: 0.85rem;
             padding: 0 8px;
             box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         #solutionReplayPlayPauseButton {
             font-size: 0.72rem;
             padding: 0 6px;
+            min-width: 54px;
         }
 
         .solution-replay-button.step {
@@ -1119,6 +1132,7 @@
             #solutionReplayPlayPauseButton {
                 font-size: 0.66rem;
                 padding: 0 5px;
+                min-width: 44px;
             }
 
             .solution-replay-message {
@@ -1130,12 +1144,6 @@
         @media (max-width: 640px) and (orientation: portrait) {
             .solution-replay-overlay {
                 padding-bottom: calc(16px + env(safe-area-inset-bottom));
-            }
-
-            @supports (width: 1svw) {
-                .solution-replay-modal {
-                    width: min(760px, 96svw);
-                }
             }
         }
 
@@ -1339,7 +1347,9 @@
                 <div class="solution-replay-lurd-row">
                     <textarea id="solutionReplayLurdInput" class="solution-replay-lurd-input" rows="1" wrap="off" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Paste LURD (e.g. LURRDDL...)" aria-label="LURD input"></textarea>
                 </div>
-                <div id="solutionReplayLurdTrack" class="solution-replay-track" aria-live="polite"></div>
+                <div class="solution-replay-track-wrap">
+                    <div id="solutionReplayLurdTrack" class="solution-replay-track" aria-live="polite"></div>
+                </div>
                 <div id="solutionReplayLurdStatus" class="solution-replay-status" aria-live="polite"></div>
                 <div id="solutionReplayControls" class="solution-replay-controls">
                     <div id="solutionReplayMainControls" class="solution-replay-main-controls">
