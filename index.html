@@ -710,7 +710,7 @@
             padding: 8px 16px 9px 16px;
             white-space: nowrap;
             left: 50%;
-            top: -36px;
+            top: -34px;
             transform: translateX(-50%);
             z-index: 2;
         }
@@ -759,9 +759,11 @@
         .solution-replay-modal {
             position: relative;
             width: min(760px, 96vw);
+            max-width: min(760px, 96vw);
             min-height: 206px;
             max-height: 206px;
             overflow: visible;
+            overflow-x: hidden;
             background: rgba(11, 11, 11, 0.76);
             border: 2px solid #00aaff;
             border-radius: 10px;
@@ -816,6 +818,9 @@
         .solution-replay-lurd-row {
             display: grid;
             grid-template-columns: minmax(0, 1fr);
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
             gap: 6px;
             align-items: center;
             margin: 0 0 6px 0;
@@ -823,6 +828,8 @@
 
         .solution-replay-lurd-input {
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             min-height: 36px;
             max-height: 36px;
             resize: none;
@@ -888,6 +895,9 @@
         }
 
         .solution-replay-track {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
             min-height: 30px;
             max-height: 30px;
             border: none;
@@ -1121,6 +1131,12 @@
         @media (max-width: 640px) and (orientation: portrait) {
             .solution-replay-overlay {
                 padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            }
+
+            @supports (width: 1svw) {
+                .solution-replay-modal {
+                    width: min(760px, 96svw);
+                }
             }
         }
 
