@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.84';
+const APP_VERSION = '1.1.85';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -3901,25 +3901,18 @@ function calculateOptimalTileSize() {
         console.log(`Level too large for screen - using minimum tile size ${minTileSize}px (level will overflow)`);
     }
     
-    // Apply level-specific constraints for small levels only
-    const levelArea = currentLevel.width * currentLevel.height;
-    const isLargeLevel = levelArea > 200 || currentLevel.width > 20 || currentLevel.height > 15;
-    
-    if (!isLargeLevel && optimalSize >= minTileSize) {
-        // Small levels: apply maximum constraint to prevent overly large tiles
-        const maxTileSize = 64; // Maximum to prevent overly large tiles
-        
-        // Find the best safe size within min/max range
-        let bestSize = optimalSize;
-        for (let size of safeTileSizes) {
-            if (size >= minTileSize && size <= maxTileSize && size <= maxPossibleTileSize) {
-                bestSize = size;
-            }
+    // Apply a global maximum constraint for consistent visual scale across all levels
+    const maxTileSize = 64;
+    let bestSize = optimalSize;
+    for (let size of safeTileSizes) {
+        if (size >= minTileSize && size <= maxTileSize && size <= maxPossibleTileSize) {
+            bestSize = size;
         }
-        optimalSize = bestSize;
     }
-    
-    console.log(`Level size: ${currentLevel.width}x${currentLevel.height} (${levelArea} tiles), Large level: ${isLargeLevel}, Safe tile size: ${optimalSize}px`);
+    optimalSize = bestSize;
+
+    const levelArea = currentLevel.width * currentLevel.height;
+    console.log(`Level size: ${currentLevel.width}x${currentLevel.height} (${levelArea} tiles), Safe tile size: ${optimalSize}px`);
     
     return optimalSize;
 }
