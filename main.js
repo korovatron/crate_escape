@@ -2252,9 +2252,11 @@ function updateSolutionReplayUI() {
 
     const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
     const isTouchUi = isTouchDevice();
+    const hasFineHoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const useTouchReplayUi = isTouchUi && !hasFineHoverPointer && !isIOSPlatform();
     const shouldShowReplayModal = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive;
 
-    if (isTouchUi) {
+    if (useTouchReplayUi) {
         triggerButton.style.display = 'none';
 
         if (touchTriggerButton) {
