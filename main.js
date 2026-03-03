@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.75';
+const APP_VERSION = '1.1.76';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1733,7 +1733,8 @@ function updateHamburgerMenuUI() {
 
     const shouldShowHamburger = currentGameState === GAME_STATES.TITLE ||
         currentGameState === GAME_STATES.LEVEL_SELECT ||
-        currentGameState === GAME_STATES.PLAYING;
+        currentGameState === GAME_STATES.PLAYING ||
+        currentGameState === GAME_STATES.SOLUTION_REPLAY;
 
     container.style.display = shouldShowHamburger ? 'block' : 'none';
 
@@ -1741,11 +1742,23 @@ function updateHamburgerMenuUI() {
         isHamburgerMenuOpen = false;
         backdrop.style.display = 'none';
         panel.style.display = 'none';
+        container.style.opacity = '1';
+        container.style.pointerEvents = 'auto';
         container.setAttribute('aria-hidden', 'true');
         button.setAttribute('aria-expanded', 'false');
+        button.removeAttribute('aria-disabled');
         backdrop.setAttribute('aria-hidden', 'true');
         panel.setAttribute('aria-hidden', 'true');
         return;
+    }
+
+    const shouldDimHamburger = currentGameState === GAME_STATES.SOLUTION_REPLAY;
+    container.style.opacity = shouldDimHamburger ? '0.35' : '1';
+    container.style.pointerEvents = shouldDimHamburger ? 'none' : 'auto';
+    button.setAttribute('aria-disabled', shouldDimHamburger ? 'true' : 'false');
+
+    if (shouldDimHamburger) {
+        isHamburgerMenuOpen = false;
     }
 
     const menuConfig = getCurrentMenuConfig();
