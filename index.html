@@ -618,6 +618,9 @@
             width: 100%;
             min-height: 220px;
             resize: vertical;
+            overflow-x: auto;
+            overflow-y: auto;
+            white-space: pre;
             background: #111;
             color: #fff;
             border: 1px solid #00aaff;
@@ -657,9 +660,11 @@
 
         .import-level-error {
             margin-top: 10px;
-            color: #ff9f9f;
+            color: #ff335f;
+            text-shadow: 0 0 8px rgba(255, 51, 95, 0.55);
             min-height: 1.2em;
             font-size: 0.92rem;
+            font-weight: 700;
         }
 
         .level-designer-overlay {
@@ -812,11 +817,12 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            margin-left: auto;
         }
 
         .level-designer-zoom button {
-            width: 30px;
-            height: 30px;
+            width: 26px;
+            height: 26px;
             border: 1px solid #00aaff;
             border-radius: 6px;
             background: #0f1720;
@@ -828,11 +834,23 @@
         }
 
         .level-designer-zoom-value {
-            min-width: 58px;
+            min-width: 50px;
             text-align: center;
             color: #00ccff;
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+        }
+
+        .level-designer-validation {
+            min-width: 0;
+            flex: 1 1 auto;
+            text-align: left;
+            font-size: 0.82rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #9fffbf;
         }
 
         .legal-modal-content {
@@ -1561,11 +1579,11 @@
                 <button id="importLevelCloseButton" class="import-level-close" type="button" aria-label="Close import level dialog">×</button>
                 <h2 id="importLevelTitle">Import Custom Level</h2>
                 <p>Paste or type a Sokoban text level below using symbols like #, @, $, ., *, + and spaces.</p>
-                <textarea id="importLevelTextarea" class="import-level-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+                <textarea id="importLevelTextarea" class="import-level-textarea" wrap="off" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
                 <div class="import-level-actions">
                     <button id="importLevelPasteButton" class="import-level-button" type="button">Paste</button>
-                    <button id="importLevelDesignerButton" class="import-level-button" type="button">Designer</button>
-                    <button id="importLevelLinkButton" class="import-level-button" type="button">Copy Link</button>
+                    <button id="importLevelDesignerButton" class="import-level-button" type="button" aria-label="Open visual level designer" title="Open the visual editor to draw and edit this level.">Designer</button>
+                    <button id="importLevelLinkButton" class="import-level-button" type="button" aria-label="Copy shareable custom level link" title="Create and copy a shareable link for this custom level.">Copy Link</button>
                     <button id="importLevelClearButton" class="import-level-button" type="button">Clear</button>
                     <button id="importLevelPlayButton" class="import-level-button primary" type="button" aria-label="Play level" title="Play level">▶</button>
                 </div>
@@ -1585,6 +1603,7 @@
                     <canvas id="levelDesignerCanvas" class="level-designer-canvas" width="1000" height="600" aria-label="Level designer canvas"></canvas>
                 </div>
                 <div class="level-designer-footer">
+                    <div id="levelDesignerValidation" class="level-designer-validation" aria-live="polite"></div>
                     <div class="level-designer-zoom">
                         <button id="levelDesignerZoomOutButton" type="button" aria-label="Zoom out">−</button>
                         <div id="levelDesignerZoomValue" class="level-designer-zoom-value">32 px</div>

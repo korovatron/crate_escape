@@ -134,6 +134,10 @@ document.addEventListener('keydown', (e) => {
     // Handle exit with Escape key (back button behavior)
     if (e.key === 'Escape' && currentGameState === GAME_STATES.PLAYING) {
         playSound('click');
+        if (isCustomLevelActive) {
+            openImportLevelModal({ returnToLevelSelectOnClose: true });
+            return;
+        }
         // Check for cloud sync updates when navigating back to level select
         if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
             downloadGameProgress(true, false).catch(error => {
@@ -738,6 +742,7 @@ function getLevelDesignerElements() {
         canvas: document.getElementById('levelDesignerCanvas'),
         tools: document.getElementById('levelDesignerTools'),
         status: document.getElementById('levelDesignerStatus'),
+        validation: document.getElementById('levelDesignerValidation'),
         zoomOutButton: document.getElementById('levelDesignerZoomOutButton'),
         zoomInButton: document.getElementById('levelDesignerZoomInButton'),
         zoomValue: document.getElementById('levelDesignerZoomValue'),
@@ -1077,7 +1082,7 @@ async function loadLegalModalContent(type) {
 
                 <p><strong>Importing custom levels</strong></p>
                 <ul>
-                    <li>Open the hamburger menu and choose <em>Import Level</em>.</li>
+                    <li>Open the hamburger menu and choose <em>Custom Level</em>.</li>
                     <li>Paste a Sokoban text level (commonly called XSB format).</li>
                     <li>Core symbols: <code>#</code> wall, <code>@</code> player, <code>$</code> crate, <code>.</code> goal, <code>+</code> player on goal, <code>*</code> crate on goal, space = floor.</li>
                     <li>Also accepted: <code>-</code>/<code>_</code> for floor, <code>p/P</code> for player, <code>b/B</code> for crates, <code>o/O</code> for goals.</li>
@@ -1318,7 +1323,8 @@ function initializeLegalModal() {
 function setImportLevelError(message) {
     const { error } = getImportLevelElements();
     if (error) {
-        error.style.color = '#ff9f9f';
+        error.style.color = '#ff335f';
+        error.style.textShadow = '0 0 8px rgba(255, 51, 95, 0.55)';
         error.textContent = message || '';
     }
 }
@@ -1326,7 +1332,8 @@ function setImportLevelError(message) {
 function setImportLevelSuccess(message) {
     const { error } = getImportLevelElements();
     if (error) {
-        error.style.color = '#9fffbf';
+        error.style.color = '#00ff9a';
+        error.style.textShadow = '0 0 8px rgba(0, 255, 154, 0.45)';
         error.textContent = message || '';
     }
 }
@@ -1379,11 +1386,13 @@ function buildCustomLevelLink(levelRows) {
     return `${window.location.origin}${window.location.pathname}#level=${encodedLevel}`;
 }
 
-function openImportLevelModal() {
+function openImportLevelModal(options = {}) {
     const { overlay, textarea } = getImportLevelElements();
     if (!overlay || !textarea) {
         return;
     }
+
+    customLevelModalReturnToLevelSelectOnClose = options.returnToLevelSelectOnClose === true;
 
     if (launchedFromCustomLevelLink && Array.isArray(customLevelRows) && customLevelRows.length > 0) {
         const linkedLevelText = customLevelRows.join('\n');
@@ -1409,6 +1418,9 @@ function closeImportLevelModal() {
         return;
     }
 
+    const shouldReturnToLevelSelect = customLevelModalReturnToLevelSelectOnClose;
+    customLevelModalReturnToLevelSelectOnClose = false;
+
     if (isLevelDesignerModalOpen()) {
         closeLevelDesignerModal();
     }
@@ -1416,6 +1428,10 @@ function closeImportLevelModal() {
     overlay.style.display = 'none';
     overlay.setAttribute('aria-hidden', 'true');
     setImportLevelError('');
+
+    if (shouldReturnToLevelSelect && currentGameState === GAME_STATES.PLAYING && isCustomLevelActive) {
+        exitCustomLevelToLevelSelect();
+    }
 }
 
 function normalizeDesignerImportChar(char) {
@@ -1570,6 +1586,122 @@ function setLevelDesignerStatus(message, isError = false) {
 
     status.style.color = isError ? '#ff9f9f' : '#ffdd00';
     status.textContent = message || '';
+}
+
+function setLevelDesignerValidation(message, severity = 'info') {
+    const { validation } = getLevelDesignerElements();
+    if (!validation) {
+        return;
+    }
+
+    if (severity === 'error') {
+        validation.style.color = '#ff335f';
+        validation.style.textShadow = '0 0 8px rgba(255, 51, 95, 0.55)';
+    } else if (severity === 'warn') {
+        validation.style.color = '#ffd400';
+        validation.style.textShadow = '0 0 8px rgba(255, 212, 0, 0.45)';
+    } else if (severity === 'ok') {
+        validation.style.color = '#00ff9a';
+        validation.style.textShadow = '0 0 8px rgba(0, 255, 154, 0.45)';
+    } else {
+        validation.style.color = '#00ccff';
+        validation.style.textShadow = '0 0 8px rgba(0, 204, 255, 0.4)';
+    }
+
+    validation.textContent = message || '';
+}
+
+function getLevelDesignerValidationReport() {
+    if (!levelDesignerState.cells || levelDesignerState.cells.size === 0) {
+        return { severity: 'info', message: 'Start drawing a level.' };
+    }
+
+    let playerCount = 0;
+    let boxCount = 0;
+    let goalCount = 0;
+    let wallCount = 0;
+    let playerKey = '';
+
+    for (const [key, value] of levelDesignerState.cells.entries()) {
+        if (value === '@' || value === '+') {
+            playerCount++;
+            if (!playerKey) {
+                playerKey = key;
+            }
+        }
+        if (value === '$' || value === '*') boxCount++;
+        if (value === '.' || value === '+' || value === '*') goalCount++;
+        if (value === '#') wallCount++;
+    }
+
+    if (playerCount !== 1) {
+        return { severity: 'error', message: 'Error: exactly one player is required.' };
+    }
+    if (boxCount === 0) {
+        return { severity: 'error', message: 'Error: add at least one crate.' };
+    }
+    if (goalCount === 0) {
+        return { severity: 'error', message: 'Error: add at least one goal.' };
+    }
+    if (boxCount !== goalCount) {
+        return { severity: 'error', message: `Error: crates (${boxCount}) and goals (${goalCount}) must match.` };
+    }
+    if (wallCount === 0) {
+        return { severity: 'error', message: 'Error: add enclosing walls.' };
+    }
+
+    const bounds = getLevelDesignerBounds();
+    if (!bounds || !playerKey) {
+        return { severity: 'warn', message: 'Warning: unable to validate enclosure.' };
+    }
+
+    const [playerXRaw, playerYRaw] = playerKey.split(',');
+    const playerX = parseInt(playerXRaw, 10);
+    const playerY = parseInt(playerYRaw, 10);
+    if (!Number.isFinite(playerX) || !Number.isFinite(playerY)) {
+        return { severity: 'warn', message: 'Warning: unable to validate enclosure.' };
+    }
+
+    const queue = [[playerX, playerY]];
+    const visited = new Set();
+    const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+    while (queue.length > 0) {
+        const [x, y] = queue.shift();
+        const visitedKey = `${x},${y}`;
+        if (visited.has(visitedKey)) {
+            continue;
+        }
+        visited.add(visitedKey);
+
+        const tileValue = levelDesignerState.cells.get(visitedKey) || ' ';
+        if (tileValue === '#') {
+            continue;
+        }
+
+        if (x === bounds.minX || x === bounds.maxX || y === bounds.minY || y === bounds.maxY) {
+            return { severity: 'error', message: 'Error: level is not closed by walls.' };
+        }
+
+        for (const [dx, dy] of deltas) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < bounds.minX || nx > bounds.maxX || ny < bounds.minY || ny > bounds.maxY) {
+                continue;
+            }
+            const nextKey = `${nx},${ny}`;
+            if (!visited.has(nextKey)) {
+                queue.push([nx, ny]);
+            }
+        }
+    }
+
+    return { severity: 'ok', message: 'Ready: level passes basic checks.' };
+}
+
+function refreshLevelDesignerValidation() {
+    const report = getLevelDesignerValidationReport();
+    setLevelDesignerValidation(report.message, report.severity);
 }
 
 function updateLevelDesignerZoomLabel() {
@@ -1733,12 +1865,14 @@ function syncImportTextareaFromDesigner() {
     const bounds = getLevelDesignerBounds();
     if (!bounds) {
         setLevelDesignerStatus('Place tiles to start building your level.');
+        refreshLevelDesignerValidation();
         return;
     }
 
     const width = bounds.maxX - bounds.minX + 1;
     const height = bounds.maxY - bounds.minY + 1;
     setLevelDesignerStatus(`Selected: ${levelDesignerState.selectedTool.toUpperCase()} · Bounds: ${width}×${height}`);
+    refreshLevelDesignerValidation();
 }
 
 function syncDesignerFromImportTextarea(recenter = false) {
@@ -1750,6 +1884,7 @@ function syncDesignerFromImportTextarea(recenter = false) {
     const parsed = parseDesignerAsciiToCells(textarea.value);
     if (!parsed.isValid) {
         setLevelDesignerStatus(parsed.error, true);
+        setLevelDesignerValidation(parsed.error, 'error');
         return;
     }
 
@@ -1933,6 +2068,7 @@ function openLevelDesignerModal() {
     renderLevelDesignerToolstripIcons();
     updateLevelDesignerToolstripActiveState();
     updateLevelDesignerZoomLabel();
+    refreshLevelDesignerValidation();
     renderLevelDesigner();
 }
 
@@ -2440,6 +2576,8 @@ function playImportedLevelFromModal() {
         return;
     }
 
+    customLevelModalReturnToLevelSelectOnClose = false;
+
     customLevelRows = parsedResult.rows;
     scheduleSaveCustomLevelEditorText(textarea.value);
     isCustomLevelActive = true;
@@ -2490,6 +2628,13 @@ function initializeImportLevelModal() {
 
     designerButton?.addEventListener('click', () => {
         playSound('click');
+        const textValue = textarea ? textarea.value : '';
+        const parsedResult = parseImportedLevelText(textValue);
+        if (!parsedResult.isValid && /^Invalid symbol on line\s+\d+/i.test(parsedResult.error || '')) {
+            setImportLevelError(parsedResult.error);
+            return;
+        }
+        setImportLevelError('');
         openLevelDesignerModal();
     });
 
@@ -3246,6 +3391,11 @@ function initializeLevelCompleteModal() {
 
     exitButton?.addEventListener('click', () => {
         playSound('click');
+        if (isCustomLevelActive) {
+            restartCurrentLevel();
+            openImportLevelModal({ returnToLevelSelectOnClose: true });
+            return;
+        }
         exitCustomLevelToLevelSelect();
     });
 
@@ -3274,10 +3424,14 @@ function updateLevelCompleteModalUI() {
         nextButton.style.display = 'none';
         replayButton.style.display = 'inline-flex';
         exitButton.style.display = 'inline-flex';
+        exitButton.setAttribute('aria-label', 'Back to custom level modal');
+        exitButton.setAttribute('title', 'Back to custom level modal');
     } else {
         nextButton.style.display = 'inline-flex';
         replayButton.style.display = 'none';
         exitButton.style.display = 'none';
+        exitButton.setAttribute('aria-label', 'Exit to level select');
+        exitButton.setAttribute('title', 'Exit to level select');
     }
 }
 
@@ -3430,6 +3584,7 @@ let customThemeIndex = 0;
 let launchedFromCustomLevelLink = false;
 let customLevelEditorDraft = '';
 let customLevelEditorSaveTimeout = null;
+let customLevelModalReturnToLevelSelectOnClose = false;
 
 const LEVEL_DESIGNER_TILE_SIZES = [16, 20, 24, 28, 32, 40, 48, 64, 80, 96, 128];
 const LEVEL_DESIGNER_TOOLS = [
@@ -5509,7 +5664,7 @@ function getCurrentMenuConfig() {
     }
     
     // Custom level import
-    baseOptions.push("Import Level");
+    baseOptions.push("Custom Level");
     baseGameStates.push('open_import_level');
 
     // Add Credits after import
