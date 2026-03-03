@@ -218,6 +218,10 @@
         .title-screen-tagline {
             margin: 0;
             width: var(--title-tagline-width, min(740px, 90vw));
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             text-align: center;
             color: #dddddd;
             font-family: Arial, system-ui, -apple-system, sans-serif;
@@ -1590,13 +1594,13 @@
         <div id="titleScreenUI" class="title-screen-ui" aria-hidden="true">
             <div class="title-screen-top">
                 <img id="titleScreenLogo" class="title-screen-logo" src="assets/images/cartoonLogo.png" alt="The Crate Escape">
-                <p class="title-screen-tagline"><span class="title-screen-tagline-main">Play Classic Sokoban Puzzles.</span> <span class="title-screen-tagline-sub">Design &amp; Share Custom Levels.</span></p>
             </div>
+            <p class="title-screen-tagline"><span class="title-screen-tagline-main">Play Classic Sokoban Puzzles.</span> <span class="title-screen-tagline-sub">Design &amp; Share Custom Levels.</span></p>
             <div class="title-screen-start-wrap">
                 <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Play" title="Play">PLAY</button>
             </div>
             <div class="title-screen-footer" aria-label="Copyright and link">
-                <div class="copyright">Copyright © 2025-2026 Neil Kendall</div>
+                <div class="copyright">Copyright © 2025-2026 Neil&nbsp;Kendall</div>
                 <div class="more-link">More @ <a href="https://www.korovatron.co.uk/" target="_blank" rel="noopener noreferrer">www.korovatron.co.uk</a></div>
             </div>
         </div>
