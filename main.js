@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.79';
+const APP_VERSION = '1.1.80';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1070,7 +1070,7 @@ async function loadLegalModalContent(type) {
                     <li>You can push crates, but you cannot pull them.</li>
                 </ul>
 
-                <p><strong>Controls</strong></p>
+                <p><strong>Gameplay controls</strong></p>
                 <ul>
                     <li>Move: Arrow keys or WASD (desktop), swipe (touch)</li>
                     <li>Undo: U, Backspace, or Delete</li>
@@ -1080,14 +1080,40 @@ async function loadLegalModalContent(type) {
                     <li>Back/close: ESC</li>
                 </ul>
 
-                <p><strong>Importing custom levels</strong></p>
+                <p><strong>Custom Level</strong></p>
                 <ul>
                     <li>Open the hamburger menu and choose <em>Custom Level</em>.</li>
-                    <li>Paste a Sokoban text level (commonly called XSB format).</li>
-                    <li>Core symbols: <code>#</code> wall, <code>@</code> player, <code>$</code> crate, <code>.</code> goal, <code>+</code> player on goal, <code>*</code> crate on goal, space = floor.</li>
-                    <li>Also accepted: <code>-</code>/<code>_</code> for floor, <code>p/P</code> for player, <code>b/B</code> for crates, <code>o/O</code> for goals.</li>
+                    <li>Paste/type Sokoban text (XSB), or tap <em>Designer</em> to draw visually.</li>
+                    <li>Buttons: <em>Paste</em>, <em>Designer</em>, <em>Copy Link</em>, <em>Clear</em>, and <em>Play</em>.</li>
+                    <li>Core symbols: <code>#</code> wall, <code>@</code> player, <code>$</code> crate, <code>.</code> goal, <code>+</code> player on goal, <code>*</code> crate on goal, and space for floor.</li>
+                    <li>Aliases also accepted: <code>-</code>/<code>_</code> floor, <code>p/P</code> player, <code>b/B</code> crate, <code>o/O</code> goal.</li>
                     <li>Lines starting with <code>;</code> are treated as comments and ignored.</li>
-                    <li>You can generate a shareable level link directly from the import modal.</li>
+                    <li>Invalid symbols are blocked and reported with line-aware errors.</li>
+                    <li>Use <em>Copy Link</em> to generate a shareable URL for the current custom level.</li>
+                </ul>
+
+                <p><strong>Visual Designer (mouse / trackpad)</strong></p>
+                <ul>
+                    <li><strong>Left click + drag:</strong> paint with the selected tool.</li>
+                    <li><strong>Right click + drag:</strong> erase tiles.</li>
+                    <li><strong>Middle click drag:</strong> pan the canvas.</li>
+                    <li><strong>Space + left drag:</strong> pan (alternative to middle mouse).</li>
+                    <li><strong>Mouse wheel:</strong> zoom in/out.</li>
+                    <li>Use the top toolstrip to select Wall, Floor, Crate, Goal, Player, or Eraser.</li>
+                </ul>
+
+                <p><strong>Visual Designer (touch gestures)</strong></p>
+                <ul>
+                    <li><strong>One-finger drag:</strong> paint with the selected tool.</li>
+                    <li><strong>Two-finger drag:</strong> pan the canvas.</li>
+                    <li><strong>Pinch in/out:</strong> zoom the canvas.</li>
+                </ul>
+
+                <p><strong>Designer behavior</strong></p>
+                <ul>
+                    <li>Text and visual editor are live-synced in both directions.</li>
+                    <li>Designer footer shows live validation (player count, crate/goal count, enclosure checks).</li>
+                    <li>Use the designer close button (<em>×</em>) to return to Custom Level, then press <em>Play</em>.</li>
                 </ul>
 
                 <p><strong>LURD console</strong></p>

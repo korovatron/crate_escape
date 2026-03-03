@@ -634,7 +634,8 @@
 
         .import-level-actions {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            align-items: center;
             gap: 8px;
             margin-top: 12px;
         }
@@ -647,6 +648,12 @@
             border-radius: 6px;
             font-size: 0.95rem;
             cursor: pointer;
+            min-width: 96px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            white-space: nowrap;
         }
 
         .import-level-button.primary {
@@ -656,6 +663,42 @@
             min-width: 44px;
             font-size: 1.15rem;
             line-height: 1;
+            margin-left: auto;
+        }
+
+        @media (max-width: 620px) {
+            .import-level-actions {
+                display: grid;
+                grid-template-columns: auto auto minmax(0, 1fr) auto;
+                grid-template-areas:
+                    "paste designer . play"
+                    "link clear . .";
+                gap: 8px;
+                align-items: stretch;
+                width: 100%;
+            }
+
+            #importLevelPasteButton { grid-area: paste; }
+            #importLevelDesignerButton { grid-area: designer; }
+            #importLevelLinkButton { grid-area: link; }
+            #importLevelClearButton { grid-area: clear; }
+            #importLevelPlayButton { grid-area: play; }
+
+            .import-level-button {
+                width: auto;
+                min-width: 96px;
+                min-height: 38px;
+                padding: 8px 8px;
+                font-size: 0.85rem;
+            }
+
+            .import-level-button.primary {
+                margin-left: 0;
+                width: auto;
+                min-width: 44px;
+                min-height: 38px;
+                font-size: 1.1rem;
+            }
         }
 
         .import-level-error {
@@ -681,8 +724,10 @@
 
         .level-designer-modal {
             position: relative;
-            width: min(1200px, 96vw);
-            height: min(900px, 92vh);
+            width: 96vw;
+            height: 92vh;
+            min-width: 320px;
+            min-height: 360px;
             background: #0b0b0b;
             border: 2px solid #00aaff;
             border-radius: 10px;
@@ -1451,6 +1496,10 @@
                 -ms-overflow-style: none;
             }
 
+            .level-designer-zoom {
+                display: none;
+            }
+
             .import-level-modal::-webkit-scrollbar,
             .import-level-textarea::-webkit-scrollbar,
             .legal-modal-content::-webkit-scrollbar {
@@ -1581,10 +1630,10 @@
                 <p>Paste or type a Sokoban text level below using symbols like #, @, $, ., *, + and spaces.</p>
                 <textarea id="importLevelTextarea" class="import-level-textarea" wrap="off" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
                 <div class="import-level-actions">
-                    <button id="importLevelPasteButton" class="import-level-button" type="button">Paste</button>
+                    <button id="importLevelPasteButton" class="import-level-button" type="button" aria-label="Paste level text" title="Paste level text">Paste</button>
                     <button id="importLevelDesignerButton" class="import-level-button" type="button" aria-label="Open visual level designer" title="Open the visual editor to draw and edit this level.">Designer</button>
                     <button id="importLevelLinkButton" class="import-level-button" type="button" aria-label="Copy shareable custom level link" title="Create and copy a shareable link for this custom level.">Copy Link</button>
-                    <button id="importLevelClearButton" class="import-level-button" type="button">Clear</button>
+                    <button id="importLevelClearButton" class="import-level-button" type="button" aria-label="Clear level text" title="Clear level text">Clear</button>
                     <button id="importLevelPlayButton" class="import-level-button primary" type="button" aria-label="Play level" title="Play level">▶</button>
                 </div>
                 <div id="importLevelError" class="import-level-error" aria-live="polite"></div>
@@ -1594,8 +1643,8 @@
         <div id="levelDesignerOverlay" class="level-designer-overlay" aria-hidden="true">
             <div class="level-designer-modal" role="dialog" aria-modal="true" aria-labelledby="levelDesignerTitle">
                 <div class="level-designer-header">
-                    <h2 id="levelDesignerTitle" class="level-designer-title">Level Designer (Under Development)</h2>
-                    <button id="levelDesignerCloseButton" class="level-designer-close" type="button" aria-label="Close level designer">×</button>
+                    <h2 id="levelDesignerTitle" class="level-designer-title">Level Designer</h2>
+                    <button id="levelDesignerCloseButton" class="level-designer-close" type="button" aria-label="Close level designer, keep current design, and play-test from Custom Level" title="Close designer and return to Custom Level. Your current design is kept, and you can press Play to test it.">×</button>
                 </div>
                 <div id="levelDesignerTools" class="level-designer-tools" role="toolbar" aria-label="Tile selection"></div>
                 <div id="levelDesignerStatus" class="level-designer-status" aria-live="polite"></div>
