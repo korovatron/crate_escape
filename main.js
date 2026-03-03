@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.85';
+const APP_VERSION = '1.1.86';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -5809,30 +5809,31 @@ function getHamburgerMenuHoverIndex(x, y) {
 
 // Helper function to get current menu configuration
 function getCurrentMenuConfig() {
-    const baseOptions = ["Home", "Instructions", "Cloud Sync"];
+    const baseOptions = [
+        "Home",
+        "Play",
+        "Custom Level",
+        "Cloud Sync",
+        "Credits",
+        "Privacy Policy",
+        "Terms of Service"
+    ];
     const baseGameStates = [
         GAME_STATES.TITLE,
-        'open_instructions_modal',
-        'open_cloud_sync_modal'
+        'open_play_menu',
+        'open_import_level',
+        'open_cloud_sync_modal',
+        'open_credits_modal',
+        'open_privacy_policy',
+        'open_terms_of_service'
     ];
-    
-    // Add iOS Install option if user is on iOS Safari (regardless of dismissal)
+
+    // Add iOS Install option directly above Cloud Sync when applicable
     if (shouldShowIOSInstallMenuItem()) {
-        baseOptions.splice(2, 0, "📱 Install App"); // Insert before Cloud Sync
-        baseGameStates.splice(2, 0, 'open_ios_install_modal');
+        const cloudSyncIndex = baseOptions.indexOf("Cloud Sync");
+        baseOptions.splice(cloudSyncIndex, 0, "📱 Install App");
+        baseGameStates.splice(cloudSyncIndex, 0, 'open_ios_install_modal');
     }
-    
-    // Custom level import
-    baseOptions.push("Custom Level");
-    baseGameStates.push('open_import_level');
-
-    // Add Credits after import
-    baseOptions.push("Credits");
-    baseGameStates.push('open_credits_modal');
-
-    // Add legal links at the bottom
-    baseOptions.push("Privacy Policy", "Terms of Service");
-    baseGameStates.push('open_privacy_policy', 'open_terms_of_service');
     
     return { options: baseOptions, gameStates: baseGameStates };
 }
@@ -5856,6 +5857,13 @@ function handleMenuOptionClick(mouseX, mouseY) {
 
 function handleMenuOptionTarget(targetState) {
     const auxiliaryMenuStates = [];
+
+    if (targetState === 'open_play_menu') {
+        currentGameState = GAME_STATES.LEVEL_SELECT;
+        initializeLevelSelect();
+        isHamburgerMenuOpen = false;
+        return true;
+    }
 
     if (targetState === 'open_privacy_policy') {
         openPrivacyPolicyLink();
