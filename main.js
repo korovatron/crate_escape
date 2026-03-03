@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.86';
+const APP_VERSION = '1.1.87';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -3067,13 +3067,21 @@ function updateTitleScreenUI() {
         const containerRect = container.getBoundingClientRect();
         const taglineRect = tagline.getBoundingClientRect();
         const footerRect = footer.getBoundingClientRect();
+        const startWrapRect = startWrap.getBoundingClientRect();
+        const copyrightElement = footer.querySelector('.copyright');
+        const copyrightRect = copyrightElement ? copyrightElement.getBoundingClientRect() : null;
 
         const taglineBottom = taglineRect.bottom - containerRect.top;
         const footerTop = footerRect.top - containerRect.top;
-        const midpoint = (taglineBottom + footerTop) / 2;
+        const copyrightTop = copyrightRect
+            ? (copyrightRect.top - containerRect.top)
+            : footerTop;
+        const startHalfHeight = Math.max(0, startWrapRect.height / 2);
+        const anchorGap = isTouchLandscape ? 10 : 14;
+        const anchoredCenterY = copyrightTop - anchorGap - startHalfHeight;
         const minTop = taglineBottom + 24;
-        const maxTop = footerTop - 24;
-        const startCenterY = Math.max(minTop, Math.min(maxTop, midpoint));
+        const maxTop = footerTop - 16;
+        const startCenterY = Math.max(minTop, Math.min(maxTop, anchoredCenterY));
 
         container.style.setProperty('--title-start-center-y', `${Math.round(startCenterY)}px`);
     }
@@ -5814,6 +5822,7 @@ function getCurrentMenuConfig() {
         "Play",
         "Custom Level",
         "Cloud Sync",
+        "Instructions",
         "Credits",
         "Privacy Policy",
         "Terms of Service"
@@ -5823,6 +5832,7 @@ function getCurrentMenuConfig() {
         'open_play_menu',
         'open_import_level',
         'open_cloud_sync_modal',
+        'open_instructions_modal',
         'open_credits_modal',
         'open_privacy_policy',
         'open_terms_of_service'
