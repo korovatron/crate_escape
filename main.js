@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.82';
+const APP_VERSION = '1.1.83';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1441,6 +1441,8 @@ function openImportLevelModal(options = {}) {
         }
     } else if (!textarea.value && customLevelEditorDraft) {
         textarea.value = customLevelEditorDraft;
+    } else if (!textarea.value && !customLevelEditorDraft) {
+        textarea.value = DEFAULT_CUSTOM_LEVEL_TEMPLATE;
     }
 
     overlay.style.display = 'flex';
@@ -3656,6 +3658,19 @@ let currentLevelNumber = 1; // Start with level 1
 const CUSTOM_SET_NAME = 'Custom';
 const CUSTOM_LEVEL_NUMBER = 1;
 const CUSTOM_LEVEL_EDITOR_DRAFT_KEY = 'customLevelEditorText';
+const DEFAULT_CUSTOM_LEVEL_TEMPLATE = [
+    '----#####----------',
+    '----#---#----------',
+    '----#$--#----------',
+    '--###--$##---------',
+    '--#--$-$-#---------',
+    '###-#-##-#---######',
+    '#---#-##-#####--..#',
+    '#-$--$----------..#',
+    '#####-###-#@##--..#',
+    '----#-----#########',
+    '----#######--------'
+].join('\n');
 let isCustomLevelActive = false;
 let customLevelRows = [];
 let customThemeIndex = 0;
