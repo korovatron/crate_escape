@@ -962,6 +962,18 @@
             z-index: 2;
         }
 
+        .solution-trigger-button::after {
+            content: ' ' attr(data-arrow);
+            margin-left: 0.28em;
+            color: inherit;
+            text-shadow: none;
+        }
+
+        .solution-trigger-button.has-saved-solution::after {
+            color: #00ff88;
+            text-shadow: 0 0 8px rgba(0, 255, 136, 0.65);
+        }
+
         .solution-replay-overlay.open .solution-trigger-button {
             box-shadow: 0 0 24px rgba(0, 170, 255, 0.35);
         }
@@ -989,6 +1001,30 @@
             min-height: 44px;
             cursor: pointer;
             z-index: 9001;
+        }
+
+        .solution-touch-trigger-button.has-saved-solution {
+            border-color: #00ff88;
+            box-shadow: 0 0 24px rgba(0, 255, 136, 0.35);
+        }
+
+        .solution-saved-hint {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -100%);
+            display: none;
+            pointer-events: none;
+            color: #00ff88;
+            text-shadow: 0 0 14px rgba(0, 255, 136, 0.85);
+            font-family: Arial, system-ui, -apple-system, sans-serif;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 0.86rem;
+            z-index: 9003;
+            opacity: 0;
+            white-space: nowrap;
         }
 
         .solution-replay-overlay {
@@ -1589,6 +1625,7 @@
         </div>
 
         <button id="solutionTouchTriggerButton" class="solution-touch-trigger-button" type="button" aria-label="Open LURD console" title="Open LURD console">LURD CONSOLE</button>
+        <div id="solutionSavedHint" class="solution-saved-hint" aria-hidden="true">REPLAY SOLUTION</div>
 
         <div id="solutionReplayOverlay" class="solution-replay-overlay" aria-hidden="true">
             <div id="solutionReplayModal" class="solution-replay-modal" role="dialog" aria-modal="false" aria-label="LURD console controls">

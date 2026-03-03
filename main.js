@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.83';
+const APP_VERSION = '1.1.84';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -797,6 +797,7 @@ function getSolutionReplayElements() {
     return {
         triggerButton: document.getElementById('solutionTriggerButton'),
         touchTriggerButton: document.getElementById('solutionTouchTriggerButton'),
+        savedHint: document.getElementById('solutionSavedHint'),
         overlay: document.getElementById('solutionReplayOverlay'),
         modal: document.getElementById('solutionReplayModal'),
         controls: document.getElementById('solutionReplayControls'),
@@ -875,6 +876,70 @@ function openCurrentLevelSolutionReplay() {
 function getCurrentLevelProgressData() {
     const levelKey = `${currentSet}_${currentLevelNumber}`;
     return levelProgress.get(levelKey) || null;
+}
+
+const SOLUTION_SAVED_HINT_DURATION_MS = 5000;
+let solutionSavedHintStartTime = 0;
+let currentLevelLoadSerial = 0;
+let hintedLevelLoadSerial = 0;
+
+function triggerSavedSolutionHintIfAvailable() {
+    if (currentLevelLoadSerial <= 0 || hintedLevelLoadSerial === currentLevelLoadSerial) {
+        return;
+    }
+
+    hintedLevelLoadSerial = currentLevelLoadSerial;
+
+    if (currentGameState !== GAME_STATES.PLAYING || isCustomLevelActive) {
+        return;
+    }
+
+    const storedSolution = getStoredSolutionForCurrentLevel();
+    if (!storedSolution) {
+        return;
+    }
+
+    solutionSavedHintStartTime = Date.now();
+}
+
+function updateSavedSolutionHintUI() {
+    const { savedHint, triggerButton, touchTriggerButton } = getSolutionReplayElements();
+    if (!savedHint) {
+        return;
+    }
+
+    if (!solutionSavedHintStartTime) {
+        savedHint.style.display = 'none';
+        savedHint.style.opacity = '0';
+        return;
+    }
+
+    const elapsed = Date.now() - solutionSavedHintStartTime;
+    if (elapsed >= SOLUTION_SAVED_HINT_DURATION_MS || currentGameState !== GAME_STATES.PLAYING) {
+        solutionSavedHintStartTime = 0;
+        savedHint.style.display = 'none';
+        savedHint.style.opacity = '0';
+        return;
+    }
+
+    let anchorRect = null;
+
+    if (touchTriggerButton && touchTriggerButton.style.display !== 'none') {
+        anchorRect = touchTriggerButton.getBoundingClientRect();
+    } else if (triggerButton && triggerButton.style.display !== 'none') {
+        anchorRect = triggerButton.getBoundingClientRect();
+    }
+
+    if (anchorRect) {
+        const centerX = anchorRect.left + (anchorRect.width / 2);
+        const topY = anchorRect.top - 10;
+        savedHint.style.left = `${Math.round(centerX)}px`;
+        savedHint.style.top = `${Math.round(topY)}px`;
+    }
+
+    const opacity = Math.max(0, 1 - (elapsed / SOLUTION_SAVED_HINT_DURATION_MS));
+    savedHint.style.display = 'block';
+    savedHint.style.opacity = opacity.toFixed(3);
 }
 
 function getStoredSolutionForCurrentLevel() {
@@ -3327,6 +3392,7 @@ function updateSolutionReplayUI() {
     const hasFineHoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const useTouchReplayUi = isIOSPlatform() || (isTouchUi && !hasFineHoverPointer);
     const shouldShowReplayModal = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive;
+    const hasStoredSolution = Boolean(getStoredSolutionForCurrentLevel());
 
     if (useTouchReplayUi) {
         triggerButton.style.display = 'none';
@@ -3335,12 +3401,14 @@ function updateSolutionReplayUI() {
             const shouldShowTouchTrigger = currentGameState === GAME_STATES.PLAYING && !shouldShowReplayModal;
             touchTriggerButton.style.display = shouldShowTouchTrigger ? 'inline-flex' : 'none';
             touchTriggerButton.style.fontSize = isMobile ? '11px' : '13px';
+            touchTriggerButton.classList.toggle('has-saved-solution', hasStoredSolution && shouldShowTouchTrigger);
         }
 
         overlay.style.display = shouldShowReplayModal ? 'flex' : 'none';
     } else {
         if (touchTriggerButton) {
             touchTriggerButton.style.display = 'none';
+            touchTriggerButton.classList.remove('has-saved-solution');
         }
 
         const shouldShowTrigger = currentGameState === GAME_STATES.PLAYING ||
@@ -3349,9 +3417,13 @@ function updateSolutionReplayUI() {
         triggerButton.style.alignItems = 'center';
         triggerButton.style.justifyContent = 'center';
         triggerButton.style.fontSize = isMobile ? '11px' : '13px';
-        triggerButton.textContent = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive
-            ? 'LURD CONSOLE ▼'
-            : 'LURD CONSOLE ▲';
+        const triggerArrow = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive
+            ? '▼'
+            : '▲';
+        triggerButton.textContent = 'LURD CONSOLE';
+        triggerButton.setAttribute('data-arrow', triggerArrow);
+        const hasStoredSolution = Boolean(getStoredSolutionForCurrentLevel());
+        triggerButton.classList.toggle('has-saved-solution', hasStoredSolution);
 
         const shouldShowReplayHost = shouldShowTrigger;
         overlay.style.display = shouldShowReplayHost ? 'flex' : 'none';
@@ -4321,6 +4393,7 @@ function gameLoad() {
 }
 
 function applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart = false, skipProgressPersistence = false) {
+    currentLevelLoadSerial++;
     currentLevel = parsedLevel;
 
     // Reset move count for level load/restart
@@ -6429,6 +6502,10 @@ function updateCameraPosition() {
 }
 
 function update(secondsPassed) {
+    if (currentGameState === GAME_STATES.PLAYING) {
+        triggerSavedSolutionHintIfAvailable();
+    }
+
     // Update input feedback timer
     if (inputFadeTimer > 0) {
         inputFadeTimer -= secondsPassed * 1000;
@@ -6489,6 +6566,7 @@ function draw() {
     }
 
     updateSolutionReplayUI();
+    updateSavedSolutionHintUI();
     updateLevelCompleteModalUI();
     updateHamburgerMenuUI();
     updateLevelSelectUI();
