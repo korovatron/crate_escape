@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.74';
+const APP_VERSION = '1.1.75';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2253,7 +2253,7 @@ function updateSolutionReplayUI() {
     const isMobile = canvas ? canvas.width < 600 : window.innerWidth < 600;
     const isTouchUi = isTouchDevice();
     const hasFineHoverPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const useTouchReplayUi = isTouchUi && !hasFineHoverPointer && !isIOSPlatform();
+    const useTouchReplayUi = isIOSPlatform() || (isTouchUi && !hasFineHoverPointer);
     const shouldShowReplayModal = currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive;
 
     if (useTouchReplayUi) {
