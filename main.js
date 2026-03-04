@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.94';
+const APP_VERSION = '1.1.95';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -164,9 +164,7 @@ document.addEventListener('keydown', (e) => {
         }
         // Check for cloud sync updates when navigating back to level select
         if (window.firebaseAuth && window.firebaseAuth.isAuthenticated && window.firebaseAuth.currentUser) {
-            downloadGameProgress(true, false).catch(error => {
-                console.log('Background cloud sync failed (non-critical):', error);
-            });
+            requestBackgroundCloudSyncDownload();
         }
         currentGameState = GAME_STATES.LEVEL_SELECT;
         initializeLevelSelect();
@@ -377,7 +375,7 @@ function setupCanvasEventListeners() {
             if (isClickOnExitButton(mouseX, mouseY)) {
                 playSound('click');
                 currentGameState = GAME_STATES.LEVEL_SELECT;
-                downloadGameProgress(true, false); // Silent cloud sync on navigation
+                requestBackgroundCloudSyncDownload(); // Silent cloud sync on navigation
                 initializeLevelSelect();
                 return;
             }
@@ -608,7 +606,7 @@ function setupCanvasEventListeners() {
                     if (isClickOnExitButton(canvasPos.x, canvasPos.y)) {
                         playSound('click');
                         currentGameState = GAME_STATES.LEVEL_SELECT;
-                        downloadGameProgress(true, false); // Silent cloud sync on navigation
+                        requestBackgroundCloudSyncDownload(); // Silent cloud sync on navigation
                         initializeLevelSelect();
                         return;
                     }
@@ -861,7 +859,7 @@ function getTitleScreenElements() {
 function transitionTitleToLevelSelect() {
     playSound('click');
     currentGameState = GAME_STATES.LEVEL_SELECT;
-    downloadGameProgress(true, false); // Silent cloud sync on navigation
+    requestBackgroundCloudSyncDownload(); // Silent cloud sync on navigation
     initializeLevelSelect();
     lastInputType = "Level Select";
     lastInputTime = Date.now();
@@ -3881,6 +3879,58 @@ function acknowledgeIOSInstallNotification() {
 // Cloud Sync authentication variables
 let cloudSyncState = 'checking'; // 'checking', 'not_authenticated', 'signing_in', 'authenticated', 'error'
 let hasCloudSyncedThisSession = false; // Track if cloud sync has happened this session
+let cloudUploadInProgress = false;
+let cloudUploadPending = false;
+let cloudUploadDeferredTimeoutId = null;
+let lastCloudUploadCompletedAt = 0;
+const CLOUD_UPLOAD_MIN_INTERVAL_MS = 1500;
+const CLOUD_LEVEL_LOAD_UPLOAD_DEBOUNCE_MS = 900;
+let cloudDownloadInProgressPromise = null;
+let lastBackgroundCloudDownloadAt = 0;
+const CLOUD_BACKGROUND_DOWNLOAD_COOLDOWN_MS = 2500;
+
+function scheduleDeferredCloudUpload(delayMs = CLOUD_UPLOAD_MIN_INTERVAL_MS) {
+    if (cloudUploadDeferredTimeoutId) {
+        clearTimeout(cloudUploadDeferredTimeoutId);
+    }
+
+    cloudUploadDeferredTimeoutId = setTimeout(() => {
+        cloudUploadDeferredTimeoutId = null;
+        uploadGameProgress().catch(error => {
+            console.error('Deferred cloud upload failed:', error);
+        });
+    }, Math.max(0, delayMs));
+}
+
+function queueCloudUploadFromLevelLoad() {
+    cloudUploadPending = true;
+    scheduleDeferredCloudUpload(CLOUD_LEVEL_LOAD_UPLOAD_DEBOUNCE_MS);
+}
+
+function requestBackgroundCloudSyncDownload() {
+    if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
+        return;
+    }
+
+    if (cloudDownloadInProgressPromise) {
+        return;
+    }
+
+    const elapsed = Date.now() - lastBackgroundCloudDownloadAt;
+    if (elapsed < CLOUD_BACKGROUND_DOWNLOAD_COOLDOWN_MS) {
+        return;
+    }
+
+    cloudDownloadInProgressPromise = downloadGameProgress(true, false)
+        .catch(error => {
+            console.log('Background cloud sync failed (non-critical):', error);
+            return false;
+        })
+        .finally(() => {
+            lastBackgroundCloudDownloadAt = Date.now();
+            cloudDownloadInProgressPromise = null;
+        });
+}
 
 // Expose cloudSyncState globally so Firebase config can update it
 window.cloudSyncState = cloudSyncState;
@@ -4729,10 +4779,8 @@ function applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart = false, 
 
     // Upload progress to cloud if user is authenticated and this is a new level load (not restart)
     if (!isRestart && !skipProgressPersistence && window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
-        // Don't await this to avoid blocking level loading
-        uploadGameProgress().catch(error => {
-            console.error('Failed to upload progress after level load:', error);
-        });
+        // Coalesce rapid level-load transitions into a single deferred upload.
+        queueCloudUploadFromLevelLoad();
     }
 
     return true;
@@ -6252,13 +6300,33 @@ async function startGoogleSignIn() {
 
 // Cloud data sync functions
 async function uploadGameProgress() {
+    // Check if user is authenticated
+    if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
+        console.log('Cannot upload progress: user not authenticated');
+        return false;
+    }
+
+    if (cloudUploadInProgress) {
+        cloudUploadPending = true;
+        return true;
+    }
+
+    const elapsedSinceLastUpload = Date.now() - lastCloudUploadCompletedAt;
+    if (elapsedSinceLastUpload < CLOUD_UPLOAD_MIN_INTERVAL_MS) {
+        cloudUploadPending = true;
+        scheduleDeferredCloudUpload(CLOUD_UPLOAD_MIN_INTERVAL_MS - elapsedSinceLastUpload);
+        return true;
+    }
+
+    if (cloudUploadDeferredTimeoutId) {
+        clearTimeout(cloudUploadDeferredTimeoutId);
+        cloudUploadDeferredTimeoutId = null;
+    }
+
+    cloudUploadInProgress = true;
+    cloudUploadPending = false;
+
     try {
-        // Check if user is authenticated
-        if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
-            console.log('Cannot upload progress: user not authenticated');
-            return false;
-        }
-        
         console.log('Uploading game progress to cloud...');
         
         // Import Firestore functions
@@ -6380,6 +6448,13 @@ async function uploadGameProgress() {
         inputFadeTimer = 2000;
         
         return false;
+    } finally {
+        cloudUploadInProgress = false;
+        lastCloudUploadCompletedAt = Date.now();
+
+        if (cloudUploadPending) {
+            scheduleDeferredCloudUpload(CLOUD_UPLOAD_MIN_INTERVAL_MS);
+        }
     }
 }
 
