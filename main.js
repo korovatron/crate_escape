@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.97';
+const APP_VERSION = '1.1.98';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -914,10 +914,12 @@ const TITLE_MINI_DEMO_PRESETS = {
         solution: 'dlllllululllddduRluurDRRRRRdrrruullDurrddlLLLulllllddrrUdlluurRRRRRdrrruullDurrddlLLullllllddrUluRRRRRRdrrruullDurrddlL'
     }
 };
-const TITLE_MINI_DEMO_START_DELAY_MS = 900;
+const TITLE_MINI_DEMO_INTRO_HOLD_MS = 2000;
+const TITLE_MINI_DEMO_INTRO_FADE_MS = 1000;
 const TITLE_MINI_DEMO_STEP_INTERVAL_MS = 220;
 const TITLE_MINI_DEMO_MOVE_DURATION_MS = 200;
-const TITLE_MINI_DEMO_END_DELAY_MS = 1400;
+const TITLE_MINI_DEMO_OUTRO_HOLD_MS = 2000;
+const TITLE_MINI_DEMO_OUTRO_FADE_MS = 1000;
 const TITLE_MINI_DEMO_ANIMATION_FRAME_MS = 84;
 const TITLE_MINI_DEMO_THEME_COUNT = 8;
 const titleMiniDemoThemeIndex = Math.floor(Math.random() * TITLE_MINI_DEMO_THEME_COUNT);
@@ -3249,6 +3251,7 @@ function updateTitleScreenUI() {
     container.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
 
     if (!shouldShow) {
+        titleMiniDemoState = null;
         return;
     }
 
@@ -7013,13 +7016,15 @@ function createTitleMiniDemoState(nowMs = Date.now(), preset = getTitleMiniDemoP
         goalsSet: new Set(levelData.goals.map((goal) => `${goal.x},${goal.y}`)),
         moveIndex: 0,
         isSolved: false,
-        nextTickAt: nowMs + TITLE_MINI_DEMO_START_DELAY_MS,
+        nextTickAt: nowMs,
         activeMove: null,
         facingDirection: 'down',
         animationState: 'idle-down',
         animationFrame: 0,
         animationTimerMs: 0,
-        lastUpdateAt: nowMs
+        lastUpdateAt: nowMs,
+        visibilityPhase: 'intro-hold',
+        visibilityPhaseStartedAt: nowMs
     };
 }
 
@@ -7144,6 +7149,81 @@ function getTitleMiniDemoInterMoveDelay(state) {
     return isSameDirection ? 0 : pauseDuration;
 }
 
+function updateTitleMiniDemoVisibilityPhase(state, nowMs) {
+    let shouldRestart = false;
+    let transitions = 0;
+
+    while (!shouldRestart && transitions < 6) {
+        transitions += 1;
+        const elapsed = Math.max(0, nowMs - state.visibilityPhaseStartedAt);
+
+        if (state.visibilityPhase === 'intro-hold') {
+            if (elapsed < TITLE_MINI_DEMO_INTRO_HOLD_MS) {
+                break;
+            }
+
+            state.visibilityPhase = 'intro-fade';
+            state.visibilityPhaseStartedAt += TITLE_MINI_DEMO_INTRO_HOLD_MS;
+            continue;
+        }
+
+        if (state.visibilityPhase === 'intro-fade') {
+            if (elapsed < TITLE_MINI_DEMO_INTRO_FADE_MS) {
+                break;
+            }
+
+            state.visibilityPhase = 'playing';
+            state.visibilityPhaseStartedAt += TITLE_MINI_DEMO_INTRO_FADE_MS;
+            state.nextTickAt = nowMs;
+            continue;
+        }
+
+        if (state.visibilityPhase === 'outro-hold') {
+            if (elapsed < TITLE_MINI_DEMO_OUTRO_HOLD_MS) {
+                break;
+            }
+
+            state.visibilityPhase = 'outro-fade';
+            state.visibilityPhaseStartedAt += TITLE_MINI_DEMO_OUTRO_HOLD_MS;
+            continue;
+        }
+
+        if (state.visibilityPhase === 'outro-fade') {
+            if (elapsed < TITLE_MINI_DEMO_OUTRO_FADE_MS) {
+                break;
+            }
+
+            shouldRestart = true;
+        }
+
+        break;
+    }
+
+    return shouldRestart;
+}
+
+function getTitleMiniDemoActorsOpacity(state, nowMs) {
+    if (!state) {
+        return 0;
+    }
+
+    const elapsed = Math.max(0, nowMs - state.visibilityPhaseStartedAt);
+
+    if (state.visibilityPhase === 'intro-hold') {
+        return 0;
+    }
+
+    if (state.visibilityPhase === 'intro-fade') {
+        return Math.max(0, Math.min(1, elapsed / TITLE_MINI_DEMO_INTRO_FADE_MS));
+    }
+
+    if (state.visibilityPhase === 'outro-fade') {
+        return Math.max(0, 1 - Math.min(1, elapsed / TITLE_MINI_DEMO_OUTRO_FADE_MS));
+    }
+
+    return 1;
+}
+
 function updateTitleMiniDemoAnimation(state, nowMs) {
     const deltaMs = Math.max(0, nowMs - state.lastUpdateAt);
     state.lastUpdateAt = nowMs;
@@ -7176,46 +7256,47 @@ function advanceTitleMiniDemoState(nowMs) {
 
     const state = titleMiniDemoState;
 
-    if (state.isSolved) {
-        updateTitleMiniDemoAnimation(state, nowMs);
-        if (nowMs >= state.nextTickAt) {
-            titleMiniDemoState = createTitleMiniDemoState(nowMs, activePreset);
-        }
+    if (updateTitleMiniDemoVisibilityPhase(state, nowMs)) {
+        titleMiniDemoState = createTitleMiniDemoState(nowMs, activePreset);
         return titleMiniDemoState;
     }
 
-    if (state.activeMove && nowMs >= state.activeMove.endsAt) {
-        const completedMoveEndsAt = state.activeMove.endsAt;
-        const hasMoreMoves = state.moveIndex < state.solution.length;
-        const postMoveDelay = hasMoreMoves ? getTitleMiniDemoInterMoveDelay(state) : 0;
-        const shouldResetToIdle = !hasMoreMoves || postMoveDelay > 0;
+    if (state.visibilityPhase === 'playing' && !state.isSolved) {
+        if (state.activeMove && nowMs >= state.activeMove.endsAt) {
+            const completedMoveEndsAt = state.activeMove.endsAt;
+            const hasMoreMoves = state.moveIndex < state.solution.length;
+            const postMoveDelay = hasMoreMoves ? getTitleMiniDemoInterMoveDelay(state) : 0;
+            const shouldResetToIdle = !hasMoreMoves || postMoveDelay > 0;
 
-        completeTitleMiniDemoMove(state, shouldResetToIdle);
+            completeTitleMiniDemoMove(state, shouldResetToIdle);
 
-        if (!hasMoreMoves) {
-            state.isSolved = true;
-            state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
-        } else {
-            state.nextTickAt = completedMoveEndsAt + postMoveDelay;
+            if (!hasMoreMoves) {
+                state.isSolved = true;
+                state.visibilityPhase = 'outro-hold';
+                state.visibilityPhaseStartedAt = nowMs;
+            } else {
+                state.nextTickAt = completedMoveEndsAt + postMoveDelay;
+            }
         }
-    }
 
-    if (!state.activeMove && !state.isSolved && nowMs >= state.nextTickAt) {
-        const moveStartAt = state.nextTickAt;
-        const moveChar = state.solution[state.moveIndex];
-        state.moveIndex += 1;
+        if (!state.activeMove && !state.isSolved && nowMs >= state.nextTickAt) {
+            const moveStartAt = state.nextTickAt;
+            const moveChar = state.solution[state.moveIndex];
+            state.moveIndex += 1;
 
-        const moveData = typeof moveChar === 'string'
-            ? buildTitleMiniDemoMove(state, moveChar, moveStartAt)
-            : null;
+            const moveData = typeof moveChar === 'string'
+                ? buildTitleMiniDemoMove(state, moveChar, moveStartAt)
+                : null;
 
-        if (moveData) {
-            beginTitleMiniDemoMove(state, moveData);
-        } else if (state.moveIndex >= state.solution.length) {
-            state.isSolved = true;
-            state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
-        } else {
-            state.nextTickAt = moveStartAt + TITLE_MINI_DEMO_STEP_INTERVAL_MS;
+            if (moveData) {
+                beginTitleMiniDemoMove(state, moveData);
+            } else if (state.moveIndex >= state.solution.length) {
+                state.isSolved = true;
+                state.visibilityPhase = 'outro-hold';
+                state.visibilityPhaseStartedAt = nowMs;
+            } else {
+                state.nextTickAt = moveStartAt + TITLE_MINI_DEMO_STEP_INTERVAL_MS;
+            }
         }
     }
 
@@ -7272,11 +7353,11 @@ function drawTitleMiniDemoSprite(spriteName, x, y, size) {
     return true;
 }
 
-function drawTitleMiniDemoOnGoalHighlight(x, y, size) {
+function drawTitleMiniDemoOnGoalHighlight(x, y, size, opacity = 1) {
     const glowPadding = Math.max(1, Math.round(size * 0.06));
 
     context.save();
-    context.globalAlpha = 0.6;
+    context.globalAlpha = 0.6 * Math.max(0, Math.min(1, opacity));
     context.fillStyle = '#00FF00';
     context.fillRect(x - glowPadding, y - glowPadding, size + (glowPadding * 2), size + (glowPadding * 2));
     context.restore();
@@ -7350,12 +7431,22 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
         }
     }
 
+    const actorsOpacity = getTitleMiniDemoActorsOpacity(state, nowMs);
+
     for (let rowIndex = 0; rowIndex < levelData.height; rowIndex++) {
         for (let colIndex = 0; colIndex < levelData.width; colIndex++) {
             const tileChar = levelData.grid[rowIndex][colIndex];
             const tileX = boardStartX + colIndex * demoTileSize;
             const tileY = boardStartY + rowIndex * demoTileSize;
             const isExteriorSpace = tileChar === ' ' && levelData.exteriorSpaces && levelData.exteriorSpaces.has(`${colIndex},${rowIndex}`);
+
+            if (!isExteriorSpace) {
+                const drewGround = drawTitleMiniDemoSprite(sprites.ground, tileX, tileY, demoTileSize);
+                if (!drewGround) {
+                    context.fillStyle = '#1f2a36';
+                    context.fillRect(tileX, tileY, demoTileSize, demoTileSize);
+                }
+            }
 
             if (tileChar === '#') {
                 const drewWall = drawTitleMiniDemoSprite(sprites.wall, tileX, tileY, demoTileSize);
@@ -7364,14 +7455,6 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
                     context.fillRect(tileX, tileY, demoTileSize, demoTileSize);
                 }
                 continue;
-            }
-
-            if (!isExteriorSpace) {
-                const drewGround = drawTitleMiniDemoSprite(sprites.ground, tileX, tileY, demoTileSize);
-                if (!drewGround) {
-                    context.fillStyle = '#1f2a36';
-                    context.fillRect(tileX, tileY, demoTileSize, demoTileSize);
-                }
             }
 
             if (tileChar === '.') {
@@ -7388,43 +7471,50 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
         }
     }
 
-    for (let boxIndex = 0; boxIndex < state.boxes.length; boxIndex++) {
-        const box = state.boxes[boxIndex];
-        const boxTileX = movingBoxRenderData && movingBoxRenderData.index === boxIndex
-            ? movingBoxRenderData.x
-            : box.x;
-        const boxTileY = movingBoxRenderData && movingBoxRenderData.index === boxIndex
-            ? movingBoxRenderData.y
-            : box.y;
-        const boxX = Math.round(boardStartX + boxTileX * demoTileSize);
-        const boxY = Math.round(boardStartY + boxTileY * demoTileSize);
-        const isOnGoal = state.goalsSet.has(`${box.x},${box.y}`);
+    if (actorsOpacity > 0) {
+        context.save();
+        context.globalAlpha = actorsOpacity;
 
-        if (isOnGoal) {
-            drawTitleMiniDemoOnGoalHighlight(boxX, boxY, demoTileSize);
+        for (let boxIndex = 0; boxIndex < state.boxes.length; boxIndex++) {
+            const box = state.boxes[boxIndex];
+            const boxTileX = movingBoxRenderData && movingBoxRenderData.index === boxIndex
+                ? movingBoxRenderData.x
+                : box.x;
+            const boxTileY = movingBoxRenderData && movingBoxRenderData.index === boxIndex
+                ? movingBoxRenderData.y
+                : box.y;
+            const boxX = Math.round(boardStartX + boxTileX * demoTileSize);
+            const boxY = Math.round(boardStartY + boxTileY * demoTileSize);
+            const isOnGoal = state.goalsSet.has(`${box.x},${box.y}`);
+
+            if (isOnGoal) {
+                drawTitleMiniDemoOnGoalHighlight(boxX, boxY, demoTileSize, actorsOpacity);
+            }
+
+            const spriteName = isOnGoal ? sprites.crateOnGoal : sprites.crate;
+            const drewBox = drawTitleMiniDemoSprite(spriteName, boxX, boxY, demoTileSize);
+
+            if (!drewBox) {
+                context.fillStyle = isOnGoal ? '#79e08f' : '#b57a4f';
+                context.fillRect(boxX, boxY, demoTileSize, demoTileSize);
+            }
         }
 
-        const spriteName = isOnGoal ? sprites.crateOnGoal : sprites.crate;
-        const drewBox = drawTitleMiniDemoSprite(spriteName, boxX, boxY, demoTileSize);
+        const playerX = Math.round(boardStartX + playerTileX * demoTileSize);
+        const playerY = Math.round(boardStartY + playerTileY * demoTileSize);
+        const playerSpriteName = getTitleMiniDemoPlayerSpriteName(state);
+        let drewPlayer = drawTitleMiniDemoSprite(playerSpriteName, playerX, playerY, demoTileSize);
 
-        if (!drewBox) {
-            context.fillStyle = isOnGoal ? '#79e08f' : '#b57a4f';
-            context.fillRect(boxX, boxY, demoTileSize, demoTileSize);
+        if (!drewPlayer) {
+            drewPlayer = drawTitleMiniDemoSprite('player_03.png', playerX, playerY, demoTileSize);
         }
-    }
 
-    const playerX = Math.round(boardStartX + playerTileX * demoTileSize);
-    const playerY = Math.round(boardStartY + playerTileY * demoTileSize);
-    const playerSpriteName = getTitleMiniDemoPlayerSpriteName(state);
-    let drewPlayer = drawTitleMiniDemoSprite(playerSpriteName, playerX, playerY, demoTileSize);
+        if (!drewPlayer) {
+            context.fillStyle = '#7ad2ff';
+            context.fillRect(playerX, playerY, demoTileSize, demoTileSize);
+        }
 
-    if (!drewPlayer) {
-        drewPlayer = drawTitleMiniDemoSprite('player_03.png', playerX, playerY, demoTileSize);
-    }
-
-    if (!drewPlayer) {
-        context.fillStyle = '#7ad2ff';
-        context.fillRect(playerX, playerY, demoTileSize, demoTileSize);
+        context.restore();
     }
 }
 
