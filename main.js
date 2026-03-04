@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.88';
+const APP_VERSION = '1.1.89';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -2227,6 +2227,10 @@ function closeLevelDesignerModal() {
     levelDesignerState.isPanning = false;
     levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
     levelDesignerState.touchMode = '';
+    levelDesignerState.touchTapCandidate = false;
+    levelDesignerState.touchStartTime = 0;
+    levelDesignerState.touchStartClientX = 0;
+    levelDesignerState.touchStartClientY = 0;
     levelDesignerState.lastPaintKey = '';
     overlay.style.display = 'none';
     overlay.setAttribute('aria-hidden', 'true');
@@ -2294,6 +2298,8 @@ function initializeLevelDesignerUI() {
         levelDesignerState.isPainting = false;
         levelDesignerState.isPanning = false;
         levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+        levelDesignerState.touchTapCandidate = false;
+        levelDesignerState.touchStartTime = 0;
         levelDesignerState.lastPaintKey = '';
         updateLevelDesignerCursor();
     };
@@ -2356,8 +2362,15 @@ function initializeLevelDesignerUI() {
         }
     });
 
-    canvas.addEventListener('pointerup', endPointerInteraction);
-    canvas.addEventListener('pointercancel', endPointerInteraction);
+    const endMousePointerInteraction = (event) => {
+        if (event && event.pointerType === 'touch') {
+            return;
+        }
+        endPointerInteraction();
+    };
+
+    canvas.addEventListener('pointerup', endMousePointerInteraction);
+    canvas.addEventListener('pointercancel', endMousePointerInteraction);
 
     canvas.addEventListener('wheel', (event) => {
         if (!levelDesignerState.isOpen) {
@@ -2396,19 +2409,25 @@ function initializeLevelDesignerUI() {
             levelDesignerState.touchStartMidY = (first.clientY + second.clientY) / 2;
             levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
             levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+            levelDesignerState.touchTapCandidate = false;
             return;
         }
 
         if (touches.length === 1) {
-            levelDesignerState.touchMode = 'paint';
-            levelDesignerState.isPainting = true;
-            levelDesignerState.isPanning = false;
-            levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
             const touch = touches[0];
-            const cell = getDesignerCellFromClientPoint(touch.clientX, touch.clientY);
-            if (cell) {
-                placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
-            }
+            levelDesignerState.touchMode = 'pan';
+            levelDesignerState.isPainting = false;
+            levelDesignerState.isPanning = true;
+            levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+            levelDesignerState.panStartClientX = touch.clientX;
+            levelDesignerState.panStartClientY = touch.clientY;
+            levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+            levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+            levelDesignerState.touchStartClientX = touch.clientX;
+            levelDesignerState.touchStartClientY = touch.clientY;
+            levelDesignerState.touchStartTime = Date.now();
+            levelDesignerState.touchTapCandidate = true;
+            levelDesignerState.lastPaintKey = '';
         }
     }, { passive: false });
 
@@ -2441,18 +2460,50 @@ function initializeLevelDesignerUI() {
             levelDesignerState.touchMode = 'panzoom';
             levelDesignerState.isPainting = false;
             levelDesignerState.isPanning = true;
+            levelDesignerState.touchTapCandidate = false;
 
             updateLevelDesignerZoomLabel();
             renderLevelDesigner();
             return;
         }
 
-        if (touches.length === 1 && levelDesignerState.touchMode === 'paint') {
+        if (touches.length === 1) {
             const touch = touches[0];
-            const cell = getDesignerCellFromClientPoint(touch.clientX, touch.clientY);
-            if (cell) {
-                placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
+
+            if (levelDesignerState.touchMode !== 'pan') {
+                levelDesignerState.touchMode = 'pan';
+                levelDesignerState.isPainting = false;
+                levelDesignerState.isPanning = true;
+                levelDesignerState.panStartClientX = touch.clientX;
+                levelDesignerState.panStartClientY = touch.clientY;
+                levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+                levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+                levelDesignerState.touchTapCandidate = false;
             }
+
+            if (levelDesignerState.touchTapCandidate) {
+                const moveDistance = Math.hypot(
+                    touch.clientX - levelDesignerState.touchStartClientX,
+                    touch.clientY - levelDesignerState.touchStartClientY
+                );
+                if (moveDistance > LEVEL_DESIGNER_TOUCH_TAP_MAX_MOVEMENT) {
+                    levelDesignerState.touchTapCandidate = false;
+                    levelDesignerState.panStartClientX = touch.clientX;
+                    levelDesignerState.panStartClientY = touch.clientY;
+                    levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+                    levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+                } else {
+                    return;
+                }
+            }
+
+            const tileSizeLocal = LEVEL_DESIGNER_TILE_SIZES[levelDesignerState.tileSizeIndex] || 32;
+            const dx = (touch.clientX - levelDesignerState.panStartClientX) / tileSizeLocal;
+            const dy = (touch.clientY - levelDesignerState.panStartClientY) / tileSizeLocal;
+            levelDesignerState.offsetX = levelDesignerState.panStartOffsetX + dx;
+            levelDesignerState.offsetY = levelDesignerState.panStartOffsetY + dy;
+
+            renderLevelDesigner();
         }
     }, { passive: false });
 
@@ -2461,20 +2512,70 @@ function initializeLevelDesignerUI() {
             return;
         }
 
+        event.preventDefault();
         const touches = event.touches;
-        if (touches.length === 0) {
-            levelDesignerState.touchMode = '';
-            endPointerInteraction();
+        if (touches.length >= 2) {
+            const first = touches[0];
+            const second = touches[1];
+            const dx = second.clientX - first.clientX;
+            const dy = second.clientY - first.clientY;
+            levelDesignerState.touchMode = 'panzoom';
+            levelDesignerState.isPainting = false;
+            levelDesignerState.isPanning = true;
+            levelDesignerState.touchStartDistance = Math.max(1, Math.hypot(dx, dy));
+            levelDesignerState.touchStartTileSizeIndex = levelDesignerState.tileSizeIndex;
+            levelDesignerState.touchStartMidX = (first.clientX + second.clientX) / 2;
+            levelDesignerState.touchStartMidY = (first.clientY + second.clientY) / 2;
+            levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+            levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+            levelDesignerState.touchTapCandidate = false;
             return;
         }
 
         if (touches.length === 1) {
-            levelDesignerState.touchMode = 'paint';
-            levelDesignerState.isPainting = true;
-            levelDesignerState.isPanning = false;
-            levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+            const touch = touches[0];
+            levelDesignerState.touchMode = 'pan';
+            levelDesignerState.isPainting = false;
+            levelDesignerState.isPanning = true;
+            levelDesignerState.panStartClientX = touch.clientX;
+            levelDesignerState.panStartClientY = touch.clientY;
+            levelDesignerState.panStartOffsetX = levelDesignerState.offsetX;
+            levelDesignerState.panStartOffsetY = levelDesignerState.offsetY;
+            levelDesignerState.touchStartClientX = touch.clientX;
+            levelDesignerState.touchStartClientY = touch.clientY;
+            levelDesignerState.touchStartTime = Date.now();
+            levelDesignerState.touchTapCandidate = false;
             levelDesignerState.lastPaintKey = '';
+            return;
         }
+
+        const touchElapsed = Date.now() - (levelDesignerState.touchStartTime || 0);
+        const shouldPlaceTile = levelDesignerState.touchMode === 'pan' &&
+            levelDesignerState.touchTapCandidate &&
+            touchElapsed <= LEVEL_DESIGNER_TOUCH_TAP_MAX_DURATION_MS;
+
+        if (shouldPlaceTile) {
+            const changedTouch = event.changedTouches && event.changedTouches.length > 0
+                ? event.changedTouches[event.changedTouches.length - 1]
+                : null;
+            const touchX = changedTouch ? changedTouch.clientX : levelDesignerState.touchStartClientX;
+            const touchY = changedTouch ? changedTouch.clientY : levelDesignerState.touchStartClientY;
+            const totalMoveDistance = Math.hypot(
+                touchX - levelDesignerState.touchStartClientX,
+                touchY - levelDesignerState.touchStartClientY
+            );
+
+            if (totalMoveDistance <= LEVEL_DESIGNER_TOUCH_TAP_MAX_MOVEMENT) {
+                const cell = getDesignerCellFromClientPoint(touchX, touchY);
+                if (cell) {
+                    levelDesignerState.activePaintTool = levelDesignerState.selectedTool;
+                    placeDesignerTileAtCell(cell.x, cell.y, levelDesignerState.activePaintTool);
+                }
+            }
+        }
+
+        levelDesignerState.touchMode = '';
+        endPointerInteraction();
     }, { passive: false });
 
     window.addEventListener('resize', () => {
@@ -3760,6 +3861,8 @@ let customLevelEditorSaveTimeout = null;
 let customLevelModalReturnToLevelSelectOnClose = false;
 
 const LEVEL_DESIGNER_TILE_SIZES = [16, 20, 24, 28, 32, 40, 48, 64, 80, 96, 128];
+const LEVEL_DESIGNER_TOUCH_TAP_MAX_MOVEMENT = 12;
+const LEVEL_DESIGNER_TOUCH_TAP_MAX_DURATION_MS = 280;
 const LEVEL_DESIGNER_TOOLS = [
     { id: 'wall', label: 'WALL', symbol: '#' },
     { id: 'floor', label: 'FLOOR', symbol: '·' },
@@ -3785,6 +3888,10 @@ let levelDesignerState = {
     touchStartTileSizeIndex: 4,
     touchStartMidX: 0,
     touchStartMidY: 0,
+    touchStartClientX: 0,
+    touchStartClientY: 0,
+    touchStartTime: 0,
+    touchTapCandidate: false,
     panStartClientX: 0,
     panStartClientY: 0,
     panStartOffsetX: 0,
