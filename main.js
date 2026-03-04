@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.99';
+const APP_VERSION = '1.1.100';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -921,6 +921,7 @@ const TITLE_MINI_DEMO_MOVE_DURATION_MS = 200;
 const TITLE_MINI_DEMO_OUTRO_HOLD_MS = 2000;
 const TITLE_MINI_DEMO_OUTRO_FADE_MS = 1000;
 const TITLE_MINI_DEMO_ANIMATION_FRAME_MS = 84;
+const TITLE_MINI_DEMO_RESUME_RESET_GAP_MS = 1200;
 const TITLE_MINI_DEMO_THEME_COUNT = 8;
 const titleMiniDemoThemeIndex = Math.floor(Math.random() * TITLE_MINI_DEMO_THEME_COUNT);
 let titleMiniDemoLevelDataByKey = new Map();
@@ -4665,6 +4666,11 @@ function createCanvas() {
 // Handle PWA background/foreground transitions to fix stuck input
 function setupBackgroundAppHandler() {
     document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            titleMiniDemoState = null;
+            return;
+        }
+
         if (!document.hidden) {
             // App returned to foreground - clear all stuck input states
             pressedKeys.clear();
@@ -4679,6 +4685,10 @@ function setupBackgroundAppHandler() {
             if (touchMoveTimer) {
                 clearInterval(touchMoveTimer);
                 touchMoveTimer = null;
+            }
+
+            if (currentGameState === GAME_STATES.TITLE) {
+                titleMiniDemoState = null;
             }
         }
     });
@@ -7255,6 +7265,11 @@ function advanceTitleMiniDemoState(nowMs) {
     }
 
     const state = titleMiniDemoState;
+
+    if ((nowMs - state.lastUpdateAt) > TITLE_MINI_DEMO_RESUME_RESET_GAP_MS) {
+        titleMiniDemoState = createTitleMiniDemoState(nowMs, activePreset);
+        return titleMiniDemoState;
+    }
 
     if (updateTitleMiniDemoVisibilityPhase(state, nowMs)) {
         titleMiniDemoState = createTitleMiniDemoState(nowMs, activePreset);
