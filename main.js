@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.96';
+const APP_VERSION = '1.1.97';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -900,9 +900,20 @@ const SOLUTION_SAVED_HINT_DURATION_MS = 5000;
 let solutionSavedHintStartTime = 0;
 let currentLevelLoadSerial = 0;
 let hintedLevelLoadSerial = 0;
-const TITLE_MINI_DEMO_SET = 'Microban_I';
-const TITLE_MINI_DEMO_LEVEL = 1;
-const TITLE_MINI_DEMO_SOLUTION = 'dlUrrrdLullddrUluRuulDrddrruLdlUU';
+const TITLE_MINI_DEMO_PRESETS = {
+    portrait: {
+        key: 'portrait',
+        setName: 'Microban_I',
+        levelNumber: 1,
+        solution: 'dlUrrrdLullddrUluRuulDrddrruLdlUU'
+    },
+    landscape: {
+        key: 'landscape',
+        setName: 'Microban_I',
+        levelNumber: 6,
+        solution: 'dlllllululllddduRluurDRRRRRdrrruullDurrddlLLLulllllddrrUdlluurRRRRRdrrruullDurrddlLLullllllddrUluRRRRRRdrrruullDurrddlL'
+    }
+};
 const TITLE_MINI_DEMO_START_DELAY_MS = 900;
 const TITLE_MINI_DEMO_STEP_INTERVAL_MS = 220;
 const TITLE_MINI_DEMO_MOVE_DURATION_MS = 200;
@@ -910,7 +921,7 @@ const TITLE_MINI_DEMO_END_DELAY_MS = 1400;
 const TITLE_MINI_DEMO_ANIMATION_FRAME_MS = 84;
 const TITLE_MINI_DEMO_THEME_COUNT = 8;
 const titleMiniDemoThemeIndex = Math.floor(Math.random() * TITLE_MINI_DEMO_THEME_COUNT);
-let titleMiniDemoLevelData = null;
+let titleMiniDemoLevelDataByKey = new Map();
 let titleMiniDemoState = null;
 
 function triggerSavedSolutionHintIfAvailable() {
@@ -3250,8 +3261,9 @@ function updateTitleScreenUI() {
     const isMobileLandscape = width > height && height < 600;
     const isNarrowPortrait = height > width && width <= 500;
     const isUltraWide = aspectRatio >= 2;
-    const logoDesktopCapWidth = 840;
-    const logoDesktopCapHeight = 270;
+    const isWideDesktop = aspectRatio >= 1.55;
+    const logoDesktopCapWidth = isUltraWide ? 1120 : isWideDesktop ? 980 : 840;
+    const logoDesktopCapHeight = isUltraWide ? 420 : isWideDesktop ? 360 : 270;
 
     let logoMaxWidth;
     let logoMaxHeight;
@@ -3262,8 +3274,10 @@ function updateTitleScreenUI() {
         logoMaxWidth = width * 0.6;
         logoMaxHeight = height * 0.25;
     } else {
-        logoMaxWidth = Math.min(width * 0.7, logoDesktopCapWidth);
-        logoMaxHeight = Math.min(height * 0.3, logoDesktopCapHeight);
+        const desktopLogoWidthFactor = isUltraWide ? 0.82 : isWideDesktop ? 0.76 : 0.7;
+        const desktopLogoHeightFactor = isUltraWide ? 0.42 : isWideDesktop ? 0.36 : 0.3;
+        logoMaxWidth = Math.min(width * desktopLogoWidthFactor, logoDesktopCapWidth);
+        logoMaxHeight = Math.min(height * desktopLogoHeightFactor, logoDesktopCapHeight);
     }
 
     let logoWidth = Math.min(logoMaxWidth, width * 0.92);
@@ -6917,22 +6931,38 @@ function drawFontLoadingOverlay() {
     context.restore();
 }
 
-function getTitleMiniDemoLevelData() {
-    if (titleMiniDemoLevelData) {
-        return titleMiniDemoLevelData;
+function getTitleMiniDemoPreset() {
+    const width = canvas ? canvas.width : window.innerWidth;
+    const height = canvas ? canvas.height : window.innerHeight;
+
+    if (width > height) {
+        return TITLE_MINI_DEMO_PRESETS.landscape;
+    }
+
+    return TITLE_MINI_DEMO_PRESETS.portrait;
+}
+
+function getTitleMiniDemoLevelData(preset = getTitleMiniDemoPreset()) {
+    if (!preset) {
+        return null;
+    }
+
+    const cacheKey = `${preset.setName}:${preset.levelNumber}`;
+    if (titleMiniDemoLevelDataByKey.has(cacheKey)) {
+        return titleMiniDemoLevelDataByKey.get(cacheKey);
     }
 
     if (typeof LevelManager === 'undefined' || typeof LevelManager.getParsedLevel !== 'function') {
         return null;
     }
 
-    const parsed = LevelManager.getParsedLevel(TITLE_MINI_DEMO_SET, TITLE_MINI_DEMO_LEVEL);
+    const parsed = LevelManager.getParsedLevel(preset.setName, preset.levelNumber);
     if (!parsed) {
         return null;
     }
 
-    titleMiniDemoLevelData = parsed;
-    return titleMiniDemoLevelData;
+    titleMiniDemoLevelDataByKey.set(cacheKey, parsed);
+    return parsed;
 }
 
 function getTitleMiniDemoIdleAnimationState(facingDirection) {
@@ -6963,13 +6993,17 @@ function getTitleMiniDemoMoveAnimationInfo(direction) {
     return { animationState: 'moving-up', facingDirection: 'up' };
 }
 
-function createTitleMiniDemoState(nowMs = Date.now()) {
-    const levelData = getTitleMiniDemoLevelData();
+function createTitleMiniDemoState(nowMs = Date.now(), preset = getTitleMiniDemoPreset()) {
+    const levelData = getTitleMiniDemoLevelData(preset);
     if (!levelData) {
         return null;
     }
 
+    const solution = typeof preset?.solution === 'string' ? preset.solution : '';
+
     return {
+        presetKey: preset?.key || 'portrait',
+        solution,
         level: levelData,
         player: {
             x: levelData.playerStart.x,
@@ -7107,8 +7141,10 @@ function updateTitleMiniDemoAnimation(state, nowMs) {
 }
 
 function advanceTitleMiniDemoState(nowMs) {
-    if (!titleMiniDemoState) {
-        titleMiniDemoState = createTitleMiniDemoState(nowMs);
+    const activePreset = getTitleMiniDemoPreset();
+
+    if (!titleMiniDemoState || titleMiniDemoState.presetKey !== activePreset.key) {
+        titleMiniDemoState = createTitleMiniDemoState(nowMs, activePreset);
     }
 
     if (!titleMiniDemoState) {
@@ -7120,7 +7156,7 @@ function advanceTitleMiniDemoState(nowMs) {
     if (state.isSolved) {
         updateTitleMiniDemoAnimation(state, nowMs);
         if (nowMs >= state.nextTickAt) {
-            titleMiniDemoState = createTitleMiniDemoState(nowMs);
+            titleMiniDemoState = createTitleMiniDemoState(nowMs, activePreset);
         }
         return titleMiniDemoState;
     }
@@ -7128,7 +7164,7 @@ function advanceTitleMiniDemoState(nowMs) {
     if (state.activeMove && nowMs >= state.activeMove.endsAt) {
         completeTitleMiniDemoMove(state);
 
-        if (state.moveIndex >= TITLE_MINI_DEMO_SOLUTION.length) {
+        if (state.moveIndex >= state.solution.length) {
             state.isSolved = true;
             state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
         } else {
@@ -7138,7 +7174,7 @@ function advanceTitleMiniDemoState(nowMs) {
     }
 
     if (!state.activeMove && !state.isSolved && nowMs >= state.nextTickAt) {
-        const moveChar = TITLE_MINI_DEMO_SOLUTION[state.moveIndex];
+        const moveChar = state.solution[state.moveIndex];
         state.moveIndex += 1;
 
         const moveData = typeof moveChar === 'string'
@@ -7147,7 +7183,7 @@ function advanceTitleMiniDemoState(nowMs) {
 
         if (moveData) {
             beginTitleMiniDemoMove(state, moveData);
-        } else if (state.moveIndex >= TITLE_MINI_DEMO_SOLUTION.length) {
+        } else if (state.moveIndex >= state.solution.length) {
             state.isSolved = true;
             state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
         } else {
@@ -7227,7 +7263,7 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
     const marginY = isMobileLandscape ? 8 : 12;
     const availableWidth = Math.max(0, canvas.width - marginX * 2);
     const availableHeight = Math.max(0, areaBottom - areaTop - marginY * 2);
-    const maxTileSize = isMobileLandscape ? 34 : isMobilePortrait ? 48 : 54;
+    const maxTileSize = isMobileLandscape ? 34 : isMobilePortrait ? 48 : 64;
     const minTileSize = isMobileLandscape ? 8 : 10;
 
     const safeTileSizes = [4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64];
@@ -7362,7 +7398,7 @@ function drawTitleScreen() {
     // Detect device orientation and adjust sizing accordingly
     const isMobilePortrait = canvas.height > canvas.width && canvas.width < 768;
     const isMobileLandscape = canvas.width > canvas.height && canvas.height < 600;
-    const aspectRatio = canvas.height / canvas.width;
+    const aspectRatio = canvas.width / Math.max(1, canvas.height);
     
     // Calculate responsive font sizes with different scaling for each mode
     let baseSize;
@@ -7391,8 +7427,10 @@ function drawTitleScreen() {
     }
     
     // Draw cartoon logo image instead of text title
-    const logoDesktopCapWidth = 840;
-    const logoDesktopCapHeight = 270;
+    const isUltraWide = aspectRatio >= 2;
+    const isWideDesktop = aspectRatio >= 1.55;
+    const logoDesktopCapWidth = isUltraWide ? 1120 : isWideDesktop ? 980 : 840;
+    const logoDesktopCapHeight = isUltraWide ? 420 : isWideDesktop ? 360 : 270;
     let logoMaxWidth;
     let logoMaxHeight;
 
@@ -7400,8 +7438,10 @@ function drawTitleScreen() {
         logoMaxWidth = canvas.width * 0.6;
         logoMaxHeight = canvas.height * 0.25;
     } else {
-        logoMaxWidth = Math.min(canvas.width * 0.7, logoDesktopCapWidth);
-        logoMaxHeight = Math.min(canvas.height * 0.3, logoDesktopCapHeight);
+        const desktopLogoWidthFactor = isUltraWide ? 0.82 : isWideDesktop ? 0.76 : 0.7;
+        const desktopLogoHeightFactor = isUltraWide ? 0.42 : isWideDesktop ? 0.36 : 0.3;
+        logoMaxWidth = Math.min(canvas.width * desktopLogoWidthFactor, logoDesktopCapWidth);
+        logoMaxHeight = Math.min(canvas.height * desktopLogoHeightFactor, logoDesktopCapHeight);
     }
     
     // Calculate logo size maintaining aspect ratio
