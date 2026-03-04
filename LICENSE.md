@@ -1,8 +1,8 @@
-# Crate Escape Non-Commercial Attribution License (CE-NCAL) v1.0
+# Crate Escape Non-Commercial Attribution Licence (CE-NCAL) v1.0
 
 Copyright (c) 2026 Neil Kendall. All rights reserved.
 
-This license applies to the original code and original project-owned assets in this repository unless a file or notice states otherwise.
+This licence applies to the original code and original project-owned assets in this repository unless a file or notice states otherwise.
 
 ## 1) What you may do
 
@@ -25,7 +25,7 @@ If you use, copy, modify, or share this project, you must:
 
 ## 3) Commercial use is not permitted
 
-You may not sell, license for a fee, monetize, or otherwise use this project for commercial advantage without prior written permission from Neil Kendall.
+You may not sell, grant paid licences for, monetise, or otherwise use this project for commercial advantage without prior written permission from Neil Kendall.
 
 Examples of commercial use include (without limitation):
 
@@ -33,18 +33,18 @@ Examples of commercial use include (without limitation):
 - ad-monetised deployments;
 - selling services/products that are primarily based on this project.
 
-For commercial licensing requests, contact: unimatrix@korovatron.co.uk
+For commercial licence enquiries, contact: unimatrix@korovatron.co.uk
 
 ## 4) Third-party content
 
-This license does not grant rights to third-party content.
-Third-party assets, level sets, libraries, and services remain subject to their own licenses/permissions as documented in THIRD_PARTY_NOTICES.md and related notices.
+This licence does not grant rights to third-party content.
+Third-party assets, level sets, libraries, and services remain subject to their own licences/permissions as documented in THIRD_PARTY_NOTICES.md and related notices.
 
-If there is any conflict between this license and a third-party notice for specific content, the third-party notice controls for that content.
+If there is any conflict between this licence and a third-party notice for specific content, the third-party notice controls for that content.
 
 ## 5) Trademarks and branding
 
-This license does not grant trademark rights to the project name, logos, or branding, except as needed for accurate attribution.
+This licence does not grant trademark rights to the project name, logos, or branding, except as needed for accurate attribution.
 
 ## 6) No warranty
 
@@ -56,5 +56,5 @@ TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE AUTHOR SHALL NOT BE LIABLE FOR ANY C
 
 ## 8) Termination
 
-If you violate this license, your rights under it terminate automatically.
+If you violate this licence, your rights under it terminate automatically.
 Rights may be reinstated at the author’s sole discretion if the violation is cured.

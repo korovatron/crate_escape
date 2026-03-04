@@ -4,7 +4,7 @@
 
 ![Crate Escape gameplay screenshot](assets/images/screenshots/4.png)
 
-Crate Escape is a Sokoban-style puzzle game built for web and installable offline play. Optimized for desktop, tablet, and mobile, it lets you push crates across classic level collections, track your progress, plan and step through solutions with LURD controls, and design/share playable custom levels.
+Crate Escape is a Sokoban-style puzzle game built for web and installable offline play. Optimised for desktop, tablet, and mobile, it lets you push crates across classic level collections, track your progress, plan and step through solutions with LURD controls, and design/share playable custom levels.
 
 ## Live Play
 
@@ -29,9 +29,9 @@ Crate Escape is a Sokoban-style puzzle game built for web and installable offlin
 - Plan, step through, replay, and share solutions with LURD controls.
 - Fast reset/undo/redo workflow for puzzle iteration.
 
-## License
+## Licence
 
-This repository is released under the [Crate Escape Non-Commercial Attribution License (CE-NCAL) v1.0](LICENSE.md).
+This repository is released under the [Crate Escape Non-Commercial Attribution Licence (CE-NCAL) v1.0](LICENSE.md).
 
 - Non-commercial use, modification, and sharing are allowed.
 - Attribution to Neil Kendall is required.

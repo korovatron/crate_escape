@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file records third-party content used by this project and the known licensing/usage terms.
+This file records third-party content used by this project and the known licence/usage terms.
 
 ## Project
 - Name: The Crate Escape
@@ -12,7 +12,7 @@ This file records third-party content used by this project and the known licensi
 ### 1) Sokoban Skin / Sprites
 - Source: Kenney
 - URL: https://kenney.nl/
-- License: CC0 1.0 Universal
+- Licence: CC0 1.0 Universal
 - Notes: Public-domain dedication (to the extent allowed by law). Attribution not required, but credited in-game.
 
 ### 2) Level Designs (David W. Skinner: Microban and Sasquatch)
@@ -27,9 +27,9 @@ This file records third-party content used by this project and the known licensi
 ### 2b) Level Set: Magic Pearls
 - Author credited: Ward De Langhe
 - Source: In-project level set (origin tracked by project maintainer)
-- License status: Unverified / unknown at this time
+- Licence status: Unverified / unknown at this time
 - Usage in this project: Included with attribution in credits
-- Notes: Treat as separately licensed until explicit permission or license text is obtained. Do not assume GPL compatibility without confirmation.
+- Notes: Treat as covered by a separate licence until explicit permission or licence text is obtained. Do not assume GPL compatibility without confirmation.
 
 ### 2c) Level Sets: Grigr Collection
 - Author credited: Evgeniy Grigoriev
@@ -71,8 +71,8 @@ This file records third-party content used by this project and the known licensi
 
 ## Items to Keep Verified
 - Keep attribution for David W. Skinner level sets wherever distributed.
-- Obtain explicit permission/license terms for the Magic Pearls set by Ward De Langhe before GPL relicensing of bundled level content.
-- If licensing model changes (e.g., GPL for repository), keep level files clearly marked as separately licensed unless explicit relicensing permission is obtained.
+- Obtain explicit permission/licence terms for the Magic Pearls set by Ward De Langhe before GPL relicensing of bundled level content.
+- If the licence model changes (e.g., GPL for repository), keep level files clearly marked as separately licensed unless explicit re-licensing permission is obtained.
 - Recheck any newly added third-party assets (music, fonts, art packs) before release.
 
 ## Last Updated
