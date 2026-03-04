@@ -30,7 +30,7 @@ You may not sell, license for a fee, monetize, or otherwise use this project for
 Examples of commercial use include (without limitation):
 
 - paid downloads, paid access, subscriptions, or paid bundles;
-- ad-monetized deployments;
+- ad-monetised deployments;
 - selling services/products that are primarily based on this project.
 
 For commercial licensing requests, contact: unimatrix@korovatron.co.uk

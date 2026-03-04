@@ -14,7 +14,7 @@ Crate Escape is a Sokoban-style puzzle game built for web and installable offlin
 
 - Includes complete **Microban**, **Sasquatch**, **Magic Pearls**, and **Grigr** level collections (**2001**, **2002**, **Challenge**, **Comet**, **Special**, **Star**, **Sun**).
 - **Grigr** level sets are included with direct author permission (Evgeniy Grigoriev, 2026-03-01).
-- Optimized for **desktop**, **tablet**, and **mobile**.
+- Optimised for **desktop**, **tablet**, and **mobile**.
 - Full input support for **keyboard/mouse** and **touch** controls.
 - Installable as a **PWA** with **offline support**.
 - Save level progress, best stats, and solutions locally.
