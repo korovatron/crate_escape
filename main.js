@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.89';
+const APP_VERSION = '1.1.90';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -57,7 +57,7 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             playSound('click');
             if (isLevelDesignerModalOpen()) {
-                closeLevelDesignerModal();
+                closeLevelDesignerModal({ restoreImportTextareaFocus: true });
             } else if (isImportLevelModalOpen()) {
                 closeImportLevelModal();
             } else if (isLegalModalOpen()) {
@@ -2216,7 +2216,8 @@ function openLevelDesignerModal() {
     renderLevelDesigner();
 }
 
-function closeLevelDesignerModal() {
+function closeLevelDesignerModal(options = {}) {
+    const { restoreImportTextareaFocus = false } = options;
     const { overlay } = getLevelDesignerElements();
     if (!overlay) {
         return;
@@ -2238,6 +2239,19 @@ function closeLevelDesignerModal() {
     overlay.style.backdropFilter = '';
     overlay.style.webkitBackdropFilter = '';
     updateLevelDesignerCursor();
+
+    if (restoreImportTextareaFocus && !isTouchDevice() && isImportLevelModalOpen()) {
+        const { textarea } = getImportLevelElements();
+        if (textarea) {
+            window.setTimeout(() => {
+                try {
+                    textarea.focus({ preventScroll: true });
+                } catch (_error) {
+                    textarea.focus();
+                }
+            }, 0);
+        }
+    }
 }
 
 function initializeLevelDesignerUI() {
