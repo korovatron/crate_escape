@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.101';
+const APP_VERSION = '1.1.102';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -684,7 +684,7 @@ let solutionReplayData = {
     currentMoveIndex: 0, // Index into the solution string
     solution: '',
     intervalId: null,
-    moveDelay: 500, // milliseconds between moves (increased for better visibility)
+    moveDelay: 250, // milliseconds between replay ticks (closer to normal movement cadence)
     simulatedContinuousDirection: null, // Track simulated continuous input for smooth animation
     shouldClearContinuousAfterMove: false, // Flag to defer clearing continuous direction until move completes
     inputDraft: '',
@@ -9797,42 +9797,48 @@ function executeNextReplayMove() {
     
     // Don't execute next move if player is currently moving
     if (isPlayerMoving) return;
-    
-    // Check if we're at the end
-    if (solutionReplayData.currentMoveIndex >= solutionReplayData.solution.length) {
-        // Solution complete
-        completeSolutionReplay();
-        return;
-    }
-    
-    // Get the current character from the solution string
-    const currentChar = solutionReplayData.solution[solutionReplayData.currentMoveIndex];
-    const direction = getDirectionFromChar(currentChar);
 
-    if (!direction) {
-        removeReplayStepAtCurrentIndex();
-        return;
-    }
-    
-    const nextX = playerPos.x + direction.x;
-    const nextY = playerPos.y + direction.y;
-    const isPushMove = findBoxAt(nextX, nextY) !== -1;
-
-    // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
-    const moveSuccessful = attemptPlayerMove(direction);
-    
-    if (moveSuccessful) {
-        if (isPushMove) {
-            promoteReplayDraftMoveToPush(solutionReplayData.currentMoveIndex);
+    let inspectedMoves = 0;
+    while (solutionReplayData.currentMoveIndex < solutionReplayData.solution.length) {
+        // Defensive guard against pathological loops if sequence mutates unexpectedly.
+        if (inspectedMoves > solutionReplayData.solution.length + 1) {
+            break;
         }
-        // Move to next character in solution
-        solutionReplayData.currentMoveIndex++;
-        solutionReplayData.hasExecutedMoves = true;
-    } else {
+        inspectedMoves++;
+
+        const currentIndex = solutionReplayData.currentMoveIndex;
+        const currentChar = solutionReplayData.solution[currentIndex];
+        const direction = getDirectionFromChar(currentChar);
+
+        if (!direction) {
+            removeReplayStepAtCurrentIndex();
+            continue;
+        }
+
+        const nextX = playerPos.x + direction.x;
+        const nextY = playerPos.y + direction.y;
+        const isPushMove = findBoxAt(nextX, nextY) !== -1;
+
+        // Directly attempt the move (continuous direction logic now handled in startPlayerMove)
+        const moveSuccessful = attemptPlayerMove(direction);
+
+        if (moveSuccessful) {
+            if (isPushMove) {
+                promoteReplayDraftMoveToPush(currentIndex);
+            }
+
+            solutionReplayData.currentMoveIndex++;
+            solutionReplayData.hasExecutedMoves = true;
+            return;
+        }
+
+        // Skip blocked moves immediately so repeated invalid chars do not create interval pauses.
         removeReplayStepAtCurrentIndex();
         solutionReplayData.simulatedContinuousDirection = null;
         solutionReplayData.shouldClearContinuousAfterMove = false;
     }
+
+    completeSolutionReplay();
 }
 
 function getDirectionFromChar(dirChar) {
