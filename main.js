@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.95';
+const APP_VERSION = '1.1.96';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -900,6 +900,18 @@ const SOLUTION_SAVED_HINT_DURATION_MS = 5000;
 let solutionSavedHintStartTime = 0;
 let currentLevelLoadSerial = 0;
 let hintedLevelLoadSerial = 0;
+const TITLE_MINI_DEMO_SET = 'Microban_I';
+const TITLE_MINI_DEMO_LEVEL = 1;
+const TITLE_MINI_DEMO_SOLUTION = 'dlUrrrdLullddrUluRuulDrddrruLdlUU';
+const TITLE_MINI_DEMO_START_DELAY_MS = 900;
+const TITLE_MINI_DEMO_STEP_INTERVAL_MS = 220;
+const TITLE_MINI_DEMO_MOVE_DURATION_MS = 200;
+const TITLE_MINI_DEMO_END_DELAY_MS = 1400;
+const TITLE_MINI_DEMO_ANIMATION_FRAME_MS = 84;
+const TITLE_MINI_DEMO_THEME_COUNT = 8;
+const titleMiniDemoThemeIndex = Math.floor(Math.random() * TITLE_MINI_DEMO_THEME_COUNT);
+let titleMiniDemoLevelData = null;
+let titleMiniDemoState = null;
 
 function triggerSavedSolutionHintIfAvailable() {
     if (currentLevelLoadSerial <= 0 || hintedLevelLoadSerial === currentLevelLoadSerial) {
@@ -3236,6 +3248,7 @@ function updateTitleScreenUI() {
     const aspectRatio = width / Math.max(1, height);
     const isTouchLandscape = isTouchDevice() && width > height;
     const isMobileLandscape = width > height && height < 600;
+    const isNarrowPortrait = height > width && width <= 500;
     const isUltraWide = aspectRatio >= 2;
 
     const logoMaxWidth = isTouchLandscape
@@ -3260,6 +3273,8 @@ function updateTitleScreenUI() {
 
     const taglineSize = isTouchLandscape
         ? Math.max(14, Math.min(20, height * 0.048))
+        : isNarrowPortrait
+        ? Math.max(16, Math.min(24, width * 0.052))
         : Math.max(13, Math.min(40, shortSide * (isUltraWide ? 0.056 : 0.04)));
     const startFontSize = Math.max(16, Math.min(32, shortSide * 0.048));
     const startPadY = Math.max(10, Math.min(16, shortSide * 0.02));
@@ -6900,6 +6915,428 @@ function drawFontLoadingOverlay() {
     context.restore();
 }
 
+function getTitleMiniDemoLevelData() {
+    if (titleMiniDemoLevelData) {
+        return titleMiniDemoLevelData;
+    }
+
+    if (typeof LevelManager === 'undefined' || typeof LevelManager.getParsedLevel !== 'function') {
+        return null;
+    }
+
+    const parsed = LevelManager.getParsedLevel(TITLE_MINI_DEMO_SET, TITLE_MINI_DEMO_LEVEL);
+    if (!parsed) {
+        return null;
+    }
+
+    titleMiniDemoLevelData = parsed;
+    return titleMiniDemoLevelData;
+}
+
+function getTitleMiniDemoIdleAnimationState(facingDirection) {
+    switch (facingDirection) {
+        case 'up':
+            return 'idle-up';
+        case 'left':
+            return 'idle-left';
+        case 'right':
+            return 'idle-right';
+        case 'down':
+        default:
+            return 'idle-down';
+    }
+}
+
+function getTitleMiniDemoMoveAnimationInfo(direction) {
+    if (direction.x > 0) {
+        return { animationState: 'moving-right', facingDirection: 'right' };
+    }
+    if (direction.x < 0) {
+        return { animationState: 'moving-left', facingDirection: 'left' };
+    }
+    if (direction.y > 0) {
+        return { animationState: 'moving-down', facingDirection: 'down' };
+    }
+
+    return { animationState: 'moving-up', facingDirection: 'up' };
+}
+
+function createTitleMiniDemoState(nowMs = Date.now()) {
+    const levelData = getTitleMiniDemoLevelData();
+    if (!levelData) {
+        return null;
+    }
+
+    return {
+        level: levelData,
+        player: {
+            x: levelData.playerStart.x,
+            y: levelData.playerStart.y
+        },
+        boxes: levelData.boxes.map((box) => ({ x: box.x, y: box.y })),
+        goalsSet: new Set(levelData.goals.map((goal) => `${goal.x},${goal.y}`)),
+        moveIndex: 0,
+        isSolved: false,
+        nextTickAt: nowMs + TITLE_MINI_DEMO_START_DELAY_MS,
+        activeMove: null,
+        facingDirection: 'down',
+        animationState: 'idle-down',
+        animationFrame: 0,
+        animationTimerMs: 0,
+        lastUpdateAt: nowMs
+    };
+}
+
+function isTitleMiniDemoWall(levelData, x, y) {
+    if (!levelData || y < 0 || y >= levelData.height || x < 0 || x >= levelData.width) {
+        return true;
+    }
+
+    return levelData.grid[y][x] === '#';
+}
+
+function findTitleMiniDemoBoxIndexAt(state, x, y) {
+    for (let boxIndex = 0; boxIndex < state.boxes.length; boxIndex++) {
+        const box = state.boxes[boxIndex];
+        if (box.x === x && box.y === y) {
+            return boxIndex;
+        }
+    }
+
+    return -1;
+}
+
+function buildTitleMiniDemoMove(state, directionChar, nowMs) {
+    const direction = getDirectionFromChar(directionChar);
+    if (!direction) {
+        return null;
+    }
+
+    const targetX = state.player.x + direction.x;
+    const targetY = state.player.y + direction.y;
+
+    if (isTitleMiniDemoWall(state.level, targetX, targetY)) {
+        return null;
+    }
+
+    let boxMove = null;
+
+    const blockingBoxIndex = findTitleMiniDemoBoxIndexAt(state, targetX, targetY);
+    if (blockingBoxIndex !== -1) {
+        const pushTargetX = targetX + direction.x;
+        const pushTargetY = targetY + direction.y;
+
+        if (isTitleMiniDemoWall(state.level, pushTargetX, pushTargetY) || findTitleMiniDemoBoxIndexAt(state, pushTargetX, pushTargetY) !== -1) {
+            return null;
+        }
+
+        const movingBox = state.boxes[blockingBoxIndex];
+        boxMove = {
+            index: blockingBoxIndex,
+            from: { x: movingBox.x, y: movingBox.y },
+            to: { x: pushTargetX, y: pushTargetY }
+        };
+    }
+
+    return {
+        direction,
+        fromPlayer: { x: state.player.x, y: state.player.y },
+        toPlayer: { x: targetX, y: targetY },
+        boxMove,
+        startedAt: nowMs,
+        endsAt: nowMs + TITLE_MINI_DEMO_MOVE_DURATION_MS
+    };
+}
+
+function beginTitleMiniDemoMove(state, moveData) {
+    if (!moveData) {
+        return;
+    }
+
+    const animationInfo = getTitleMiniDemoMoveAnimationInfo(moveData.direction);
+    state.facingDirection = animationInfo.facingDirection;
+
+    if (state.animationState !== animationInfo.animationState) {
+        state.animationState = animationInfo.animationState;
+        state.animationFrame = 0;
+        state.animationTimerMs = 0;
+    }
+
+    state.activeMove = moveData;
+}
+
+function completeTitleMiniDemoMove(state) {
+    if (!state.activeMove) {
+        return;
+    }
+
+    state.player.x = state.activeMove.toPlayer.x;
+    state.player.y = state.activeMove.toPlayer.y;
+
+    if (state.activeMove.boxMove) {
+        const { index, to } = state.activeMove.boxMove;
+        state.boxes[index].x = to.x;
+        state.boxes[index].y = to.y;
+    }
+
+    state.activeMove = null;
+    state.animationState = getTitleMiniDemoIdleAnimationState(state.facingDirection);
+    state.animationFrame = 0;
+    state.animationTimerMs = 0;
+}
+
+function updateTitleMiniDemoAnimation(state, nowMs) {
+    const deltaMs = Math.max(0, nowMs - state.lastUpdateAt);
+    state.lastUpdateAt = nowMs;
+
+    const frameSequence = playerAnimations[state.animationState] || playerAnimations['idle-down'] || [3];
+    if (!frameSequence || frameSequence.length <= 1) {
+        state.animationFrame = 0;
+        state.animationTimerMs = 0;
+        return;
+    }
+
+    state.animationTimerMs += deltaMs;
+
+    while (state.animationTimerMs >= TITLE_MINI_DEMO_ANIMATION_FRAME_MS) {
+        state.animationTimerMs -= TITLE_MINI_DEMO_ANIMATION_FRAME_MS;
+        state.animationFrame = (state.animationFrame + 1) % frameSequence.length;
+    }
+}
+
+function advanceTitleMiniDemoState(nowMs) {
+    if (!titleMiniDemoState) {
+        titleMiniDemoState = createTitleMiniDemoState(nowMs);
+    }
+
+    if (!titleMiniDemoState) {
+        return null;
+    }
+
+    const state = titleMiniDemoState;
+
+    if (state.isSolved) {
+        updateTitleMiniDemoAnimation(state, nowMs);
+        if (nowMs >= state.nextTickAt) {
+            titleMiniDemoState = createTitleMiniDemoState(nowMs);
+        }
+        return titleMiniDemoState;
+    }
+
+    if (state.activeMove && nowMs >= state.activeMove.endsAt) {
+        completeTitleMiniDemoMove(state);
+
+        if (state.moveIndex >= TITLE_MINI_DEMO_SOLUTION.length) {
+            state.isSolved = true;
+            state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
+        } else {
+            const postMoveDelay = Math.max(0, TITLE_MINI_DEMO_STEP_INTERVAL_MS - TITLE_MINI_DEMO_MOVE_DURATION_MS);
+            state.nextTickAt = nowMs + postMoveDelay;
+        }
+    }
+
+    if (!state.activeMove && !state.isSolved && nowMs >= state.nextTickAt) {
+        const moveChar = TITLE_MINI_DEMO_SOLUTION[state.moveIndex];
+        state.moveIndex += 1;
+
+        const moveData = typeof moveChar === 'string'
+            ? buildTitleMiniDemoMove(state, moveChar, nowMs)
+            : null;
+
+        if (moveData) {
+            beginTitleMiniDemoMove(state, moveData);
+        } else if (state.moveIndex >= TITLE_MINI_DEMO_SOLUTION.length) {
+            state.isSolved = true;
+            state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
+        } else {
+            state.nextTickAt = nowMs + TITLE_MINI_DEMO_STEP_INTERVAL_MS;
+        }
+    }
+
+    updateTitleMiniDemoAnimation(state, nowMs);
+    return state;
+}
+
+function getTitleMiniDemoBounds(defaultTop, defaultBottom) {
+    let top = defaultTop;
+    let bottom = defaultBottom;
+
+    const { container, tagline, startWrap } = getTitleScreenElements();
+    if (!container || !tagline || !startWrap) {
+        return { top, bottom };
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const taglineRect = tagline.getBoundingClientRect();
+    const startWrapRect = startWrap.getBoundingClientRect();
+
+    if (containerRect.height <= 0 || taglineRect.height <= 0 || startWrapRect.height <= 0) {
+        return { top, bottom };
+    }
+
+    const topPadding = Math.max(8, Math.floor(canvas.height * 0.014));
+    const bottomPadding = Math.max(8, Math.floor(canvas.height * 0.018));
+    const candidateTop = Math.floor(taglineRect.bottom - containerRect.top + topPadding);
+    const candidateBottom = Math.floor(startWrapRect.top - containerRect.top - bottomPadding);
+
+    if (candidateBottom > candidateTop + 24) {
+        top = candidateTop;
+        bottom = candidateBottom;
+    }
+
+    return { top, bottom };
+}
+
+function drawTitleMiniDemoSprite(spriteName, x, y, size) {
+    if (!textureAtlas || !textureAtlas.frames || !spriteSheet) {
+        return false;
+    }
+
+    const sprite = textureAtlas.frames[spriteName];
+    if (!sprite) {
+        return false;
+    }
+
+    context.drawImage(
+        spriteSheet,
+        sprite.x, sprite.y, sprite.width, sprite.height,
+        x, y, size, size
+    );
+
+    return true;
+}
+
+function getTitleMiniDemoPlayerSpriteName(state) {
+    const frameSequence = playerAnimations[state.animationState] || playerAnimations['idle-down'] || [3];
+    const safeFrameIndex = Math.max(0, Math.min(state.animationFrame, frameSequence.length - 1));
+    const frameNumber = frameSequence[safeFrameIndex] || 3;
+    return `player_${frameNumber.toString().padStart(2, '0')}.png`;
+}
+
+function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandscape) {
+    const nowMs = Date.now();
+    const state = advanceTitleMiniDemoState(nowMs);
+    if (!state) {
+        return;
+    }
+
+    const levelData = state.level;
+    const marginX = isMobileLandscape ? 12 : 18;
+    const marginY = isMobileLandscape ? 8 : 12;
+    const availableWidth = Math.max(0, canvas.width - marginX * 2);
+    const availableHeight = Math.max(0, areaBottom - areaTop - marginY * 2);
+    const maxTileSize = isMobileLandscape ? 34 : isMobilePortrait ? 48 : 54;
+    const minTileSize = isMobileLandscape ? 8 : 10;
+
+    let demoTileSize = Math.floor(Math.min(
+        availableWidth / Math.max(1, levelData.width),
+        availableHeight / Math.max(1, levelData.height)
+    ));
+    demoTileSize = Math.min(demoTileSize, maxTileSize);
+
+    if (demoTileSize < minTileSize) {
+        return;
+    }
+
+    const boardPixelWidth = levelData.width * demoTileSize;
+    const boardPixelHeight = levelData.height * demoTileSize;
+    const boardStartX = Math.floor((canvas.width - boardPixelWidth) / 2);
+    const boardStartY = Math.floor(areaTop + (areaBottom - areaTop - boardPixelHeight) / 2);
+    const sprites = getDesignerThemeSprites(titleMiniDemoThemeIndex);
+
+    let playerTileX = state.player.x;
+    let playerTileY = state.player.y;
+    let movingBoxRenderData = null;
+
+    if (state.activeMove) {
+        const moveDuration = Math.max(1, state.activeMove.endsAt - state.activeMove.startedAt);
+        const moveProgress = Math.max(0, Math.min(1, (nowMs - state.activeMove.startedAt) / moveDuration));
+
+        playerTileX = state.activeMove.fromPlayer.x + ((state.activeMove.toPlayer.x - state.activeMove.fromPlayer.x) * moveProgress);
+        playerTileY = state.activeMove.fromPlayer.y + ((state.activeMove.toPlayer.y - state.activeMove.fromPlayer.y) * moveProgress);
+
+        if (state.activeMove.boxMove) {
+            movingBoxRenderData = {
+                index: state.activeMove.boxMove.index,
+                x: state.activeMove.boxMove.from.x + ((state.activeMove.boxMove.to.x - state.activeMove.boxMove.from.x) * moveProgress),
+                y: state.activeMove.boxMove.from.y + ((state.activeMove.boxMove.to.y - state.activeMove.boxMove.from.y) * moveProgress)
+            };
+        }
+    }
+
+    for (let rowIndex = 0; rowIndex < levelData.height; rowIndex++) {
+        for (let colIndex = 0; colIndex < levelData.width; colIndex++) {
+            const tileChar = levelData.grid[rowIndex][colIndex];
+            const tileX = boardStartX + colIndex * demoTileSize;
+            const tileY = boardStartY + rowIndex * demoTileSize;
+            const isExteriorSpace = tileChar === ' ' && levelData.exteriorSpaces && levelData.exteriorSpaces.has(`${colIndex},${rowIndex}`);
+
+            if (tileChar === '#') {
+                const drewWall = drawTitleMiniDemoSprite(sprites.wall, tileX, tileY, demoTileSize);
+                if (!drewWall) {
+                    context.fillStyle = '#384657';
+                    context.fillRect(tileX, tileY, demoTileSize, demoTileSize);
+                }
+                continue;
+            }
+
+            if (!isExteriorSpace) {
+                const drewGround = drawTitleMiniDemoSprite(sprites.ground, tileX, tileY, demoTileSize);
+                if (!drewGround) {
+                    context.fillStyle = '#1f2a36';
+                    context.fillRect(tileX, tileY, demoTileSize, demoTileSize);
+                }
+            }
+
+            if (tileChar === '.') {
+                const goalMargin = Math.max(1, Math.floor(demoTileSize / 6));
+                const goalSize = demoTileSize - goalMargin * 2;
+                const goalX = tileX + goalMargin;
+                const goalY = tileY + goalMargin;
+                const drewGoal = drawTitleMiniDemoSprite('environment_06.png', goalX, goalY, goalSize);
+                if (!drewGoal) {
+                    context.fillStyle = '#ffd866';
+                    context.fillRect(goalX, goalY, goalSize, goalSize);
+                }
+            }
+        }
+    }
+
+    for (let boxIndex = 0; boxIndex < state.boxes.length; boxIndex++) {
+        const box = state.boxes[boxIndex];
+        const boxTileX = movingBoxRenderData && movingBoxRenderData.index === boxIndex
+            ? movingBoxRenderData.x
+            : box.x;
+        const boxTileY = movingBoxRenderData && movingBoxRenderData.index === boxIndex
+            ? movingBoxRenderData.y
+            : box.y;
+        const boxX = Math.round(boardStartX + boxTileX * demoTileSize);
+        const boxY = Math.round(boardStartY + boxTileY * demoTileSize);
+        const isOnGoal = (!movingBoxRenderData || movingBoxRenderData.index !== boxIndex) && state.goalsSet.has(`${box.x},${box.y}`);
+        const spriteName = isOnGoal ? sprites.crateOnGoal : sprites.crate;
+        const drewBox = drawTitleMiniDemoSprite(spriteName, boxX, boxY, demoTileSize);
+
+        if (!drewBox) {
+            context.fillStyle = isOnGoal ? '#79e08f' : '#b57a4f';
+            context.fillRect(boxX, boxY, demoTileSize, demoTileSize);
+        }
+    }
+
+    const playerX = Math.round(boardStartX + playerTileX * demoTileSize);
+    const playerY = Math.round(boardStartY + playerTileY * demoTileSize);
+    const playerSpriteName = getTitleMiniDemoPlayerSpriteName(state);
+    let drewPlayer = drawTitleMiniDemoSprite(playerSpriteName, playerX, playerY, demoTileSize);
+
+    if (!drewPlayer) {
+        drewPlayer = drawTitleMiniDemoSprite('player_03.png', playerX, playerY, demoTileSize);
+    }
+
+    if (!drewPlayer) {
+        context.fillStyle = '#7ad2ff';
+        context.fillRect(playerX, playerY, demoTileSize, demoTileSize);
+    }
+}
+
 function drawTitleScreen() {
     // Draw title screen background
     context.fillStyle = "#000000"; // Black background
@@ -6996,8 +7433,6 @@ function drawTitleScreen() {
     
     // Tagline removed by request.
 
-    const shouldDrawMiniDemo = false;
-
     // MIDDLE CONTENT POSITIONING: Use available space between top content and bottom-anchored elements
     
     // Calculate the available space for middle content
@@ -7025,154 +7460,8 @@ function drawTitleScreen() {
     const tempButtonSpacing = isMobileLandscape ? tempButtonHeight * 0.8 : tempButtonHeight * 1.2;
     const bottomBoundary = bottomCreditsY - tempAuthorSize - tempButtonSpacing - tempButtonHeight;
     
-    if (shouldDrawMiniDemo) {
-        // Calculate available space for demo level and determine optimal positioning
-        const availableMiddleSpace = bottomBoundary - yPos;
-        const demoHeight = 3; // tiles
-        
-        // Calculate demo tile size that fits well in available space
-        let baseDemoTileSize;
-        if (isMobilePortrait) {
-            baseDemoTileSize = Math.min(canvas.width / 15, availableMiddleSpace / 8, 40);
-        } else if (isMobileLandscape) {
-            baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 6, 28);
-        } else {
-            baseDemoTileSize = Math.min(canvas.width / 20, availableMiddleSpace / 8, 32);
-        }
-        
-        // Ensure tile size is an integer for pixel-perfect rendering
-        const demoTileSize = Math.floor(baseDemoTileSize);
-        
-        const demoWidth = 7; // 7 tiles wide
-        const totalDemoHeight = demoHeight * demoTileSize;
-        
-        // Center the demo level in the available middle space
-        const middleSpaceCenter = yPos + (availableMiddleSpace / 2);
-        const demoStartY = Math.floor(middleSpaceCenter - (totalDemoHeight / 2));
-        
-        // Pixel-align the demo level position
-        const demoStartX = Math.floor((canvas.width - (demoWidth * demoTileSize)) / 2);
-        
-        // Draw demo level tiles with pixel-perfect positioning
-        for (let y = 0; y < demoHeight; y++) {
-            for (let x = 0; x < demoWidth; x++) {
-                // Ensure pixel-aligned tile positions
-                const tileX = Math.floor(demoStartX + x * demoTileSize);
-                const tileY = Math.floor(demoStartY + y * demoTileSize);
-                
-                if (y === 0 || y === 2 || x === 0 || x === 6) {
-                    // Wall tiles - use current theme
-                    const sprites = getThemeSprites();
-                    const sprite = textureAtlas.frames[sprites.wall];
-                    context.drawImage(
-                        spriteSheet,
-                        sprite.x, sprite.y, sprite.width, sprite.height,
-                        tileX, tileY, demoTileSize, demoTileSize
-                    );
-                } else if (y === 1) {
-                    // Floor corridor - use current theme
-                    const sprites = getThemeSprites();
-                    const sprite = textureAtlas.frames[sprites.ground];
-                    context.drawImage(
-                        spriteSheet,
-                        sprite.x, sprite.y, sprite.width, sprite.height,
-                        tileX, tileY, demoTileSize, demoTileSize
-                    );
-                    
-                    // Add game elements
-                    if (x === 1) {
-                        // Player - use default player sprite (same as main game fallback)
-                        const playerSprite = textureAtlas.frames["player_03.png"];
-                        context.drawImage(
-                            spriteSheet,
-                            playerSprite.x, playerSprite.y, playerSprite.width, playerSprite.height,
-                            tileX, tileY, demoTileSize, demoTileSize
-                        );
-                    } else if (x === 3) {
-                        // Crate - use current theme crate sprite
-                        const sprites = getThemeSprites();
-                        const crateSprite = textureAtlas.frames[sprites.crate];
-                        context.drawImage(
-                            spriteSheet,
-                            crateSprite.x, crateSprite.y, crateSprite.width, crateSprite.height,
-                            tileX, tileY, demoTileSize, demoTileSize
-                        );
-                    } else if (x === 5) {
-                        // Goal tile - same as main game (floor + goal sprite with margin)
-                        const goalSprite = textureAtlas.frames["environment_06.png"];
-                        const goalMargin = Math.max(1, Math.floor(demoTileSize / 8)); // Scale margin with tile size
-                        const goalSize = Math.floor(demoTileSize - (goalMargin * 2)); // Ensure integer size
-                        const goalX = Math.floor(tileX + goalMargin); // Pixel-align goal position
-                        const goalY = Math.floor(tileY + goalMargin);
-                        context.drawImage(
-                            spriteSheet,
-                            goalSprite.x, goalSprite.y, goalSprite.width, goalSprite.height,
-                            goalX, goalY, goalSize, goalSize
-                        );
-                    }
-                    
-                    // Add movement arrows on empty tiles with dramatic manual glow effect
-                    if (x === 2 || x === 4) {
-                        // Draw arrow with bright blue glow for maximum contrast against brown ground
-                        const arrowSize = Math.floor(demoTileSize * 0.4);
-                        const arrowX = Math.floor(tileX + demoTileSize / 2);
-                        const arrowY = Math.floor(tileY + demoTileSize / 2);
-                        
-                        // Calculate pulsating intensity
-                        const time = Date.now() * 0.005;
-                        const glowIntensity = 0.5 + 0.5 * Math.sin(time); // 0.5 to 1.0 for brighter baseline
-                        
-                        // Save context
-                        context.save();
-                        
-                        // Create manual glow effect with bright blue colors for contrast against brown ground
-                        const arrowThird = Math.floor(arrowSize / 3);
-                        
-                        // Draw multiple glow layers from largest to smallest
-                        for (let layer = 6; layer >= 0; layer--) {
-                            const layerSize = arrowSize + layer * 4; // Each layer 4px larger for bigger glow
-                            const layerThird = Math.floor(layerSize / 3);
-                            const baseOpacity = glowIntensity * 0.4; // Much higher base opacity
-                            
-                            if (layer > 4) {
-                                // Outer bright blue glow layers - perfect contrast against brown
-                                context.fillStyle = `rgba(0, 150, 255, ${baseOpacity / (layer - 2)})`; // Bright blue
-                            } else if (layer > 2) {
-                                // Middle cyan-blue glow layers - bright and prominent
-                                context.fillStyle = `rgba(100, 200, 255, ${baseOpacity / (layer - 1)})`; // Light blue
-                            } else if (layer > 0) {
-                                // Inner bright cyan layers
-                                context.fillStyle = `rgba(200, 230, 255, ${baseOpacity * 1.5})`; // Very light blue
-                            } else {
-                                // Core very bright white arrow
-                                context.fillStyle = `rgba(255, 255, 255, ${0.9 + glowIntensity * 0.1})`; // Almost always bright white
-                            }
-                            
-                            // Draw complete arrow with head and tail
-                            const tailWidth = Math.floor(layerThird * 0.6); // Tail is narrower than head
-                            const tailLength = Math.floor(layerThird * 1.2); // Tail extends behind
-                            
-                            context.beginPath();
-                            // Arrow head (pointing right)
-                            context.moveTo(arrowX - layerThird, arrowY - layerThird); // Top left of head
-                            context.lineTo(arrowX + layerThird, arrowY); // Arrow tip
-                            context.lineTo(arrowX - layerThird, arrowY + layerThird); // Bottom left of head
-                            // Connect to tail
-                            context.lineTo(arrowX - layerThird, arrowY + tailWidth); // Top of tail notch
-                            context.lineTo(arrowX - layerThird - tailLength, arrowY + tailWidth); // End of top tail
-                            context.lineTo(arrowX - layerThird - tailLength, arrowY - tailWidth); // End of bottom tail
-                            context.lineTo(arrowX - layerThird, arrowY - tailWidth); // Bottom of tail notch
-                            context.closePath();
-                            context.fill();
-                        }
-                        
-                        // Restore context
-                        context.restore();
-                    }
-                }
-            }
-        }
-    }
+    const miniDemoBounds = getTitleMiniDemoBounds(yPos, bottomBoundary);
+    drawTitleMiniDemo(miniDemoBounds.top, miniDemoBounds.bottom, isMobilePortrait, isMobileLandscape);
     
     // BOTTOM-ANCHORED POSITIONING: Position credits and start button from bottom edge
     
