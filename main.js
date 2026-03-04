@@ -7244,6 +7244,16 @@ function drawTitleMiniDemoSprite(spriteName, x, y, size) {
     return true;
 }
 
+function drawTitleMiniDemoOnGoalHighlight(x, y, size) {
+    const glowPadding = Math.max(1, Math.round(size * 0.06));
+
+    context.save();
+    context.globalAlpha = 0.6;
+    context.fillStyle = '#00FF00';
+    context.fillRect(x - glowPadding, y - glowPadding, size + (glowPadding * 2), size + (glowPadding * 2));
+    context.restore();
+}
+
 function getTitleMiniDemoPlayerSpriteName(state) {
     const frameSequence = playerAnimations[state.animationState] || playerAnimations['idle-down'] || [3];
     const safeFrameIndex = Math.max(0, Math.min(state.animationFrame, frameSequence.length - 1));
@@ -7360,7 +7370,12 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
             : box.y;
         const boxX = Math.round(boardStartX + boxTileX * demoTileSize);
         const boxY = Math.round(boardStartY + boxTileY * demoTileSize);
-        const isOnGoal = (!movingBoxRenderData || movingBoxRenderData.index !== boxIndex) && state.goalsSet.has(`${box.x},${box.y}`);
+        const isOnGoal = state.goalsSet.has(`${box.x},${box.y}`);
+
+        if (isOnGoal) {
+            drawTitleMiniDemoOnGoalHighlight(boxX, boxY, demoTileSize);
+        }
+
         const spriteName = isOnGoal ? sprites.crateOnGoal : sprites.crate;
         const drewBox = drawTitleMiniDemoSprite(spriteName, boxX, boxY, demoTileSize);
 
