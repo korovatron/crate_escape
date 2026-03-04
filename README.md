@@ -27,3 +27,12 @@ Crate Escape is a Sokoban-style puzzle game built for web and installable play. 
 - Replay and share solutions.
 - Fast reset/undo/redo workflow for puzzle iteration.
 
+## License
+
+This repository is released under the [Crate Escape Non-Commercial Attribution License (CE-NCAL) v1.0](LICENSE.md).
+
+- Non-commercial use, modification, and sharing are allowed.
+- Attribution to Neil Kendall is required.
+- Commercial use requires prior written permission.
+- Third-party content remains under its own terms as listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
