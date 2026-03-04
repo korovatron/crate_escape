@@ -197,8 +197,8 @@
         .title-screen-top {
             position: absolute;
             left: 50%;
-            top: 25%;
-            transform: translate(-50%, -50%);
+            top: var(--title-top-inset, max(62px, calc(env(safe-area-inset-top) + 10px)));
+            transform: translateX(-50%);
             width: min(760px, 96vw);
             margin: 0;
             display: flex;
@@ -218,34 +218,40 @@
         .title-screen-tagline {
             margin: 0;
             width: var(--title-tagline-width, min(740px, 90vw));
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
+            display: grid;
+            justify-items: center;
+            row-gap: 2px;
             text-align: center;
             color: #dddddd;
             font-family: Arial, system-ui, -apple-system, sans-serif;
             font-size: var(--title-tagline-size, clamp(13px, 2.1vw, 22px));
             line-height: 1.35;
-            text-wrap: balance;
         }
 
         .title-screen-tagline-main {
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            text-align: center;
             white-space: nowrap;
         }
 
         .title-screen-tagline-sub {
+            display: block;
             font-size: 0.88em;
             color: inherit;
             font-weight: inherit;
+            margin: 0 auto;
+            width: 100%;
+            text-align: center;
             white-space: nowrap;
         }
 
         .title-screen-start-wrap {
             position: absolute;
             left: 50%;
-            top: var(--title-start-center-y, 70%);
-            transform: translate(-50%, -50%);
+            bottom: var(--title-start-bottom, 96px);
+            transform: translateX(-50%);
             pointer-events: auto;
         }
 
@@ -311,10 +317,6 @@
             .title-screen-tagline {
                 font-size: var(--title-tagline-size, clamp(12px, 1.7vw, 17px));
                 max-width: var(--title-tagline-width, 68vw);
-            }
-
-            .title-screen-start-wrap {
-                top: var(--title-start-center-y, 70%);
             }
         }
 
@@ -1699,8 +1701,8 @@
         <div id="titleScreenUI" class="title-screen-ui" aria-hidden="true">
             <div class="title-screen-top">
                 <img id="titleScreenLogo" class="title-screen-logo" src="assets/images/cartoonLogo.png" alt="The Crate Escape">
+                <p class="title-screen-tagline"><span class="title-screen-tagline-main">Play Classic Sokoban Puzzles.</span><span class="title-screen-tagline-sub">Design &amp; Share Custom Levels.</span></p>
             </div>
-            <p class="title-screen-tagline"><span class="title-screen-tagline-main">Play Classic Sokoban Puzzles.</span> <span class="title-screen-tagline-sub">Design &amp; Share Custom Levels.</span></p>
             <div class="title-screen-start-wrap">
                 <button id="titleScreenStartButton" class="title-screen-start-button" type="button" aria-label="Play" title="Play">PLAY</button>
             </div>

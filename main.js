@@ -3250,13 +3250,22 @@ function updateTitleScreenUI() {
     const isMobileLandscape = width > height && height < 600;
     const isNarrowPortrait = height > width && width <= 500;
     const isUltraWide = aspectRatio >= 2;
+    const logoDesktopCapWidth = 840;
+    const logoDesktopCapHeight = 270;
 
-    const logoMaxWidth = isTouchLandscape
-        ? width * 0.56
-        : (isUltraWide ? width * 0.62 : (isMobileLandscape ? width * 0.6 : width * 0.7));
-    const logoMaxHeight = isTouchLandscape
-        ? height * 0.22
-        : (isUltraWide ? height * 0.38 : (isMobileLandscape ? height * 0.25 : height * 0.3));
+    let logoMaxWidth;
+    let logoMaxHeight;
+    if (isTouchLandscape) {
+        logoMaxWidth = width * 0.56;
+        logoMaxHeight = height * 0.22;
+    } else if (isMobileLandscape) {
+        logoMaxWidth = width * 0.6;
+        logoMaxHeight = height * 0.25;
+    } else {
+        logoMaxWidth = Math.min(width * 0.7, logoDesktopCapWidth);
+        logoMaxHeight = Math.min(height * 0.3, logoDesktopCapHeight);
+    }
+
     let logoWidth = Math.min(logoMaxWidth, width * 0.92);
     let logoHeight = logoMaxHeight;
 
@@ -3284,8 +3293,13 @@ function updateTitleScreenUI() {
         : isUltraWide
         ? Math.max(90, Math.min(210, height * 0.24))
         : Math.max(60, Math.min(138, height * 0.16));
+    const topInset = isTouchLandscape
+        ? 'max(56px, calc(env(safe-area-inset-top) + 8px))'
+        : isMobileLandscape
+        ? 'max(58px, calc(env(safe-area-inset-top) + 10px))'
+        : 'max(62px, calc(env(safe-area-inset-top) + 10px))';
 
-    container.style.setProperty('--title-top-margin', isUltraWide && !isTouchLandscape ? 'max(10px, 2.6vh) auto 0 auto' : '0 auto 0 auto');
+    container.style.setProperty('--title-top-inset', topInset);
     container.style.setProperty('--title-top-gap', isTouchLandscape ? '8px' : (isUltraWide ? '14px' : '10px'));
     container.style.setProperty('--title-logo-width', `${Math.round(logoWidth)}px`);
     container.style.setProperty('--title-logo-height', `${Math.round(logoHeight)}px`);
@@ -3298,27 +3312,15 @@ function updateTitleScreenUI() {
     container.style.setProperty('--title-start-pad-x', `${Math.round(startPadX)}px`);
     container.style.setProperty('--title-start-bottom', `${Math.round(startBottom)}px`);
 
-    if (startWrap && tagline && footer) {
+    if (startWrap && footer) {
         const containerRect = container.getBoundingClientRect();
-        const taglineRect = tagline.getBoundingClientRect();
         const footerRect = footer.getBoundingClientRect();
-        const startWrapRect = startWrap.getBoundingClientRect();
-        const copyrightElement = footer.querySelector('.copyright');
-        const copyrightRect = copyrightElement ? copyrightElement.getBoundingClientRect() : null;
-
-        const taglineBottom = taglineRect.bottom - containerRect.top;
         const footerTop = footerRect.top - containerRect.top;
-        const copyrightTop = copyrightRect
-            ? (copyrightRect.top - containerRect.top)
-            : footerTop;
-        const startHalfHeight = Math.max(0, startWrapRect.height / 2);
-        const anchorGap = isTouchLandscape ? 10 : 14;
-        const anchoredCenterY = copyrightTop - anchorGap - startHalfHeight;
-        const minTop = taglineBottom + 24;
-        const maxTop = footerTop - 16;
-        const startCenterY = Math.max(minTop, Math.min(maxTop, anchoredCenterY));
-
-        container.style.setProperty('--title-start-center-y', `${Math.round(startCenterY)}px`);
+        const anchorGap = isTouchLandscape ? 12 : 15;
+        const footerBlockHeight = Math.max(0, containerRect.height - footerTop);
+        const anchoredStartBottom = footerBlockHeight + anchorGap;
+        const startBottomResolved = Math.max(24, anchoredStartBottom);
+        container.style.setProperty('--title-start-bottom', `${Math.round(startBottomResolved)}px`);
     }
 }
 
@@ -7228,11 +7230,21 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
     const maxTileSize = isMobileLandscape ? 34 : isMobilePortrait ? 48 : 54;
     const minTileSize = isMobileLandscape ? 8 : 10;
 
-    let demoTileSize = Math.floor(Math.min(
+    const safeTileSizes = [4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64];
+    const maxPossibleTileSize = Math.floor(Math.min(
         availableWidth / Math.max(1, levelData.width),
         availableHeight / Math.max(1, levelData.height)
     ));
-    demoTileSize = Math.min(demoTileSize, maxTileSize);
+    const maxAllowedTileSize = Math.min(maxPossibleTileSize, maxTileSize);
+    let demoTileSize = 0;
+
+    for (const size of safeTileSizes) {
+        if (size <= maxAllowedTileSize) {
+            demoTileSize = size;
+        } else {
+            break;
+        }
+    }
 
     if (demoTileSize < minTileSize) {
         return;
@@ -7368,19 +7380,29 @@ function drawTitleScreen() {
     const smallSize = baseSize * 0.7;
     const largeSize = baseSize * 1.3;
     
-    // Starting Y position - more responsive to screen height
+    // Starting Y position - pinned below hamburger clearance zone
     let yPos;
     if (isMobileLandscape) {
-        yPos = Math.min(canvas.height * 0.05, 20); // Very close to top for landscape, but not less than 20px
+        yPos = 54;
     } else if (isMobilePortrait) {
-        yPos = Math.min(canvas.height * 0.06, 30); // Closer to top for portrait, ensuring content fits
+        yPos = 60;
     } else {
-        yPos = Math.min(canvas.height * 0.08, 40); // Desktop - closer to top to allow more content below
+        yPos = 64;
     }
     
     // Draw cartoon logo image instead of text title
-    const logoMaxWidth = isMobileLandscape ? canvas.width * 0.6 : canvas.width * 0.7;
-    const logoMaxHeight = isMobileLandscape ? canvas.height * 0.25 : canvas.height * 0.3;
+    const logoDesktopCapWidth = 840;
+    const logoDesktopCapHeight = 270;
+    let logoMaxWidth;
+    let logoMaxHeight;
+
+    if (isMobileLandscape) {
+        logoMaxWidth = canvas.width * 0.6;
+        logoMaxHeight = canvas.height * 0.25;
+    } else {
+        logoMaxWidth = Math.min(canvas.width * 0.7, logoDesktopCapWidth);
+        logoMaxHeight = Math.min(canvas.height * 0.3, logoDesktopCapHeight);
+    }
     
     // Calculate logo size maintaining aspect ratio
     const logoAspectRatio = cartoonLogo.width / cartoonLogo.height;
