@@ -4,7 +4,7 @@
 
 ![Crate Escape gameplay screenshot](assets/images/screenshots/4.png)
 
-Crate Escape is a Sokoban-style puzzle game built for web and installable play. Push crates onto goal tiles across classic level collections, track your progress, and share your solutions.
+Crate Escape is a Sokoban-style puzzle game built for web and installable offline play. Optimized for desktop, tablet, and mobile, it lets you push crates across classic level collections, track your progress, plan and step through solutions with LURD controls, and design/share playable custom levels.
 
 ## Live Play
 
@@ -12,19 +12,21 @@ Crate Escape is a Sokoban-style puzzle game built for web and installable play. 
 
 ## Features
 
-- Includes complete **Microban**, **Sasquatch**, **Magic Pearls**, and **Grigr 2001** level sets.
-- **Grigr 2001** is included with direct author permission (Evgeniy Grigoriev, 2026-03-01).
-- Play equally well on **mobile**, **tablet**, and **desktop**.
+- Includes complete **Microban**, **Sasquatch**, **Magic Pearls**, and **Grigr** level collections (**2001**, **2002**, **Challenge**, **Comet**, **Special**, **Star**, **Sun**).
+- **Grigr** level sets are included with direct author permission (Evgeniy Grigoriev, 2026-03-01).
+- Optimized for **desktop**, **tablet**, and **mobile**.
 - Full input support for **keyboard/mouse** and **touch** controls.
+- Installable as a **PWA** with **offline support**.
 - Save level progress, best stats, and solutions locally.
 - Optional **cloud sync** to keep progress and stats available across devices.
-- Built-in **custom level importer/editor**.
-- Create and share **links to custom levels**.
+- Built-in **custom level importer** and **graphical level designer**.
+- **LURD console** with plan, step-through, replay, and share workflow.
+- Create and share **fully playable custom levels via URL links**.
 
 ## Gameplay Highlights
 
 - Track best moves and pushes per level.
-- Replay and share solutions.
+- Plan, step through, replay, and share solutions with LURD controls.
 - Fast reset/undo/redo workflow for puzzle iteration.
 
 ## License

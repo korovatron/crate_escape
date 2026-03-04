@@ -31,14 +31,15 @@ This file records third-party content used by this project and the known licensi
 - Usage in this project: Included with attribution in credits
 - Notes: Treat as separately licensed until explicit permission or license text is obtained. Do not assume GPL compatibility without confirmation.
 
-### 2c) Level Set: Grigr 2001
+### 2c) Level Sets: Grigr Collection
 - Author credited: Evgeniy Grigoriev
-- Source: In-project source file `grigr2001.txt` (with author/email/website metadata)
+- Set names: Grigr 2001, Grigr 2002, Grigr Challenge, Grigr Comet, Grigr Special, Grigr Star, Grigr Sun
+- Source: In-project source data (`levels.js`) and metadata file `grigr2001.txt` (author/email/website metadata)
 - Permission status: Explicit permission granted by author via email (2026-03-01)
 - Permission text retained by maintainer:
   - "ok. you can use my level in your game"
 - Usage in this project: Included with attribution in credits
-- Notes: Use with attribution as granted by author. Keep email record with project compliance documents.
+- Notes: Use with attribution as granted by author. Keep email record with project compliance documents and maintain the above set list.
 
 ### 3) Sound Effects
 - Source tool: jsfxr / sfxr.me
@@ -75,4 +76,4 @@ This file records third-party content used by this project and the known licensi
 - Recheck any newly added third-party assets (music, fonts, art packs) before release.
 
 ## Last Updated
-- 2026-03-01
+- 2026-03-04
