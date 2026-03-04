@@ -7101,7 +7101,7 @@ function beginTitleMiniDemoMove(state, moveData) {
     state.activeMove = moveData;
 }
 
-function completeTitleMiniDemoMove(state) {
+function completeTitleMiniDemoMove(state, shouldResetToIdle = true) {
     if (!state.activeMove) {
         return;
     }
@@ -7116,9 +7116,32 @@ function completeTitleMiniDemoMove(state) {
     }
 
     state.activeMove = null;
-    state.animationState = getTitleMiniDemoIdleAnimationState(state.facingDirection);
-    state.animationFrame = 0;
-    state.animationTimerMs = 0;
+
+    if (shouldResetToIdle) {
+        state.animationState = getTitleMiniDemoIdleAnimationState(state.facingDirection);
+        state.animationFrame = 0;
+        state.animationTimerMs = 0;
+    }
+}
+
+function getTitleMiniDemoInterMoveDelay(state) {
+    const pauseDuration = Math.max(0, TITLE_MINI_DEMO_STEP_INTERVAL_MS - TITLE_MINI_DEMO_MOVE_DURATION_MS);
+
+    if (!state || state.moveIndex <= 0 || state.moveIndex >= state.solution.length) {
+        return pauseDuration;
+    }
+
+    const previousMoveChar = state.solution[state.moveIndex - 1];
+    const nextMoveChar = state.solution[state.moveIndex];
+    const previousDirection = getDirectionFromChar(previousMoveChar);
+    const nextDirection = getDirectionFromChar(nextMoveChar);
+
+    if (!previousDirection || !nextDirection) {
+        return pauseDuration;
+    }
+
+    const isSameDirection = previousDirection.x === nextDirection.x && previousDirection.y === nextDirection.y;
+    return isSameDirection ? 0 : pauseDuration;
 }
 
 function updateTitleMiniDemoAnimation(state, nowMs) {
@@ -7162,23 +7185,28 @@ function advanceTitleMiniDemoState(nowMs) {
     }
 
     if (state.activeMove && nowMs >= state.activeMove.endsAt) {
-        completeTitleMiniDemoMove(state);
+        const completedMoveEndsAt = state.activeMove.endsAt;
+        const hasMoreMoves = state.moveIndex < state.solution.length;
+        const postMoveDelay = hasMoreMoves ? getTitleMiniDemoInterMoveDelay(state) : 0;
+        const shouldResetToIdle = !hasMoreMoves || postMoveDelay > 0;
 
-        if (state.moveIndex >= state.solution.length) {
+        completeTitleMiniDemoMove(state, shouldResetToIdle);
+
+        if (!hasMoreMoves) {
             state.isSolved = true;
             state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
         } else {
-            const postMoveDelay = Math.max(0, TITLE_MINI_DEMO_STEP_INTERVAL_MS - TITLE_MINI_DEMO_MOVE_DURATION_MS);
-            state.nextTickAt = nowMs + postMoveDelay;
+            state.nextTickAt = completedMoveEndsAt + postMoveDelay;
         }
     }
 
     if (!state.activeMove && !state.isSolved && nowMs >= state.nextTickAt) {
+        const moveStartAt = state.nextTickAt;
         const moveChar = state.solution[state.moveIndex];
         state.moveIndex += 1;
 
         const moveData = typeof moveChar === 'string'
-            ? buildTitleMiniDemoMove(state, moveChar, nowMs)
+            ? buildTitleMiniDemoMove(state, moveChar, moveStartAt)
             : null;
 
         if (moveData) {
@@ -7187,7 +7215,7 @@ function advanceTitleMiniDemoState(nowMs) {
             state.isSolved = true;
             state.nextTickAt = nowMs + TITLE_MINI_DEMO_END_DELAY_MS;
         } else {
-            state.nextTickAt = nowMs + TITLE_MINI_DEMO_STEP_INTERVAL_MS;
+            state.nextTickAt = moveStartAt + TITLE_MINI_DEMO_STEP_INTERVAL_MS;
         }
     }
 
