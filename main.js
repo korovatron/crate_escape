@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.91';
+const APP_VERSION = '1.1.92';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -9,6 +9,8 @@ const isKeyDown = (key) => pressedKeys.has(key);
 // Google Analytics gameplay tracking
 let lastPlayEventTime = 0;
 const playEventThrottle = 30000; // 30 seconds
+let lastDesignerEventTime = 0;
+const designerEventThrottle = 30000; // 30 seconds
 
 function trackGameplayEvent() {
     const now = Date.now();
@@ -16,6 +18,16 @@ function trackGameplayEvent() {
         lastPlayEventTime = now;
         if (typeof gtag === 'function') {
             gtag('event', 'CRATE-ESCAPE-play');
+        }
+    }
+}
+
+function trackDesignerEvent() {
+    const now = Date.now();
+    if (now - lastDesignerEventTime >= designerEventThrottle) {
+        lastDesignerEventTime = now;
+        if (typeof gtag === 'function') {
+            gtag('event', 'CRATE-DESIGNER');
         }
     }
 }
@@ -2151,6 +2163,8 @@ function placeDesignerTileAtCell(cellX, cellY, toolId = levelDesignerState.selec
         default:
             break;
     }
+
+    trackDesignerEvent();
 
     renderLevelDesigner();
     syncImportTextareaFromDesigner();
