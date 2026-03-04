@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.1.90';
+const APP_VERSION = '1.1.91';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -57,7 +57,11 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             playSound('click');
             if (isLevelDesignerModalOpen()) {
-                closeLevelDesignerModal({ restoreImportTextareaFocus: true });
+                if (isLevelDesignerHelpModalOpen()) {
+                    closeLevelDesignerHelpModal();
+                } else {
+                    closeLevelDesignerModal({ restoreImportTextareaFocus: true });
+                }
             } else if (isImportLevelModalOpen()) {
                 closeImportLevelModal();
             } else if (isLegalModalOpen()) {
@@ -755,6 +759,10 @@ function getLevelDesignerElements() {
         overlay: document.getElementById('levelDesignerOverlay'),
         canvas: document.getElementById('levelDesignerCanvas'),
         tools: document.getElementById('levelDesignerTools'),
+        helpButton: document.getElementById('levelDesignerHelpButton'),
+        helpOverlay: document.getElementById('levelDesignerHelpOverlay'),
+        helpModal: document.getElementById('levelDesignerHelpModal'),
+        helpCloseButton: document.getElementById('levelDesignerHelpCloseButton'),
         status: document.getElementById('levelDesignerStatus'),
         validation: document.getElementById('levelDesignerValidation'),
         zoomOutButton: document.getElementById('levelDesignerZoomOutButton'),
@@ -1117,6 +1125,42 @@ function isLegalModalOpen() {
 function isLevelDesignerModalOpen() {
     const { overlay } = getLevelDesignerElements();
     return Boolean(overlay && overlay.style.display === 'flex');
+}
+
+function isLevelDesignerHelpModalOpen() {
+    const { helpOverlay } = getLevelDesignerElements();
+    return Boolean(helpOverlay && helpOverlay.style.display === 'flex');
+}
+
+function openLevelDesignerHelpModal() {
+    const { helpOverlay, helpCloseButton } = getLevelDesignerElements();
+    if (!helpOverlay) {
+        return;
+    }
+
+    helpOverlay.style.display = 'flex';
+    helpOverlay.setAttribute('aria-hidden', 'false');
+
+    window.setTimeout(() => {
+        helpCloseButton?.focus();
+    }, 0);
+}
+
+function closeLevelDesignerHelpModal(options = {}) {
+    const { restoreHelpButtonFocus = false } = options;
+    const { helpOverlay, helpButton } = getLevelDesignerElements();
+    if (!helpOverlay) {
+        return;
+    }
+
+    helpOverlay.style.display = 'none';
+    helpOverlay.setAttribute('aria-hidden', 'true');
+
+    if (restoreHelpButtonFocus && !isTouchDevice()) {
+        window.setTimeout(() => {
+            helpButton?.focus();
+        }, 0);
+    }
 }
 
 function isAnyBlockingModalOpen() {
@@ -1941,15 +1985,39 @@ function renderLevelDesignerToolstripIcons() {
             drawGround(ctx, iconSize);
             drawLevelDesignerSprite(ctx, playerSpriteName, 0, 0, iconSize);
         } else if (toolId === 'eraser') {
-            drawGround(ctx, iconSize);
-            ctx.strokeStyle = '#ff6666';
-            ctx.lineWidth = 2;
+            ctx.save();
+            ctx.translate(iconSize / 2, iconSize / 2);
+            ctx.rotate(-Math.PI / 4);
+
+            const eraserWidth = 18;
+            const eraserHeight = 10;
+            const capWidth = 5;
+
+            ctx.fillStyle = '#e8edf2';
+            ctx.fillRect(-eraserWidth / 2, -eraserHeight / 2, eraserWidth, eraserHeight);
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 1.3;
+            ctx.strokeRect(-eraserWidth / 2, -eraserHeight / 2, eraserWidth, eraserHeight);
+
+            ctx.fillStyle = '#ff6b8a';
+            ctx.fillRect(eraserWidth / 2 - capWidth, -eraserHeight / 2, capWidth, eraserHeight);
+            ctx.strokeRect(eraserWidth / 2 - capWidth, -eraserHeight / 2, capWidth, eraserHeight);
+
+            ctx.fillStyle = '#ffd9df';
             ctx.beginPath();
-            ctx.moveTo(4, 4);
-            ctx.lineTo(iconSize - 4, iconSize - 4);
-            ctx.moveTo(iconSize - 4, 4);
-            ctx.lineTo(4, iconSize - 4);
+            ctx.moveTo(-eraserWidth / 2, -eraserHeight / 2);
+            ctx.lineTo(-eraserWidth / 2 - 3, 0);
+            ctx.lineTo(-eraserWidth / 2, eraserHeight / 2);
+            ctx.closePath();
+            ctx.fill();
             ctx.stroke();
+
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(255, 214, 160, 0.95)';
+            ctx.fillRect(4, 17, 2, 2);
+            ctx.fillRect(7, 18, 2, 2);
+            ctx.fillRect(10, 16, 2, 2);
         } else {
             drawGround(ctx, iconSize);
         }
@@ -2206,6 +2274,7 @@ function openLevelDesignerModal() {
     overlay.style.background = 'transparent';
     overlay.style.backdropFilter = 'none';
     overlay.style.webkitBackdropFilter = 'none';
+    closeLevelDesignerHelpModal();
 
     syncDesignerFromImportTextarea(true);
     renderLevelDesignerToolstripIcons();
@@ -2222,6 +2291,8 @@ function closeLevelDesignerModal(options = {}) {
     if (!overlay) {
         return;
     }
+
+    closeLevelDesignerHelpModal();
 
     levelDesignerState.isOpen = false;
     levelDesignerState.isPainting = false;
@@ -2259,17 +2330,25 @@ function initializeLevelDesignerUI() {
         overlay,
         canvas,
         tools,
+        helpOverlay,
+        helpModal,
+        helpCloseButton,
         zoomOutButton,
         zoomInButton,
         closeButton
     } = getLevelDesignerElements();
-    if (!overlay || !canvas || !tools || !zoomOutButton || !zoomInButton || !closeButton || overlay.dataset.bound === 'true') {
+    if (!overlay || !canvas || !tools || !helpOverlay || !helpModal || !helpCloseButton || !zoomOutButton || !zoomInButton || !closeButton || overlay.dataset.bound === 'true') {
         return;
     }
 
-    tools.innerHTML = LEVEL_DESIGNER_TOOLS.map(tool =>
+    tools.innerHTML = `${LEVEL_DESIGNER_TOOLS.map(tool =>
         `<button class="level-designer-tool${tool.id === levelDesignerState.selectedTool ? ' active' : ''}" type="button" data-designer-tool="${escapeHtml(tool.id)}" aria-pressed="${tool.id === levelDesignerState.selectedTool ? 'true' : 'false'}" title="${escapeHtml(tool.label)}"><canvas class="level-designer-tool-icon" width="24" height="24" aria-hidden="true"></canvas></button>`
-    ).join('');
+    ).join('')}<button id="levelDesignerHelpButton" class="level-designer-tool level-designer-tool-help" type="button" aria-label="Show level designer controls" title="Show level designer controls">?</button>`;
+
+    const helpButton = tools.querySelector('#levelDesignerHelpButton');
+    if (!helpButton) {
+        return;
+    }
 
     renderLevelDesignerToolstripIcons();
 
@@ -2290,6 +2369,20 @@ function initializeLevelDesignerUI() {
     closeButton.addEventListener('click', () => {
         playSound('click');
         closeLevelDesignerModal();
+    });
+
+    helpButton.addEventListener('click', () => {
+        playSound('click');
+        openLevelDesignerHelpModal();
+    });
+
+    helpCloseButton.addEventListener('click', () => {
+        playSound('click');
+        closeLevelDesignerHelpModal({ restoreHelpButtonFocus: true });
+    });
+
+    helpModal.addEventListener('click', (event) => {
+        event.stopPropagation();
     });
 
     zoomOutButton.addEventListener('click', () => {
@@ -3883,7 +3976,7 @@ const LEVEL_DESIGNER_TOOLS = [
     { id: 'crate', label: 'CRATE', symbol: '$' },
     { id: 'goal', label: 'GOAL', symbol: '.' },
     { id: 'player', label: 'PLAYER', symbol: '@' },
-    { id: 'eraser', label: 'ERASE', symbol: '⌫' }
+    { id: 'eraser', label: 'ERASE (Right-click also erases)', symbol: '⌫' }
 ];
 
 let levelDesignerState = {

@@ -791,6 +791,8 @@
         }
 
         .level-designer-tools {
+            flex: 1 1 auto;
+            min-width: 0;
             display: flex;
             gap: 6px;
             overflow-x: auto;
@@ -798,6 +800,19 @@
             padding-bottom: 2px;
             scrollbar-width: none;
             -ms-overflow-style: none;
+        }
+
+        .level-designer-tool.level-designer-tool-help {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #00aaff;
+            line-height: 1;
+        }
+
+        @media (pointer: coarse), (hover: none) {
+            .level-designer-tool.level-designer-tool-help {
+                display: none;
+            }
         }
 
         .level-designer-tools::-webkit-scrollbar {
@@ -911,6 +926,96 @@
             overflow: hidden;
             text-overflow: ellipsis;
             color: #9fffbf;
+        }
+
+        .level-designer-help-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.62);
+            z-index: 6;
+            border-radius: 8px;
+        }
+
+        .level-designer-help-modal {
+            position: relative;
+            width: min(560px, 100%);
+            max-height: 100%;
+            overflow: auto;
+            background: #0b0b0b;
+            border: 1px solid #00aaff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.28);
+            padding: 12px 12px 10px 12px;
+            color: #dff7ff;
+            box-sizing: border-box;
+        }
+
+        .level-designer-help-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 26px;
+            height: 26px;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: #0f1720;
+            color: #dff7ff;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .level-designer-help-title {
+            margin: 0 34px 8px 0;
+            color: #00ccff;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .level-designer-help-content {
+            margin-top: 8px;
+            border: 1px solid #00aaff;
+            border-radius: 6px;
+            background: #111;
+            padding: 10px;
+        }
+
+        .level-designer-help-section {
+            margin-top: 8px;
+        }
+
+        .level-designer-help-section:first-child {
+            margin-top: 0;
+        }
+
+        .level-designer-help-section h4 {
+            margin: 0 0 4px 0;
+            color: #ffdd00;
+            font-size: 0.86rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .level-designer-help-section ul {
+            margin: 0;
+            padding-left: 16px;
+            color: #d0e4ee;
+            font-size: 0.82rem;
+            line-height: 1.32;
+        }
+
+        .level-designer-help-section li {
+            margin: 0 0 3px 0;
         }
 
         .legal-modal-content {
@@ -1709,6 +1814,32 @@
                         <button id="levelDesignerZoomOutButton" type="button" aria-label="Zoom out">−</button>
                         <div id="levelDesignerZoomValue" class="level-designer-zoom-value">32 px</div>
                         <button id="levelDesignerZoomInButton" type="button" aria-label="Zoom in">+</button>
+                    </div>
+                </div>
+                <div id="levelDesignerHelpOverlay" class="level-designer-help-overlay" aria-hidden="true">
+                    <div id="levelDesignerHelpModal" class="level-designer-help-modal" role="dialog" aria-modal="false" aria-label="Level designer controls">
+                        <button id="levelDesignerHelpCloseButton" class="level-designer-help-close" type="button" aria-label="Close controls help">×</button>
+                        <h3 class="level-designer-help-title">Designer Controls</h3>
+                        <div class="level-designer-help-content">
+                            <div class="level-designer-help-section">
+                                <ul>
+                                    <li>Left click: paint selected tool.</li>
+                                    <li>Right click: erase.</li>
+                                    <li>Middle mouse drag: pan view.</li>
+                                    <li>Hold Space and drag: pan view.</li>
+                                    <li>Mouse wheel: zoom in/out.</li>
+                                </ul>
+                            </div>
+                            <div class="level-designer-help-section">
+                                <ul>
+                                    <li>Build a fully enclosed play area with walls.</li>
+                                    <li>Use exactly one player tile.</li>
+                                    <li>Add at least one crate and at least one goal.</li>
+                                    <li>Keep crate and goal counts equal.</li>
+                                    <li>Watch the footer status and aim for “Ready: level passes basic checks.”</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
