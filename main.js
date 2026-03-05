@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.2';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -4149,6 +4149,7 @@ let moveTargetPos = { x: 0, y: 0 };
 let movingBox = null; // Box being pushed (if any)
 let moveStartBoxPos = { x: 0, y: 0 };
 let moveTargetBoxPos = { x: 0, y: 0 };
+let currentMoveUsesLinearInterpolation = false;
 
 // Player animation variables
 let playerAnimationState = 'idle'; // 'idle', 'moving-down', 'moving-up', 'moving-left', 'moving-right'
@@ -4804,6 +4805,7 @@ function applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart = false, 
     moveAnimationProgress = 0;
     moveTargetPos = { x: playerPos.x, y: playerPos.y };
     movingBox = null;
+    currentMoveUsesLinearInterpolation = false;
 
     // Reset animation state
     playerFacingDirection = 'down';
@@ -4907,6 +4909,7 @@ function applyGameStateSnapshot(snapshot) {
     pendingUndoState = null;
     pendingRedoState = null;
     isReverseAnimation = false;
+    currentMoveUsesLinearInterpolation = false;
     playerAnimationState = getIdleAnimationState();
     playerAnimationFrame = 0;
     playerAnimationTimer = 0;
@@ -4984,6 +4987,7 @@ function undoLastMove() {
     isPlayerMoving = true;
     moveAnimationProgress = 0;
     isReverseAnimation = true; // Enable reverse animation mode
+    currentMoveUsesLinearInterpolation = false;
     
     // Set up reverse movement animation
     moveStartPos = { x: currentState.playerPos.x, y: currentState.playerPos.y };
@@ -5081,6 +5085,7 @@ function redoLastMove() {
     isPlayerMoving = true;
     moveAnimationProgress = 0;
     isReverseAnimation = false;
+    currentMoveUsesLinearInterpolation = false;
     pendingUndoState = null;
     pendingRedoState = redoState;
 
@@ -5444,6 +5449,10 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
         playerFacingDirection = 'up';
         newAnimationState = 'moving-up';
     }
+
+    // Use linear interpolation for every normal move so tile boundaries and direction reversals
+    // do not switch movement curves and introduce visible jumps.
+    currentMoveUsesLinearInterpolation = true;
     
     // During solution replay, check if next move is in same direction for continuous animation
     if (currentGameState === GAME_STATES.SOLUTION_REPLAY && solutionReplayData.isActive) {
@@ -5496,6 +5505,19 @@ function startPlayerMove(targetX, targetY, boxIndex = null, boxTargetX = 0, boxT
     // If same direction, keep current frame and timer for smooth continuation
 }
 
+function applyMovementTimeCarryover(overflowSeconds) {
+    if (!isPlayerMoving || overflowSeconds <= 0 || moveDuration <= 0) {
+        return;
+    }
+
+    const carryoverProgress = overflowSeconds / moveDuration;
+    if (!Number.isFinite(carryoverProgress) || carryoverProgress <= 0) {
+        return;
+    }
+
+    moveAnimationProgress = Math.min(0.999999, moveAnimationProgress + carryoverProgress);
+}
+
 function updatePlayerMovement(deltaTime) {
     if (!isPlayerMoving) return;
     
@@ -5538,8 +5560,12 @@ function updatePlayerMovement(deltaTime) {
     
     if (moveAnimationProgress >= 1.0) {
         // Movement complete
+        const completedMoveUsedLinearInterpolation = currentMoveUsesLinearInterpolation;
+        const overflowProgress = Math.max(0, moveAnimationProgress - 1.0);
+        const overflowTimeSeconds = overflowProgress * moveDuration;
         moveAnimationProgress = 1.0;
         isPlayerMoving = false;
+        currentMoveUsesLinearInterpolation = false;
         const isHistoryTraversalMove = !!pendingUndoState || !!pendingRedoState;
         
         // Check if this was an undo animation
@@ -5626,9 +5652,17 @@ function updatePlayerMovement(deltaTime) {
         
         // Immediately check for continued input to eliminate pause
         checkForContinuedInput();
+
+        // Preserve frame-time overflow only when interpolation mode stays consistent between tiles.
+        // This avoids visible jumps at boundaries where eased and linear movement modes meet.
+        if (overflowTimeSeconds > 0 &&
+            isPlayerMoving &&
+            currentMoveUsesLinearInterpolation === completedMoveUsedLinearInterpolation) {
+            applyMovementTimeCarryover(overflowTimeSeconds);
+        }
         
         // Reset to idle animation when movement completes and no continuous input
-        if (!isContinuousInputActive()) {
+        if (!isPlayerMoving && !isContinuousInputActive()) {
             playerAnimationState = getIdleAnimationState();
             playerAnimationFrame = 0;
             playerAnimationTimer = 0;
@@ -6817,12 +6851,14 @@ function getTouchCanvasPosition(touch) {
 }
 
 function getInterpolationValue(progress) {
+    const clampedProgress = Math.max(0, Math.min(1, progress));
+
     // Use linear interpolation for continuous movement to avoid pauses
     // Use eased interpolation for single movements for natural feel
-    if (isContinuousInputActive()) {
-        return progress; // Linear interpolation - constant speed
+    if (currentMoveUsesLinearInterpolation) {
+        return clampedProgress; // Linear interpolation - constant speed
     } else {
-        return easeInOutQuad(progress); // Eased interpolation - natural feel
+        return easeInOutQuad(clampedProgress); // Eased interpolation - natural feel
     }
 }
 
