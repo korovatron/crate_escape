@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.3';
+const APP_VERSION = '1.2.4';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -221,8 +221,10 @@ document.addEventListener('keydown', (e) => {
         }
         
         if (moveDirection.x !== 0 || moveDirection.y !== 0) {
-            trackGameplayEvent();
-            attemptPlayerMove(moveDirection);
+            if (!isLevelPlayIntroBlockingInput()) {
+                trackGameplayEvent();
+                attemptPlayerMove(moveDirection);
+            }
         }
     }
     
@@ -530,7 +532,7 @@ function setupCanvasEventListeners() {
                 lastTouchMoveTime = currentTime;
                 
                 // Attempt immediate movement
-                if (!isPlayerMoving) {
+                if (!isPlayerMoving && !isLevelPlayIntroBlockingInput()) {
                     trackGameplayEvent();
                     attemptPlayerMove(touchMoveDirection);
                 }
@@ -542,6 +544,7 @@ function setupCanvasEventListeners() {
                 
                 touchMoveTimer = setInterval(() => {
                     if (isTouchActive && !isPlayerMoving && currentGameState === GAME_STATES.PLAYING && !isHamburgerMenuOpen &&
+                        !isLevelPlayIntroBlockingInput() &&
                         (touchMoveDirection.x !== 0 || touchMoveDirection.y !== 0)) {
                         attemptPlayerMove(touchMoveDirection);
                     }
@@ -869,6 +872,7 @@ function transitionTitleToLevelSelect() {
 function openCurrentLevelSolutionReplay() {
     playSound('click');
     const currentHistory = generateSolutionString();
+    stopLevelPlayIntro();
 
     solutionReplayData.isActive = true;
     solutionReplayData.isPlaying = false;
@@ -914,8 +918,10 @@ const TITLE_MINI_DEMO_PRESETS = {
         solution: 'dlllllululllddduRluurDRRRRRdrrruullDurrddlLLLulllllddrrUdlluurRRRRRdrrruullDurrddlLLullllllddrUluRRRRRRdrrruullDurrddlL'
     }
 };
-const TITLE_MINI_DEMO_INTRO_HOLD_MS = 2000;
-const TITLE_MINI_DEMO_INTRO_FADE_MS = 1000;
+const TITLE_MINI_DEMO_INTRO_HOLD_MS = 1000;
+const TITLE_MINI_DEMO_INTRO_FADE_MS = 2000;
+const TITLE_MINI_DEMO_CRATE_FADE_MS = 1000;
+const TITLE_MINI_DEMO_PLAYER_FADE_MS = 1000;
 const TITLE_MINI_DEMO_STEP_INTERVAL_MS = 220;
 const TITLE_MINI_DEMO_MOVE_DURATION_MS = 200;
 const TITLE_MINI_DEMO_OUTRO_HOLD_MS = 2000;
@@ -3919,7 +3925,6 @@ let cloudUploadPending = false;
 let cloudUploadDeferredTimeoutId = null;
 let lastCloudUploadCompletedAt = 0;
 const CLOUD_UPLOAD_MIN_INTERVAL_MS = 1500;
-const CLOUD_LEVEL_LOAD_UPLOAD_DEBOUNCE_MS = 900;
 let cloudDownloadInProgressPromise = null;
 let lastBackgroundCloudDownloadAt = 0;
 const CLOUD_BACKGROUND_DOWNLOAD_COOLDOWN_MS = 2500;
@@ -3935,11 +3940,6 @@ function scheduleDeferredCloudUpload(delayMs = CLOUD_UPLOAD_MIN_INTERVAL_MS) {
             console.error('Deferred cloud upload failed:', error);
         });
     }, Math.max(0, delayMs));
-}
-
-function queueCloudUploadFromLevelLoad() {
-    cloudUploadPending = true;
-    scheduleDeferredCloudUpload(CLOUD_LEVEL_LOAD_UPLOAD_DEBOUNCE_MS);
 }
 
 function requestBackgroundCloudSyncDownload() {
@@ -4124,6 +4124,13 @@ let overviewOffsetY = 0;
 
 // Status bar configuration
 const STATUS_BAR_HEIGHT = 60;
+const LEVEL_PLAY_INTRO_HOLD_MS = 1000;
+const LEVEL_PLAY_INTRO_CRATE_FADE_MS = 1000;
+const LEVEL_PLAY_INTRO_PLAYER_FADE_MS = 1000;
+const LEVEL_PLAY_INTRO_FADE_TOTAL_MS =
+    LEVEL_PLAY_INTRO_CRATE_FADE_MS +
+    LEVEL_PLAY_INTRO_PLAYER_FADE_MS;
+const LEVEL_PLAY_INTRO_CLOUD_SYNC_MAX_WAIT_MS = 1000;
 let moveCount = 0;
 let pushCount = 0; // Track successful box pushes
 let attemptCount = 1; // Start at 1 since first play is attempt 1
@@ -4150,6 +4157,12 @@ let movingBox = null; // Box being pushed (if any)
 let moveStartBoxPos = { x: 0, y: 0 };
 let moveTargetBoxPos = { x: 0, y: 0 };
 let currentMoveUsesLinearInterpolation = false;
+let isLevelPlayIntroActive = false;
+let levelPlayIntroStartedAt = 0;
+let levelPlayIntroPreFadeHoldMs = LEVEL_PLAY_INTRO_HOLD_MS;
+let isLevelPlayIntroWaitingForCloudSync = false;
+let levelPlayIntroCloudSyncDeadlineAt = 0;
+let levelPlayIntroSessionToken = 0;
 
 // Player animation variables
 let playerAnimationState = 'idle'; // 'idle', 'moving-down', 'moving-up', 'moving-left', 'moving-right'
@@ -4183,6 +4196,149 @@ function getIdleAnimationState() {
         default:
             return 'idle-down';
     }
+}
+
+function beginLevelPlayIntroFade(startedAt = Date.now()) {
+    levelPlayIntroStartedAt = startedAt;
+    isLevelPlayIntroWaitingForCloudSync = false;
+    levelPlayIntroCloudSyncDeadlineAt = 0;
+}
+
+function startLevelPlayIntro({
+    startedAt = Date.now(),
+    waitForCloudSync = false,
+    levelLoadSerial = currentLevelLoadSerial
+} = {}) {
+    isLevelPlayIntroActive = true;
+    const introToken = ++levelPlayIntroSessionToken;
+
+    if (!waitForCloudSync) {
+        levelPlayIntroPreFadeHoldMs = LEVEL_PLAY_INTRO_HOLD_MS;
+        beginLevelPlayIntroFade(startedAt);
+        return;
+    }
+
+    levelPlayIntroPreFadeHoldMs = 0;
+    isLevelPlayIntroWaitingForCloudSync = true;
+    levelPlayIntroCloudSyncDeadlineAt = startedAt + LEVEL_PLAY_INTRO_CLOUD_SYNC_MAX_WAIT_MS;
+    levelPlayIntroStartedAt = 0;
+
+    const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve(false), LEVEL_PLAY_INTRO_CLOUD_SYNC_MAX_WAIT_MS);
+    });
+
+    Promise.race([
+        uploadGameProgress(true).catch((error) => {
+            console.log('Level-start cloud sync failed before intro fade:', error);
+            return false;
+        }),
+        timeoutPromise
+    ]).finally(() => {
+        if (!isLevelPlayIntroActive) {
+            return;
+        }
+
+        if (introToken !== levelPlayIntroSessionToken) {
+            return;
+        }
+
+        if (levelLoadSerial !== currentLevelLoadSerial) {
+            return;
+        }
+
+        beginLevelPlayIntroFade(Date.now());
+    });
+}
+
+function stopLevelPlayIntro() {
+    isLevelPlayIntroActive = false;
+    isLevelPlayIntroWaitingForCloudSync = false;
+    levelPlayIntroCloudSyncDeadlineAt = 0;
+    levelPlayIntroStartedAt = 0;
+    levelPlayIntroPreFadeHoldMs = LEVEL_PLAY_INTRO_HOLD_MS;
+    levelPlayIntroSessionToken++;
+}
+
+function ensureLevelPlayIntroFadeStarted(nowMs = Date.now()) {
+    if (!isLevelPlayIntroActive || !isLevelPlayIntroWaitingForCloudSync) {
+        return;
+    }
+
+    if (nowMs >= levelPlayIntroCloudSyncDeadlineAt) {
+        beginLevelPlayIntroFade(nowMs);
+    }
+}
+
+function isLevelPlayIntroBlockingInput(nowMs = Date.now()) {
+    if (!isLevelPlayIntroActive || currentGameState !== GAME_STATES.PLAYING) {
+        return false;
+    }
+
+    ensureLevelPlayIntroFadeStarted(nowMs);
+
+    if (isLevelPlayIntroWaitingForCloudSync) {
+        return true;
+    }
+
+    const elapsedMs = Math.max(0, nowMs - levelPlayIntroStartedAt);
+    const totalIntroDurationMs = levelPlayIntroPreFadeHoldMs + LEVEL_PLAY_INTRO_FADE_TOTAL_MS;
+    if (elapsedMs >= totalIntroDurationMs) {
+        stopLevelPlayIntro();
+        return false;
+    }
+
+    return true;
+}
+
+function getLevelPlayIntroActorOpacities(nowMs = Date.now()) {
+    if (!isLevelPlayIntroActive || currentGameState !== GAME_STATES.PLAYING) {
+        return {
+            cratesOpacity: 1,
+            playerOpacity: 1
+        };
+    }
+
+    ensureLevelPlayIntroFadeStarted(nowMs);
+
+    if (isLevelPlayIntroWaitingForCloudSync) {
+        return {
+            cratesOpacity: 0,
+            playerOpacity: 0
+        };
+    }
+
+    const elapsedMs = Math.max(0, nowMs - levelPlayIntroStartedAt);
+    const totalIntroDurationMs = levelPlayIntroPreFadeHoldMs + LEVEL_PLAY_INTRO_FADE_TOTAL_MS;
+    if (elapsedMs >= totalIntroDurationMs) {
+        stopLevelPlayIntro();
+        return {
+            cratesOpacity: 1,
+            playerOpacity: 1
+        };
+    }
+
+    if (elapsedMs < levelPlayIntroPreFadeHoldMs) {
+        return {
+            cratesOpacity: 0,
+            playerOpacity: 0
+        };
+    }
+
+    const introFadeElapsedMs = elapsedMs - levelPlayIntroPreFadeHoldMs;
+    const cratesOpacity = Math.min(
+        1,
+        introFadeElapsedMs / LEVEL_PLAY_INTRO_CRATE_FADE_MS
+    );
+    const playerOpacity = Math.min(
+        1,
+        Math.max(0, introFadeElapsedMs - LEVEL_PLAY_INTRO_CRATE_FADE_MS) /
+            LEVEL_PLAY_INTRO_PLAYER_FADE_MS
+    );
+
+    return {
+        cratesOpacity,
+        playerOpacity
+    };
 }
 
 // Function to calculate optimal tile size with mobile-friendly constraints
@@ -4812,6 +4968,16 @@ function applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart = false, 
     playerAnimationState = getIdleAnimationState();
     playerAnimationFrame = 0;
     playerAnimationTimer = 0;
+    const shouldWaitForCloudSyncBeforeIntroFade =
+        !isRestart &&
+        !skipProgressPersistence &&
+        window.firebaseAuth &&
+        window.firebaseAuth.isAuthenticated &&
+        window.firebaseAuth.currentUser;
+    startLevelPlayIntro({
+        waitForCloudSync: Boolean(shouldWaitForCloudSyncBeforeIntroFade),
+        levelLoadSerial: currentLevelLoadSerial
+    });
 
     console.log(`Loaded level ${levelNumber} from ${setName}`);
     console.log(`Level size: ${currentLevel.width}x${currentLevel.height}`);
@@ -4822,12 +4988,6 @@ function applyLoadedLevel(parsedLevel, setName, levelNumber, isRestart = false, 
     // Calculate level centering offsets - use Math.floor to ensure integer pixel positions
     levelOffsetX = Math.floor((canvas.width - currentLevel.width * tileSize) / 2);
     levelOffsetY = Math.floor((canvas.height - STATUS_BAR_HEIGHT - currentLevel.height * tileSize) / 2) + STATUS_BAR_HEIGHT;
-
-    // Upload progress to cloud if user is authenticated and this is a new level load (not restart)
-    if (!isRestart && !skipProgressPersistence && window.firebaseAuth && window.firebaseAuth.isAuthenticated) {
-        // Coalesce rapid level-load transitions into a single deferred upload.
-        queueCloudUploadFromLevelLoad();
-    }
 
     return true;
 }
@@ -5357,6 +5517,10 @@ async function copySavedSolutionToClipboard(levelProgressData) {
 
 // Player movement functions
 function attemptPlayerMove(direction) {
+    if (isLevelPlayIntroBlockingInput()) {
+        return false;
+    }
+
     // Hide solution button when player attempts to move
     showSolutionButton = false;
     
@@ -6377,7 +6541,7 @@ async function startGoogleSignIn() {
 }
 
 // Cloud data sync functions
-async function uploadGameProgress() {
+async function uploadGameProgress(forceImmediate = false) {
     // Check if user is authenticated
     if (!window.firebaseAuth || !window.firebaseAuth.isAuthenticated || !window.firebaseAuth.currentUser) {
         console.log('Cannot upload progress: user not authenticated');
@@ -6386,11 +6550,17 @@ async function uploadGameProgress() {
 
     if (cloudUploadInProgress) {
         cloudUploadPending = true;
-        return true;
+        if (!forceImmediate) {
+            return true;
+        }
+
+        while (cloudUploadInProgress) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
     }
 
     const elapsedSinceLastUpload = Date.now() - lastCloudUploadCompletedAt;
-    if (elapsedSinceLastUpload < CLOUD_UPLOAD_MIN_INTERVAL_MS) {
+    if (!forceImmediate && elapsedSinceLastUpload < CLOUD_UPLOAD_MIN_INTERVAL_MS) {
         cloudUploadPending = true;
         scheduleDeferredCloudUpload(CLOUD_UPLOAD_MIN_INTERVAL_MS - elapsedSinceLastUpload);
         return true;
@@ -7231,24 +7401,27 @@ function updateTitleMiniDemoVisibilityPhase(state, nowMs) {
 
 function getTitleMiniDemoActorsOpacity(state, nowMs) {
     if (!state) {
-        return 0;
+        return { cratesOpacity: 0, playerOpacity: 0 };
     }
 
     const elapsed = Math.max(0, nowMs - state.visibilityPhaseStartedAt);
 
     if (state.visibilityPhase === 'intro-hold') {
-        return 0;
+        return { cratesOpacity: 0, playerOpacity: 0 };
     }
 
     if (state.visibilityPhase === 'intro-fade') {
-        return Math.max(0, Math.min(1, elapsed / TITLE_MINI_DEMO_INTRO_FADE_MS));
+        const cratesOpacity = Math.max(0, Math.min(1, elapsed / TITLE_MINI_DEMO_CRATE_FADE_MS));
+        const playerOpacity = Math.max(0, Math.min(1, (elapsed - TITLE_MINI_DEMO_CRATE_FADE_MS) / TITLE_MINI_DEMO_PLAYER_FADE_MS));
+        return { cratesOpacity, playerOpacity };
     }
 
     if (state.visibilityPhase === 'outro-fade') {
-        return Math.max(0, 1 - Math.min(1, elapsed / TITLE_MINI_DEMO_OUTRO_FADE_MS));
+        const opacity = Math.max(0, 1 - Math.min(1, elapsed / TITLE_MINI_DEMO_OUTRO_FADE_MS));
+        return { cratesOpacity: opacity, playerOpacity: opacity };
     }
 
-    return 1;
+    return { cratesOpacity: 1, playerOpacity: 1 };
 }
 
 function updateTitleMiniDemoAnimation(state, nowMs) {
@@ -7463,7 +7636,9 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
         }
     }
 
-    const actorsOpacity = getTitleMiniDemoActorsOpacity(state, nowMs);
+    const actorOpacities = getTitleMiniDemoActorsOpacity(state, nowMs);
+    const cratesOpacity = actorOpacities.cratesOpacity;
+    const playerOpacity = actorOpacities.playerOpacity;
 
     for (let rowIndex = 0; rowIndex < levelData.height; rowIndex++) {
         for (let colIndex = 0; colIndex < levelData.width; colIndex++) {
@@ -7503,9 +7678,9 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
         }
     }
 
-    if (actorsOpacity > 0) {
+    if (cratesOpacity > 0) {
         context.save();
-        context.globalAlpha = actorsOpacity;
+        context.globalAlpha = cratesOpacity;
 
         for (let boxIndex = 0; boxIndex < state.boxes.length; boxIndex++) {
             const box = state.boxes[boxIndex];
@@ -7520,7 +7695,7 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
             const isOnGoal = state.goalsSet.has(`${box.x},${box.y}`);
 
             if (isOnGoal) {
-                drawTitleMiniDemoOnGoalHighlight(boxX, boxY, demoTileSize, actorsOpacity);
+                drawTitleMiniDemoOnGoalHighlight(boxX, boxY, demoTileSize, cratesOpacity);
             }
 
             const spriteName = isOnGoal ? sprites.crateOnGoal : sprites.crate;
@@ -7531,6 +7706,13 @@ function drawTitleMiniDemo(areaTop, areaBottom, isMobilePortrait, isMobileLandsc
                 context.fillRect(boxX, boxY, demoTileSize, demoTileSize);
             }
         }
+
+        context.restore();
+    }
+
+    if (playerOpacity > 0) {
+        context.save();
+        context.globalAlpha = playerOpacity;
 
         const playerX = Math.round(boardStartX + playerTileX * demoTileSize);
         const playerY = Math.round(boardStartY + playerTileY * demoTileSize);
@@ -8219,16 +8401,28 @@ function drawNormalGameplay() {
         }
     }
     
+    const introOpacities = getLevelPlayIntroActorOpacities();
+
     // Draw boxes with smooth movement
-    currentLevel.boxes.forEach((box, index) => {
-        const pixelPos = getCurrentBoxPixelPos(index);
-        const isOnGoal = isBoxOnGoal(index);
-        drawBoxTile(pixelPos.x, pixelPos.y, isOnGoal);
-    });
+    if (introOpacities.cratesOpacity > 0) {
+        context.save();
+        context.globalAlpha = introOpacities.cratesOpacity;
+        currentLevel.boxes.forEach((box, index) => {
+            const pixelPos = getCurrentBoxPixelPos(index);
+            const isOnGoal = isBoxOnGoal(index);
+            drawBoxTile(pixelPos.x, pixelPos.y, isOnGoal);
+        });
+        context.restore();
+    }
     
     // Draw player with smooth movement
-    const playerPixelPos = getCurrentPlayerPixelPos();
-    drawPlayerTile(playerPixelPos.x, playerPixelPos.y);
+    if (introOpacities.playerOpacity > 0) {
+        context.save();
+        context.globalAlpha = introOpacities.playerOpacity;
+        const playerPixelPos = getCurrentPlayerPixelPos();
+        drawPlayerTile(playerPixelPos.x, playerPixelPos.y);
+        context.restore();
+    }
     
     // Restore the context state (removes clipping)
     context.restore();
@@ -8310,7 +8504,8 @@ function drawBoxTile(x, y, isOnGoal = false) {
     if (isOnGoal) {
         // Draw a subtle glow behind the box when it's on a goal
         context.save();
-        context.globalAlpha = 0.6;
+        const inheritedAlpha = context.globalAlpha;
+        context.globalAlpha = inheritedAlpha * 0.6;
         context.fillStyle = "#00FF00"; // Green glow
         context.fillRect(x - 2, y - 2, tileSize + 4, tileSize + 4);
         context.restore();
@@ -9725,6 +9920,7 @@ function startSolutionReplay(solutionString) {
     
     // Set up the solution replay data
     const parsed = normalizeLurdInput(solutionString);
+    stopLevelPlayIntro();
     solutionReplayData.solution = parsed.isValid ? parsed.normalized : '';
     solutionReplayData.currentMoveIndex = 0;
     solutionReplayData.isActive = true;
