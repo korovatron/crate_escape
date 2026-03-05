@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1263,8 +1263,8 @@ async function loadLegalModalContent(type) {
 
                 <p><strong>Visual Designer (touch gestures)</strong></p>
                 <ul>
-                    <li><strong>One-finger drag:</strong> paint with the selected tool.</li>
-                    <li><strong>Two-finger drag:</strong> pan the canvas.</li>
+                    <li><strong>One-finger drag:</strong> pan the canvas.</li>
+                    <li><strong>Tap:</strong> place the currently selected tile.</li>
                     <li><strong>Pinch in/out:</strong> zoom the canvas.</li>
                 </ul>
 

@@ -683,6 +683,18 @@
             margin-left: auto;
         }
 
+        .import-level-button:focus-visible,
+        .import-level-button:hover {
+            background: rgba(0, 170, 255, 0.2);
+            outline: none;
+        }
+
+        .import-level-button.primary:focus-visible,
+        .import-level-button.primary:hover {
+            background: rgba(0, 255, 136, 0.2);
+            outline: none;
+        }
+
         @media (max-width: 620px) {
             .import-level-actions {
                 display: grid;
@@ -908,6 +920,12 @@
             line-height: 1;
             cursor: pointer;
             padding: 0;
+        }
+
+        .level-designer-zoom button:focus-visible,
+        .level-designer-zoom button:hover {
+            background: rgba(0, 170, 255, 0.2);
+            outline: none;
         }
 
         .level-designer-zoom-value {
@@ -1194,6 +1212,18 @@
             padding: 0;
         }
 
+        .import-level-close:focus-visible,
+        .import-level-close:hover,
+        .level-designer-close:focus-visible,
+        .level-designer-close:hover,
+        .level-designer-help-close:focus-visible,
+        .level-designer-help-close:hover,
+        .solution-replay-close:focus-visible,
+        .solution-replay-close:hover {
+            background: rgba(0, 170, 255, 0.2);
+            outline: none;
+        }
+
         .solution-replay-progress {
             text-align: center;
             color: #00aaff;
@@ -1259,7 +1289,7 @@
         .solution-replay-mini-button {
             border: 1px solid #00aaff;
             border-radius: 6px;
-            background: #102318;
+            background: #102030;
             color: #00ff88;
             height: 32px;
             min-height: 32px;
@@ -1442,6 +1472,16 @@
             color: #666666;
             border-color: #444444;
             cursor: default;
+        }
+
+        .solution-trigger-button:focus-visible,
+        .solution-trigger-button:hover,
+        .solution-replay-mini-button:focus-visible,
+        .solution-replay-mini-button:hover,
+        .solution-replay-button:not(:disabled):focus-visible,
+        .solution-replay-button:not(:disabled):hover {
+            background: rgba(0, 170, 255, 0.2);
+            outline: none;
         }
 
         .solution-replay-message {
