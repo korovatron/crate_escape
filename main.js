@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.2.3';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -6916,25 +6916,6 @@ function update(secondsPassed) {
         
         // Update player sprite animation
         updatePlayerAnimation(secondsPassed);
-        
-        // Legacy key processing (can be removed later)
-        if (isKeyDown('ArrowLeft') && canProcessKey('ArrowLeft')) {
-            lastKeyTime.set('ArrowLeft', Date.now());
-            console.log('Left key is pressed');
-            // ...existing code...
-        }
-        if (isKeyDown('ArrowRight') && canProcessKey('ArrowRight')) {
-            lastKeyTime.set('ArrowRight', Date.now());
-            // ...existing code...
-        }
-        if (isKeyDown('ArrowUp') && canProcessKey('ArrowUp')) {
-            lastKeyTime.set('ArrowUp', Date.now());
-            // ...existing code...
-        }
-        if (isKeyDown('ArrowDown') && canProcessKey('ArrowDown')) {
-            lastKeyTime.set('ArrowDown', Date.now());
-            // ...existing code...
-        }
     }
 }
 // #endregion
