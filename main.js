@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.5';
+const APP_VERSION = '1.2.6';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1214,9 +1214,18 @@ const LEGAL_MODAL_CACHE = {
     terms: null
 };
 
+let legalModalReturnType = null;
+
 function closeLegalModal() {
     const { overlay } = getLegalModalElements();
     if (!overlay) {
+        return;
+    }
+
+    if (legalModalReturnType) {
+        const returnType = legalModalReturnType;
+        legalModalReturnType = null;
+        openLegalModal(returnType);
         return;
     }
 
@@ -1296,7 +1305,7 @@ async function loadLegalModalContent(type) {
 
     if (type === 'credits') {
         return {
-            title: 'Credits',
+            title: 'About',
             contentHtml: `
                 <p><strong>Game Design & Programming:</strong> Neil Kendall</p>
                 <p><strong>Sokoban Puzzle Game Concept:</strong> Hiroyuki Imabayashi</p>
@@ -1306,6 +1315,10 @@ async function loadLegalModalContent(type) {
                 <p><strong>Version:</strong> ${APP_VERSION}</p>
                 <p><strong>Copyright © 2025-2026</strong> Neil Kendall</p>
                 <p><strong>More @</strong> <a href="https://www.korovatron.co.uk/" target="_blank" rel="noopener noreferrer">www.korovatron.co.uk</a></p>
+                <div class="legal-modal-actions">
+                    <button id="creditsPrivacyPolicyButton" class="import-level-button" type="button">Privacy Policy</button>
+                    <button id="creditsTermsOfServiceButton" class="import-level-button" type="button">Terms of Service</button>
+                </div>
             `
         };
     }
@@ -1444,11 +1457,13 @@ async function loadLegalModalContent(type) {
     }
 }
 
-async function openLegalModal(type) {
+async function openLegalModal(type, options = {}) {
     const { overlay, title, content } = getLegalModalElements();
     if (!overlay || !title || !content) {
         return;
     }
+
+    legalModalReturnType = options.returnTo || null;
 
     overlay.style.display = 'flex';
     overlay.setAttribute('aria-hidden', 'false');
@@ -1457,7 +1472,7 @@ async function openLegalModal(type) {
         privacy: 'Privacy Policy',
         terms: 'Terms of Service',
         instructions: 'Instructions',
-        credits: 'Credits',
+        credits: 'About',
         cloud_sync: 'Cloud Sync',
         ios_install: 'Install App'
     };
@@ -1493,6 +1508,21 @@ async function openLegalModal(type) {
             playSound('click');
             acknowledgeIOSInstallNotification();
             closeLegalModal();
+        });
+    }
+
+    if (type === 'credits') {
+        const privacyButton = document.getElementById('creditsPrivacyPolicyButton');
+        const termsButton = document.getElementById('creditsTermsOfServiceButton');
+
+        privacyButton?.addEventListener('click', () => {
+            playSound('click');
+            openLegalModal('privacy', { returnTo: 'credits' });
+        });
+
+        termsButton?.addEventListener('click', () => {
+            playSound('click');
+            openLegalModal('terms', { returnTo: 'credits' });
         });
     }
 }
@@ -6341,9 +6371,7 @@ function getCurrentMenuConfig() {
         "Custom Level",
         "Cloud Sync",
         "Instructions",
-        "Credits",
-        "Privacy Policy",
-        "Terms of Service"
+        "About"
     ];
     const baseGameStates = [
         GAME_STATES.TITLE,
@@ -6351,9 +6379,7 @@ function getCurrentMenuConfig() {
         'open_import_level',
         'open_cloud_sync_modal',
         'open_instructions_modal',
-        'open_credits_modal',
-        'open_privacy_policy',
-        'open_terms_of_service'
+        'open_credits_modal'
     ];
 
     // Add iOS Install option directly above Cloud Sync when applicable
@@ -6389,18 +6415,6 @@ function handleMenuOptionTarget(targetState) {
     if (targetState === 'open_play_menu') {
         currentGameState = GAME_STATES.LEVEL_SELECT;
         initializeLevelSelect();
-        isHamburgerMenuOpen = false;
-        return true;
-    }
-
-    if (targetState === 'open_privacy_policy') {
-        openPrivacyPolicyLink();
-        isHamburgerMenuOpen = false;
-        return true;
-    }
-
-    if (targetState === 'open_terms_of_service') {
-        openTermsOfServiceLink();
         isHamburgerMenuOpen = false;
         return true;
     }
@@ -6456,14 +6470,6 @@ function handleMenuOptionTarget(targetState) {
     currentGameState = targetState;
     isHamburgerMenuOpen = false;
     return true;
-}
-
-function openPrivacyPolicyLink() {
-    openLegalModal('privacy');
-}
-
-function openTermsOfServiceLink() {
-    openLegalModal('terms');
 }
 
 // Cloud sync authentication functions
