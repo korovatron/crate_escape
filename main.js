@@ -6,41 +6,6 @@ const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
 const isKeyDown = (key) => pressedKeys.has(key);
 
-// Google Analytics gameplay tracking
-let lastPlayEventTime = 0;
-const playEventThrottle = 30000; // 30 seconds
-let lastDesignerEventTime = 0;
-const designerEventThrottle = 30000; // 30 seconds
-
-function trackGameplayEvent() {
-    const now = Date.now();
-    if (now - lastPlayEventTime >= playEventThrottle) {
-        lastPlayEventTime = now;
-        if (typeof gtag === 'function') {
-            gtag('event', 'CRATE-ESCAPE-play');
-        }
-    }
-}
-
-function trackDesignerEvent() {
-    const now = Date.now();
-    if (now - lastDesignerEventTime >= designerEventThrottle) {
-        lastDesignerEventTime = now;
-        if (typeof gtag === 'function') {
-            gtag('event', 'CRATE-DESIGNER');
-        }
-    }
-}
-
-function trackLevelCompleteEvent(levelSet, levelNumber) {
-    if (typeof gtag === 'function') {
-        gtag('event', 'CRATE_LEV_COMP', {
-            level_set: levelSet,
-            level_number: levelNumber
-        });
-    }
-}
-
 // Check if enough time has passed since last key action
 const canProcessKey = (key) => {
     const now = Date.now();
@@ -222,7 +187,6 @@ document.addEventListener('keydown', (e) => {
         
         if (moveDirection.x !== 0 || moveDirection.y !== 0) {
             if (!isLevelPlayIntroBlockingInput()) {
-                trackGameplayEvent();
                 attemptPlayerMove(moveDirection);
             }
         }
@@ -533,7 +497,6 @@ function setupCanvasEventListeners() {
                 
                 // Attempt immediate movement
                 if (!isPlayerMoving && !isLevelPlayIntroBlockingInput()) {
-                    trackGameplayEvent();
                     attemptPlayerMove(touchMoveDirection);
                 }
                 
@@ -2224,8 +2187,6 @@ function placeDesignerTileAtCell(cellX, cellY, toolId = levelDesignerState.selec
             break;
     }
 
-    trackDesignerEvent();
-
     renderLevelDesigner();
     syncImportTextareaFromDesigner();
     setImportLevelError('');
@@ -2916,10 +2877,6 @@ async function copyTextToClipboard(text) {
 }
 
 async function copyCustomLevelLinkFromModal() {
-    if (typeof gtag === 'function') {
-        gtag('event', 'CRATE-GEN-LINK');
-    }
-
     const { textarea } = getImportLevelElements();
     if (!textarea) {
         return;
@@ -2988,10 +2945,6 @@ function tryLoadCustomLevelFromUrlHash() {
 }
 
 function playImportedLevelFromModal() {
-    if (typeof gtag === 'function') {
-        gtag('event', 'CRATE-CUST-LVL');
-    }
-
     const { textarea } = getImportLevelElements();
     if (!textarea) {
         return;
@@ -6117,7 +6070,6 @@ function checkLevelCompletion() {
         currentGameState = GAME_STATES.LEVEL_COMPLETE;
         levelCompletionStartTime = Date.now();
         solutionCopied = false; // Reset copy state for new completion
-        trackLevelCompleteEvent(currentSet, currentLevelNumber);
         
         // Mark level as completed for progress tracking
         if (!isCustomLevelActive) {
