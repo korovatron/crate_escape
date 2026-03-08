@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.9';
+const APP_VERSION = '1.2.10';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -6456,7 +6456,6 @@ async function startGoogleSignIn() {
         console.log('Google Sign-In successful:', result.user);
         console.log('User displayName:', result.user.displayName);
         console.log('User email:', result.user.email);
-        console.log('User photoURL:', result.user.photoURL);
         updateCloudSyncState('authenticated');
         
         // Update global auth state
@@ -6624,7 +6623,6 @@ async function uploadGameProgress(forceImmediate = false) {
                 uid: window.firebaseAuth.currentUser.uid,
                 email: window.firebaseAuth.currentUser.email,
                 displayName: window.firebaseAuth.currentUser.displayName || 'Anonymous',
-                photoURL: window.firebaseAuth.currentUser.photoURL || null,
                 lastSync: new Date().toISOString()
             }
         };
