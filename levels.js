@@ -20333,6 +20333,8 @@ const LevelManager = {
       if (x < 0 || y < 0 || x >= level.width || y >= level.height) return;
       if (visited[y][x]) return;
       if (level.grid[y][x] === '#') return;
+      // Stop spreading at any non-space character (crates, goals, player, etc.)
+      if (level.grid[y][x] !== ' ') return;
       visited[y][x] = true;
       queue.push({ x, y });
     }
