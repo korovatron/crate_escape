@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.18';
+const APP_VERSION = '1.2.19';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -1274,7 +1274,6 @@ async function loadLegalModalContent(type) {
                 <p><strong>Sokoban Puzzle Game Concept:</strong> Hiroyuki Imabayashi</p>
                 <p><strong>Sokoban Skin:</strong> <a href="https://kenney.nl/" target="_blank" rel="noopener noreferrer">Kenney</a></p>
                 <p><strong>Level Design:</strong> David W Skinner, Ward De Langhe & Evgeniy Grigoriev</p>
-                <p><strong>Adviser:</strong> Jacob Jacobi</p>
                 <p><strong>Version:</strong> ${APP_VERSION}</p>
                 <p><strong>Copyright © 2025-2026</strong> Neil Kendall</p>
                 <p><strong>More @</strong> <a href="https://www.korovatron.co.uk/" target="_blank" rel="noopener noreferrer">www.korovatron.co.uk</a></p>
