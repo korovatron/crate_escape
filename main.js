@@ -1,6 +1,6 @@
 // #region Event Handlers & Input
 "use strict";
-const APP_VERSION = '1.2.19';
+const APP_VERSION = '1.2.20';
 const pressedKeys = new Set();
 const lastKeyTime = new Map(); // Track when each key was last processed
 const keyDebounceDelay = 500; // Half second delay for key repeat
@@ -6063,12 +6063,38 @@ function isLevelComplete() {
     );
 }
 
+function trackLevelCompletionEvent(setName, levelNumber) {
+    try {
+        const goatcounter = window.goatcounter;
+        if (!goatcounter || typeof goatcounter.count !== 'function') {
+            return;
+        }
+
+        const safeSetName = String(setName || 'UNKNOWN')
+            .trim()
+            .replace(/\s+/g, '_')
+            .replace(/[^A-Za-z0-9_]/g, '_')
+            .replace(/_+/g, '_');
+        const safeLevelNumber = String(levelNumber || '0').replace(/[^0-9]/g, '') || '0';
+        const eventName = `CRATE_ESCAPE_LEV_COMP_${safeSetName}_${safeLevelNumber}`;
+
+        goatcounter.count({
+            path: eventName,
+            event: true,
+            title: eventName
+        });
+    } catch (error) {
+        console.warn('Failed to send GoatCounter level completion event:', error);
+    }
+}
+
 function checkLevelCompletion() {
     // Only check completion during normal PLAYING state (not during solution replay)
     if (currentGameState === GAME_STATES.PLAYING && isLevelComplete()) {
         currentGameState = GAME_STATES.LEVEL_COMPLETE;
         levelCompletionStartTime = Date.now();
         solutionCopied = false; // Reset copy state for new completion
+        trackLevelCompletionEvent(currentSet, currentLevelNumber);
         
         // Mark level as completed for progress tracking
         if (!isCustomLevelActive) {
