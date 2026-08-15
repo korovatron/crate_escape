@@ -65,7 +65,7 @@ This file records third-party content used by this project and the known licence
 - Notes: Treated as project-owned assets.
 
 ## Services & SDKs (Not redistributed as project source)
-- Google Analytics (gtag.js)
+- GoatCounter Analytics (count.js, loaded from the GoatCounter CDN)
 - Firebase Web SDK (loaded from gstatic CDN)
 - These are external services/libraries used at runtime and are subject to their own terms.
 
@@ -76,4 +76,4 @@ This file records third-party content used by this project and the known licence
 - Recheck any newly added third-party assets (music, fonts, art packs) before release.
 
 ## Last Updated
-- 2026-03-04
+- 2026-08-15
